@@ -15,7 +15,7 @@ import { getRank, getLevelProgress } from './lib/gameLogic';
 import { PvPMode } from './components/PvPMode';
 import { Swords } from 'lucide-react';
 
-type View = 'map' | 'modules' | 'reactor';
+type View = 'map' | 'modules' | 'reactor' | 'pvp';
 
 function MainApp() {
   const { user, loading, profile } = useAuth();
