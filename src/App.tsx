@@ -161,7 +161,8 @@ function MainApp() {
                 className="group relative flex items-center gap-3 bg-slate-900 border-2 border-red-600 px-8 py-4 rounded-full shadow-[0_0_30px_rgba(220,38,38,0.4)] hover:shadow-[0_0_50px_rgba(220,38,38,0.6)] hover:scale-105 transition-all overflow-hidden"
               >
                 <div className="absolute inset-0 bg-red-600/10 group-hover:bg-red-600/20 transition-colors" />
-                <Swords className="w-8 h-8 text-red-500 fill-current animate-pulse" />
+                {/* ЗАМЕНИЛ SWORDS НА ZAP НИЖЕ */}
+                <Zap className="w-8 h-8 text-red-500 fill-current animate-pulse" />
                 <span className="text-xl font-black text-white tracking-widest italic">PVP ARENA</span>
               </button>
             </div>
