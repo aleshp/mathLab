@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import Latex from 'react-latex-next';
 import { Zap, Loader, Trophy, XCircle, Play, CheckCircle2, Timer } from 'lucide-react';
 import { getPvPRank } from '../lib/gameLogic';
-// Импорт клавиатуры
 import { MathKeypad } from './MathKeypad';
 
 type DuelState = 'lobby' | 'searching' | 'battle' | 'finished';
@@ -31,25 +30,20 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
 
   // Фидбек и Таймер
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-  const [timeLeft, setTimeLeft] = useState(60); // 60 секунд на задачу
+  const [timeLeft, setTimeLeft] = useState(60);
 
-  // === ФУНКЦИИ КЛАВИАТУРЫ (ДОБАВИЛ) ===
-  const handleKeyInput = (symbol: string) => {
-    setUserAnswer((prev) => prev + symbol);
-  };
+  // Функции клавиатуры
+  const handleKeyInput = (symbol: string) => setUserAnswer((prev) => prev + symbol);
+  const handleBackspace = () => setUserAnswer((prev) => prev.slice(0, -1));
 
-  const handleBackspace = () => {
-    setUserAnswer((prev) => prev.slice(0, -1));
-  };
-
-  // === 1. ТАЙМЕР ЗАДАЧИ ===
+  // === ТАЙМЕР ЗАДАЧИ ===
   useEffect(() => {
     let timer: any;
     if (status === 'battle' && !feedback && currentProbIndex < 10) {
       timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
-            handleTimeout(); // Время вышло
+            handleTimeout();
             return 60;
           }
           return prev - 1;
@@ -59,22 +53,25 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
     return () => clearInterval(timer);
   }, [status, feedback, currentProbIndex]);
 
-  // Сброс таймера при смене вопроса
-  useEffect(() => {
-    setTimeLeft(60);
-  }, [currentProbIndex]);
+  useEffect(() => { setTimeLeft(60); }, [currentProbIndex]);
+  const handleTimeout = () => submitResult(false);
 
-  // Функция: Время вышло
-  const handleTimeout = () => {
-    submitResult(false);
-  };
-
-  // === 2. СТРАХОВКА (POLLING) ДЛЯ ХОСТА ===
+  // === HEARTBEAT & POLLING (Самое важное!) ===
+  // Если я ХОСТ (создал комнату и жду), я должен:
+  // 1. Проверять, не зашел ли кто.
+  // 2. Обновлять last_seen, чтобы комната не считалась мертвой.
   useEffect(() => {
     let interval: any;
 
     if (status === 'searching' && duelId) {
       interval = setInterval(async () => {
+        // 1. Отправляем сигнал "Я тут" (Heartbeat)
+        await supabase
+          .from('duels')
+          .update({ last_seen: new Date().toISOString() })
+          .eq('id', duelId);
+
+        // 2. Проверяем статус
         const { data } = await supabase
           .from('duels')
           .select('status, player2_id')
@@ -86,18 +83,28 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
           await fetchOpponentData(data.player2_id);
           setStatus('battle');
         }
-      }, 1000);
+      }, 2000); // Каждые 2 секунды
     }
 
     return () => clearInterval(interval);
   }, [status, duelId]);
 
-  // === 3. ПОИСК МАТЧА ===
+  // === ПОИСК МАТЧА С ЧИСТКОЙ МЕРТВЕЦОВ ===
   async function findMatch() {
     setStatus('searching');
     const myMMR = profile?.mmr || 1000;
     const range = 300;
 
+    // ШАГ 0: Чистка мусора (Dead Room Cleanup)
+    // Удаляем комнаты, где хозяин молчит больше 20 секунд
+    const twentySecondsAgo = new Date(Date.now() - 20000).toISOString();
+    await supabase
+      .from('duels')
+      .delete()
+      .eq('status', 'waiting')
+      .lt('last_seen', twentySecondsAgo); // Меньше (старее) чем 20 сек назад
+
+    // ШАГ 1: Ищем ЖИВУЮ комнату
     const { data: waitingDuel } = await supabase
       .from('duels')
       .select('*')
@@ -105,6 +112,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
       .neq('player1_id', user!.id)
       .gte('player1_mmr', myMMR - range)
       .lte('player1_mmr', myMMR + range)
+      .gt('last_seen', twentySecondsAgo) // Только те, кто обновлялся недавно
       .limit(1)
       .maybeSingle();
 
@@ -141,6 +149,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
           player1_id: user!.id,
           player1_mmr: myMMR,
           status: 'waiting',
+          last_seen: new Date().toISOString(), // Ставим метку времени
           problem_ids: shuffled
         })
         .select()
@@ -150,6 +159,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
         setDuelId(newDuel.id);
         await loadProblems(shuffled);
         startBattleSubscription(newDuel.id, 'player1');
+        // Остаемся в 'searching', useEffect с Heartbeat сам запустится
       }
     }
   }
@@ -186,7 +196,6 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
   // === 5. ОБРАБОТКА ОТВЕТА ===
   async function handleAnswer(e: React.FormEvent) {
     e.preventDefault();
-    // Проверка на пустой ответ
     if (!duelId || feedback || userAnswer.trim() === '') return; 
 
     const currentProb = problems[currentProbIndex];
@@ -289,7 +298,12 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
           Ожидаем подключения...<br/>
           (Ваш рейтинг: {profile?.mmr || 1000})
         </div>
-        <button onClick={() => { setStatus('lobby'); setDuelId(null); }} className="px-6 py-2 border border-slate-600 rounded-full text-slate-400 hover:bg-slate-800">
+        <button onClick={async () => { 
+           setStatus('lobby'); 
+           // Если я ухожу из поиска, я удаляю свою комнату, чтобы она не висела
+           if (duelId) await supabase.from('duels').delete().eq('id', duelId);
+           setDuelId(null);
+        }} className="px-6 py-2 border border-slate-600 rounded-full text-slate-400 hover:bg-slate-800">
           Отмена
         </button>
       </div>
@@ -301,8 +315,6 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
 
     return (
       <div className="max-w-4xl mx-auto p-4 md:p-8 h-full flex flex-col relative">
-        
-        {/* ФИДБЕК ОВЕРЛЕЙ */}
         {feedback && (
           <div className={`absolute inset-0 z-50 flex items-center justify-center rounded-3xl backdrop-blur-sm animate-in fade-in duration-200 ${
             feedback === 'correct' ? 'bg-emerald-500/20' : 'bg-red-500/20'
@@ -313,14 +325,11 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
           </div>
         )}
 
-        {/* ШАПКА СЧЕТА */}
         <div className="flex items-center justify-between mb-6 bg-slate-900/80 p-4 rounded-xl border border-slate-700">
           <div className="text-right">
             <div className="text-cyan-400 font-bold text-lg">ВЫ</div>
             <div className="text-3xl font-black text-white">{myScore}/10</div>
           </div>
-          
-          {/* ТАЙМЕР ПО ЦЕНТРУ */}
           <div className="flex flex-col items-center">
              <div className="text-slate-500 font-mono text-xs mb-1">ВРЕМЯ</div>
              <div className={`flex items-center gap-1 font-mono font-bold text-xl ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
@@ -328,7 +337,6 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
                 {timeLeft}
              </div>
           </div>
-
           <div className="text-left">
             <div className="text-red-400 font-bold text-lg flex items-center gap-2">
               {opponentName}
@@ -337,7 +345,6 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
           </div>
         </div>
 
-        {/* ПРОГРЕСС БАРЫ */}
         <div className="space-y-4 mb-6">
           <div>
              <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -351,7 +358,6 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
           </div>
         </div>
 
-        {/* ЗОНА ВОПРОСА */}
         <div className="flex-1 flex flex-col justify-center">
           {currentProbIndex < 10 && currentProb ? (
             <div className="bg-slate-800 border border-slate-600 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
@@ -359,12 +365,9 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
                  <div className="text-slate-400 text-sm font-mono">ЗАДАЧА {currentProbIndex + 1}</div>
                  <div className="px-2 py-1 bg-slate-700 rounded text-xs text-slate-300">Ввод ответа</div>
                </div>
-               
                <h2 className="text-3xl font-bold text-white mb-8 leading-relaxed">
                  <Latex>{currentProb.question}</Latex>
                </h2>
-               
-               {/* ФОРМА С КЛАВИАТУРОЙ */}
                <form onSubmit={handleAnswer} className="flex flex-col gap-4">
                  <div className="flex gap-4">
                    <input 
@@ -384,8 +387,6 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
                      GO
                    </button>
                  </div>
-                 
-                 {/* ВСТАВКА КЛАВИАТУРЫ */}
                  <MathKeypad onKeyPress={handleKeyInput} onBackspace={handleBackspace} />
                </form>
             </div>
@@ -423,7 +424,6 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
               <p className="text-slate-300 text-lg mb-8">Рейтинг понижен (-25 MMR)</p>
             </>
           )}
-          
           <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-700 mb-8">
             <div className="text-sm text-slate-500 mb-2">ИТОГОВЫЙ СЧЕТ</div>
             <div className="flex items-center justify-center gap-8 text-4xl font-mono font-bold">
@@ -432,7 +432,6 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
               <span className={winner === 'opponent' ? 'text-yellow-400' : 'text-slate-400'}>{oppScore}</span>
             </div>
           </div>
-
           <button onClick={onBack} className="w-full px-8 py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors">
             Вернуться в меню
           </button>
