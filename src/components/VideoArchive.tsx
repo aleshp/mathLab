@@ -12,7 +12,7 @@ type Video = {
 // === БАЗА ДАННЫХ ВИДЕО (МОЖНО РАСШИРЯТЬ) ===
 const VIDEO_LIBRARY: Video[] = [
   // СЕКТОР 0: ЛОГИКА
-  { id: 'aRVgz_EfWjI', title: 'Задачи на сплавы и смеси (Метод стаканов)', sector: 0, duration: '12:30' },
+  { id: '2UiR6dG8CFA', title: 'Задачи на сплавы и смеси (Метод ползунков)', sector: 0, duration: '12:30' },
   { id: 'MzGbb7Xp9AQ', title: 'Задачи на движение: По реке и против', sector: 0, duration: '15:45' },
   
   // СЕКТОР 1: АЛГЕБРА
