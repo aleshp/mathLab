@@ -12,22 +12,22 @@ type Video = {
 // === БАЗА ДАННЫХ ВИДЕО (МОЖНО РАСШИРЯТЬ) ===
 const VIDEO_LIBRARY: Video[] = [
   // СЕКТОР 0: ЛОГИКА
-  { id: 'VideoID_1', title: 'Задачи на сплавы и смеси (Метод стаканов)', sector: 0, duration: '12:30' },
-  { id: 'VideoID_2', title: 'Задачи на движение: По реке и против', sector: 0, duration: '15:45' },
+  { id: 'aRVgz_EfWjI', title: 'Задачи на сплавы и смеси (Метод стаканов)', sector: 0, duration: '12:30' },
+  { id: 'MzGbb7Xp9AQ', title: 'Задачи на движение: По реке и против', sector: 0, duration: '15:45' },
   
   // СЕКТОР 1: АЛГЕБРА
-  { id: 'VideoID_3', title: 'Метод интервалов для неравенств', sector: 1, duration: '10:15' },
-  { id: 'VideoID_4', title: 'Теорема Виета: Как решать устно', sector: 1, duration: '08:20' },
+  { id: 'G1KGP3TyPhw', title: 'Метод интервалов для неравенств', sector: 1, duration: '10:15' },
+  { id: 'y8zkDxXR0-E', title: 'Теорема Виета: Как решать устно', sector: 1, duration: '08:20' },
 
   // СЕКТОР 2: ФУНКЦИИ
-  { id: 'VideoID_5', title: 'Чтение графиков функций', sector: 2, duration: '14:00' },
+  { id: '5ByEHUIz0rA', title: 'Чтение графиков функций', sector: 2, duration: '14:00' },
   
   // СЕКТОР 3: ЛОГАРИФМЫ
-  { id: 'VideoID_6', title: 'Все свойства логарифмов с примерами', sector: 3, duration: '18:10' },
-  { id: 'VideoID_7', title: 'Логарифмические уравнения', sector: 3, duration: '11:30' },
+  { id: 'S1G7w2g1vT4', title: 'Все свойства логарифмов с примерами', sector: 3, duration: '18:10' },
+  { id: 'n6mhxgkq2EY', title: 'Логарифмические уравнения', sector: 3, duration: '11:30' },
 
   // СЕКТОР 4: ТРИГОНОМЕТРИЯ
-  { id: 'VideoID_8', title: 'Тригонометрический круг для чайников', sector: 4, duration: '20:00' },
+  { id: 'ZGSxIAZAS4s', title: 'Тригонометрический круг для чайников', sector: 4, duration: '20:00' },
   { id: 'VideoID_9', title: 'Формулы приведения: Запоминаем без зубрежки', sector: 4, duration: '09:45' },
 
   // СЕКТОР 5: ПРОИЗВОДНАЯ
