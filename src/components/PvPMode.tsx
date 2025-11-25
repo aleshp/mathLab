@@ -2,18 +2,20 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import Latex from 'react-latex-next';
-import { Sword, Loader, Trophy, XCircle, Play } from 'lucide-react';
-
-// УБРАЛИ ИМПОРТ CONFETTI, ЧТОБЫ НЕ БЫЛО ОШИБОК
-// import confetti from 'canvas-confetti'; 
+import { Zap, Loader, Trophy, XCircle, Play } from 'lucide-react';
+// Импортируем функции рангов, чтобы писать "Гладиатор" вместо цифр
+import { getPvPRank } from '../lib/gameLogic';
 
 type DuelState = 'lobby' | 'searching' | 'battle' | 'finished';
 
 export function PvPMode({ onBack }: { onBack: () => void }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [status, setStatus] = useState<DuelState>('lobby');
   const [duelId, setDuelId] = useState<string | null>(null);
+  
+  // Данные соперника
   const [opponentName, setOpponentName] = useState<string>('???');
+  const [opponentMMR, setOpponentMMR] = useState<number>(1000); // <--- Новое состояние
   
   // Игровые данные
   const [problems, setProblems] = useState<any[]>([]);
@@ -24,42 +26,37 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
   const [userAnswer, setUserAnswer] = useState('');
   const [winner, setWinner] = useState<'me' | 'opponent' | 'draw' | null>(null);
 
-  // === 1. ЛОГИКА ПОИСКА МАТЧА ===
+  // === 1. ПОИСК МАТЧА ===
   async function findMatch() {
     setStatus('searching');
-    
-    // Получаем мой текущий рейтинг
     const myMMR = profile?.mmr || 1000;
-    const range = 300; // Разброс рейтинга (ищем соперника +/- 300 очков)
+    const range = 300;
 
-    // 1. Ищем, есть ли кто-то ждущий В МОЕМ ДИАПАЗОНЕ СИЛЫ
     const { data: waitingDuel } = await supabase
       .from('duels')
       .select('*')
       .eq('status', 'waiting')
       .neq('player1_id', user!.id)
-      .gte('player1_mmr', myMMR - range) // Не слабее чем -300
-      .lte('player1_mmr', myMMR + range) // Не сильнее чем +300
+      .gte('player1_mmr', myMMR - range)
+      .lte('player1_mmr', myMMR + range)
       .limit(1)
       .maybeSingle();
 
     if (waitingDuel) {
-      // НАШЛИ ДОСТОЙНОГО СОПЕРНИКА
       await supabase
         .from('duels')
         .update({ 
           player2_id: user!.id,
-          player2_mmr: myMMR, // Записываем свой рейтинг
+          player2_mmr: myMMR,
           status: 'active' 
         })
         .eq('id', waitingDuel.id);
       
       setDuelId(waitingDuel.id);
       loadProblems(waitingDuel.problem_ids);
-      fetchOpponentName(waitingDuel.player1_id);
+      fetchOpponentData(waitingDuel.player1_id); // <--- Обновили вызов
       startBattleSubscription(waitingDuel.id, 'player2');
     } else {
-      // НЕТ ПОДХОДЯЩИХ -> СОЗДАЕМ КОМНАТУ И ЖДЕМ
       const { data: allProbs } = await supabase
         .from('problems')
         .select('id')
@@ -71,7 +68,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
         .from('duels')
         .insert({
           player1_id: user!.id,
-          player1_mmr: myMMR, // Сохраняем мой рейтинг, чтобы другие могли фильтровать
+          player1_mmr: myMMR,
           status: 'waiting',
           problem_ids: shuffled
         })
@@ -86,7 +83,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
     }
   }
 
-  // === 2. ПОДПИСКА НА ОБНОВЛЕНИЯ ===
+  // === 2. ПОДПИСКА ===
   function startBattleSubscription(id: string, myRole: 'player1' | 'player2') {
     const channel = supabase
       .channel(`duel-${id}`)
@@ -97,7 +94,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
         if (newData.status === 'active' && status !== 'battle') {
           setStatus('battle');
           if (myRole === 'player1' && newData.player2_id) {
-             fetchOpponentName(newData.player2_id);
+             fetchOpponentData(newData.player2_id); // <--- Обновили вызов
           }
         }
 
@@ -116,18 +113,26 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
       .subscribe();
   }
 
-  // === 3. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+  // === 3. ЗАГРУЗКА ДАННЫХ ===
   async function loadProblems(ids: string[]) {
     if (!ids || ids.length === 0) return;
     const { data } = await supabase.from('problems').select('*').in('id', ids);
-    // Сортируем так же, как пришли ID
     const sorted = ids.map(id => data?.find(p => p.id === id)).filter(Boolean);
     setProblems(sorted);
   }
 
-  async function fetchOpponentName(uid: string) {
-    const { data } = await supabase.from('profiles').select('username').eq('id', uid).single();
-    if (data) setOpponentName(data.username);
+  // <--- НОВАЯ ФУНКЦИЯ: Тянем и имя, и рейтинг
+  async function fetchOpponentData(uid: string) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('username, mmr') // Просим еще и mmr
+      .eq('id', uid)
+      .single();
+      
+    if (data) {
+      setOpponentName(data.username);
+      setOpponentMMR(data.mmr || 1000);
+    }
   }
 
   async function handleAnswer(e: React.FormEvent) {
@@ -153,17 +158,14 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
     await supabase.from('duels').update(updateData).eq('id', duelId);
 
     if (newProgress >= 10) {
-      await supabase.rpc('finish_duel', { 
-        duel_uuid: duelId, 
-        winner_uuid: user!.id 
-      });
+      await supabase.rpc('finish_duel', { duel_uuid: duelId, winner_uuid: user!.id });
     }
+  }
 
   function endGame(winnerId: string) {
     setStatus('finished');
     if (winnerId === user!.id) {
       setWinner('me');
-      // confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); // Временно отключили
     } else {
       setWinner('opponent');
     }
@@ -175,17 +177,19 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-8 max-w-md w-full p-8 bg-slate-800/50 rounded-2xl border border-red-500/30 shadow-2xl shadow-red-900/20">
           <div className="mx-auto w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center animate-pulse">
-            <Sword className="w-12 h-12 text-red-500" />
+            <Zap className="w-12 h-12 text-red-500" />
           </div>
           <div>
             <h1 className="text-4xl font-black text-white italic uppercase mb-2">PVP АРЕНА</h1>
             <p className="text-red-300/60">Битва умов в реальном времени</p>
           </div>
           
-          <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 text-left space-y-2 text-sm text-slate-400">
-            <p>• 10 случайных задач</p>
-            <p>• Кто решит быстрее и правильнее — побеждает</p>
-            <p>• Одинаковые задачи у обоих игроков</p>
+          {/* Твоя статистика */}
+          <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+             <div className="text-sm text-slate-400">Ваш рейтинг</div>
+             <div className="text-2xl font-bold text-red-400">
+               {profile?.mmr || 1000} MMR <span className="text-sm text-slate-500">({getPvPRank(profile?.mmr || 1000)})</span>
+             </div>
           </div>
 
           <button onClick={findMatch} className="w-full py-4 bg-gradient-to-r from-red-600 to-orange-600 rounded-xl font-bold text-white text-xl hover:scale-105 transition-transform shadow-lg shadow-red-500/30 flex items-center justify-center gap-2">
@@ -206,7 +210,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
       <div className="flex flex-col items-center justify-center h-full space-y-6">
         <Loader className="w-16 h-16 text-red-500 animate-spin" />
         <h2 className="text-2xl font-bold text-white animate-pulse">Поиск противника...</h2>
-        <p className="text-slate-400">Подбираем достойного оппонента</p>
+        <p className="text-slate-400">Диапазон: {profile?.mmr ? profile.mmr - 300 : 700} - {profile?.mmr ? profile.mmr + 300 : 1300} MMR</p>
         <button onClick={onBack} className="px-6 py-2 border border-slate-600 rounded-full text-slate-400 hover:bg-slate-800">
           Отмена
         </button>
@@ -217,27 +221,24 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
   if (status === 'battle') {
     return (
       <div className="max-w-4xl mx-auto p-4 md:p-8 h-full flex flex-col">
-        {/* HEADER: SCORES */}
+        {/* ШАПКА БИТВЫ */}
         <div className="flex items-center justify-between mb-8 bg-slate-900/80 p-4 rounded-xl border border-slate-700">
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="text-cyan-400 font-bold text-lg">ВЫ</div>
-              <div className="text-3xl font-black text-white">{myScore}/10</div>
-            </div>
+          <div className="text-right">
+            <div className="text-cyan-400 font-bold text-lg">ВЫ</div>
+            <div className="text-3xl font-black text-white">{myScore}/10</div>
           </div>
           
           <div className="text-slate-500 font-mono text-sm">VS</div>
 
-          <div className="flex items-center gap-4">
-            <div className="text-left">
-              <div className="text-red-400 font-bold text-lg">
-                {opponentName} 
-                <span className="text-xs ml-2 opacity-70">
-                   ({getPvPRank(oppMMR)}) {/* Потребуется передать ммр оппонента через подписку, но для начала можно без этого */}
-                </span>
-              </div>
-              <div className="text-3xl font-black text-white">{oppScore}/10</div>
+          <div className="text-left">
+            {/* ИМЯ И РАНГ ВРАГА */}
+            <div className="text-red-400 font-bold text-lg flex items-center gap-2">
+              {opponentName}
+              <span className="text-xs bg-red-900/30 px-2 py-0.5 rounded text-red-200 font-normal">
+                {opponentMMR} ({getPvPRank(opponentMMR)})
+              </span>
             </div>
+            <div className="text-3xl font-black text-white">{oppScore}/10</div>
           </div>
         </div>
 
@@ -263,7 +264,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
           </div>
         </div>
 
-        {/* PROBLEM AREA */}
+        {/* ЗОНА ВОПРОСА */}
         <div className="flex-1 flex flex-col justify-center">
           {currentProbIndex < 10 && problems[currentProbIndex] ? (
             <div className="bg-slate-800 border border-slate-600 rounded-2xl p-8 shadow-2xl">
@@ -306,8 +307,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
               <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-4">
                 ПОБЕДА!
               </h1>
-              <p className="text-slate-300 text-lg mb-8">Вы уничтожили соперника интеллектом.</p>
-              <div className="text-4xl font-mono text-white mb-8">{myScore} : {oppScore}</div>
+              <p className="text-slate-300 text-lg mb-8">Рейтинг повышен! (+25 MMR)</p>
             </>
           ) : (
             <>
@@ -315,11 +315,10 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
               <h1 className="text-5xl font-black text-red-500 mb-4">
                 ПОРАЖЕНИЕ
               </h1>
-              <p className="text-slate-300 text-lg mb-8">Вам нужно больше тренироваться в лаборатории.</p>
-              <div className="text-4xl font-mono text-white mb-8">{myScore} : {oppScore}</div>
+              <p className="text-slate-300 text-lg mb-8">Рейтинг понижен (-25 MMR)</p>
             </>
           )}
-          
+          <div className="text-4xl font-mono text-white mb-8">{myScore} : {oppScore}</div>
           <button onClick={onBack} className="px-8 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors">
             В меню
           </button>
