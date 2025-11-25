@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import Latex from 'react-latex-next';
 import { Zap, Loader, Trophy, XCircle, Play } from 'lucide-react';
-// Импортируем функции рангов, чтобы писать "Гладиатор" вместо цифр
 import { getPvPRank } from '../lib/gameLogic';
 
 type DuelState = 'lobby' | 'searching' | 'battle' | 'finished';
@@ -15,7 +14,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
   
   // Данные соперника
   const [opponentName, setOpponentName] = useState<string>('???');
-  const [opponentMMR, setOpponentMMR] = useState<number>(1000); // <--- Новое состояние
+  const [opponentMMR, setOpponentMMR] = useState<number>(1000);
   
   // Игровые данные
   const [problems, setProblems] = useState<any[]>([]);
@@ -26,12 +25,24 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
   const [userAnswer, setUserAnswer] = useState('');
   const [winner, setWinner] = useState<'me' | 'opponent' | 'draw' | null>(null);
 
+  // Реф для хранения ID интервала (чтобы очищать его)
+  const pollingRef = useRef<any>(null);
+
+  // Очистка при выходе
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      if (duelId) supabase.channel(`duel-${duelId}`).unsubscribe();
+    };
+  }, [duelId]);
+
   // === 1. ПОИСК МАТЧА ===
   async function findMatch() {
     setStatus('searching');
     const myMMR = profile?.mmr || 1000;
     const range = 300;
 
+    // Ищем открытую комнату
     const { data: waitingDuel } = await supabase
       .from('duels')
       .select('*')
@@ -43,6 +54,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
       .maybeSingle();
 
     if (waitingDuel) {
+      // ПРИСОЕДИНЯЕМСЯ
       await supabase
         .from('duels')
         .update({ 
@@ -54,9 +66,11 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
       
       setDuelId(waitingDuel.id);
       loadProblems(waitingDuel.problem_ids);
-      fetchOpponentData(waitingDuel.player1_id); // <--- Обновили вызов
+      fetchOpponentData(waitingDuel.player1_id);
       startBattleSubscription(waitingDuel.id, 'player2');
+      setStatus('battle'); // Сразу переключаем статус для второго игрока
     } else {
+      // СОЗДАЕМ НОВУЮ
       const { data: allProbs } = await supabase
         .from('problems')
         .select('id')
@@ -79,25 +93,46 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
         setDuelId(newDuel.id);
         loadProblems(shuffled);
         startBattleSubscription(newDuel.id, 'player1');
+        
+        // ЗАПУСКАЕМ СТРАХОВКУ (POLLING)
+        // Каждые 2 секунды проверяем: "Не пришел ли кто?"
+        pollingRef.current = setInterval(async () => {
+          const { data: check } = await supabase
+            .from('duels')
+            .select('status, player2_id')
+            .eq('id', newDuel.id)
+            .single();
+
+          if (check && check.status === 'active' && check.player2_id) {
+            // О! Кто-то пришел!
+            clearInterval(pollingRef.current); // Останавливаем проверку
+            fetchOpponentData(check.player2_id);
+            setStatus('battle'); // Начинаем бой
+          }
+        }, 2000);
       }
     }
   }
 
-  // === 2. ПОДПИСКА ===
+  // === 2. ПОДПИСКА (REALTIME) ===
   function startBattleSubscription(id: string, myRole: 'player1' | 'player2') {
-    const channel = supabase
+    supabase
       .channel(`duel-${id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'duels', filter: `id=eq.${id}` }, 
       (payload) => {
         const newData = payload.new;
         
-        if (newData.status === 'active' && status !== 'battle') {
-          setStatus('battle');
-          if (myRole === 'player1' && newData.player2_id) {
-             fetchOpponentData(newData.player2_id); // <--- Обновили вызов
+        // Если статус стал active (сработал Realtime)
+        if (newData.status === 'active') {
+          if (status !== 'battle') setStatus('battle');
+          if (pollingRef.current) clearInterval(pollingRef.current); // Останавливаем страховку
+          
+          if (myRole === 'player1' && newData.player2_id && opponentName === '???') {
+             fetchOpponentData(newData.player2_id);
           }
         }
 
+        // Обновление очков
         if (myRole === 'player1') {
           setOppScore(newData.player2_score);
           setOppProgress(newData.player2_progress);
@@ -117,15 +152,15 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
   async function loadProblems(ids: string[]) {
     if (!ids || ids.length === 0) return;
     const { data } = await supabase.from('problems').select('*').in('id', ids);
+    // Сортируем задачи в том же порядке, что и ID в базе
     const sorted = ids.map(id => data?.find(p => p.id === id)).filter(Boolean);
     setProblems(sorted);
   }
 
-  // <--- НОВАЯ ФУНКЦИЯ: Тянем и имя, и рейтинг
   async function fetchOpponentData(uid: string) {
     const { data } = await supabase
       .from('profiles')
-      .select('username, mmr') // Просим еще и mmr
+      .select('username, mmr')
       .eq('id', uid)
       .single();
       
@@ -164,6 +199,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
 
   function endGame(winnerId: string) {
     setStatus('finished');
+    if (pollingRef.current) clearInterval(pollingRef.current);
     if (winnerId === user!.id) {
       setWinner('me');
     } else {
@@ -184,7 +220,6 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
             <p className="text-red-300/60">Битва умов в реальном времени</p>
           </div>
           
-          {/* Твоя статистика */}
           <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
              <div className="text-sm text-slate-400">Ваш рейтинг</div>
              <div className="text-2xl font-bold text-red-400">
@@ -211,7 +246,12 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
         <Loader className="w-16 h-16 text-red-500 animate-spin" />
         <h2 className="text-2xl font-bold text-white animate-pulse">Поиск противника...</h2>
         <p className="text-slate-400">Диапазон: {profile?.mmr ? profile.mmr - 300 : 700} - {profile?.mmr ? profile.mmr + 300 : 1300} MMR</p>
-        <button onClick={onBack} className="px-6 py-2 border border-slate-600 rounded-full text-slate-400 hover:bg-slate-800">
+        <button onClick={() => {
+            // Кнопка отмены: очищаем интервал и статус
+            if(pollingRef.current) clearInterval(pollingRef.current);
+            setStatus('lobby');
+            // В идеале еще удалить созданную комнату из базы, но пока так
+        }} className="px-6 py-2 border border-slate-600 rounded-full text-slate-400 hover:bg-slate-800">
           Отмена
         </button>
       </div>
@@ -231,11 +271,10 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
           <div className="text-slate-500 font-mono text-sm">VS</div>
 
           <div className="text-left">
-            {/* ИМЯ И РАНГ ВРАГА */}
             <div className="text-red-400 font-bold text-lg flex items-center gap-2">
               {opponentName}
               <span className="text-xs bg-red-900/30 px-2 py-0.5 rounded text-red-200 font-normal">
-                {opponentMMR} ({getPvPRank(opponentMMR)})
+                {opponentMMR}
               </span>
             </div>
             <div className="text-3xl font-black text-white">{oppScore}/10</div>
