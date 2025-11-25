@@ -144,6 +144,14 @@ export function Reactor({ module, onBack }: ReactorProps) {
     // Простая логика: 1 задача = +10% прогресса (максимум 100)
     const newPercentage = Math.min(newExperiments * 10, 100);
 
+    const handleKeyInput = (symbol: string) => {
+      setUserAnswer((prev) => prev + symbol);
+    };
+    
+    const handleBackspace = () => {
+      setUserAnswer((prev) => prev.slice(0, -1));
+    };
+
     if (progressData) {
       await supabase
         .from('user_progress')
