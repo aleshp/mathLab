@@ -230,7 +230,12 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
 
           <div className="flex items-center gap-4">
             <div className="text-left">
-              <div className="text-red-400 font-bold text-lg">{opponentName}</div>
+              <div className="text-red-400 font-bold text-lg">
+                {opponentName} 
+                <span className="text-xs ml-2 opacity-70">
+                   ({getPvPRank(oppMMR)}) {/* Потребуется передать ммр оппонента через подписку, но для начала можно без этого */}
+                </span>
+              </div>
               <div className="text-3xl font-black text-white">{oppScore}/10</div>
             </div>
           </div>
