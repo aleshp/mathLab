@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { Module } from '../lib/supabase';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import Latex from 'react-latex-next'; // Подключаем отрисовку формул
-import 'katex/dist/katex.min.css'; // Стили для формул
-import { MathKeypad } from './MathKeypad';
+import Latex from 'react-latex-next';
+import 'katex/dist/katex.min.css';
 import {
   ArrowLeft,
   AlertCircle,
@@ -14,14 +13,16 @@ import {
   Zap,
   Loader
 } from 'lucide-react';
+// Импортируем нашу клавиатуру
+import { MathKeypad } from './MathKeypad';
 
-// Тип данных точно как в базе данных
 type Problem = {
   id: string;
   question: string;
   answer: string;
   type: string;
   hint?: string;
+  image_url?: string; // Поддержка картинок
 };
 
 type ReactorProps = {
@@ -33,9 +34,9 @@ export function Reactor({ module, onBack }: ReactorProps) {
   const { user, profile } = useAuth();
   
   // Состояния
-  const [problems, setProblems] = useState<Problem[]>([]); // Задачи из базы
+  const [problems, setProblems] = useState<Problem[]>([]);
   const [currentProblem, setCurrentProblem] = useState<Problem | null>(null);
-  const [loading, setLoading] = useState(true); // Загружается ли база?
+  const [loading, setLoading] = useState(true);
   
   const [userAnswer, setUserAnswer] = useState('');
   const [result, setResult] = useState<'correct' | 'incorrect' | null>(null);
@@ -46,7 +47,17 @@ export function Reactor({ module, onBack }: ReactorProps) {
   const [problemsSolved, setProblemsSolved] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
 
-  // 1. При открытии модуля загружаем задачи из Supabase
+  // === ЛОГИКА КЛАВИАТУРЫ (Которой не хватало) ===
+  const handleKeyInput = (symbol: string) => {
+    setUserAnswer((prev) => prev + symbol);
+  };
+
+  const handleBackspace = () => {
+    setUserAnswer((prev) => prev.slice(0, -1));
+  };
+  // ============================================
+
+  // Загрузка задач
   useEffect(() => {
     async function fetchProblems() {
       setLoading(true);
@@ -54,15 +65,14 @@ export function Reactor({ module, onBack }: ReactorProps) {
         const { data, error } = await supabase
           .from('problems')
           .select('*')
-          .eq('module_id', module.id); // Фильтр по текущему модулю
+          .eq('module_id', module.id);
 
         if (error) {
-          console.error('Ошибка загрузки задач:', error);
+          console.error('Ошибка:', error);
           return;
         }
 
         if (data && data.length > 0) {
-          // Перемешиваем задачи случайным образом
           const shuffled = data.sort(() => 0.5 - Math.random());
           setProblems(shuffled);
           setCurrentProblem(shuffled[0]);
@@ -75,13 +85,9 @@ export function Reactor({ module, onBack }: ReactorProps) {
     fetchProblems();
   }, [module.id]);
 
-  // Функция выбора следующей задачи
   function loadNextProblem() {
     if (problems.length === 0) return;
-    
-    // Выбираем случайную задачу из загруженных
     const randomProblem = problems[Math.floor(Math.random() * problems.length)];
-    
     setCurrentProblem(randomProblem);
     setUserAnswer('');
     setResult(null);
@@ -90,7 +96,6 @@ export function Reactor({ module, onBack }: ReactorProps) {
   }
 
   function normalizeAnswer(answer: string): string {
-    // Убираем пробелы и меняем запятые на точки (для чисел)
     return answer.toLowerCase().replace(/\s+/g, '').replace(',', '.');
   }
 
@@ -103,7 +108,6 @@ export function Reactor({ module, onBack }: ReactorProps) {
 
     setResult(isCorrect ? 'correct' : 'incorrect');
 
-    // Запись истории в базу
     await supabase.from('experiments').insert({
       user_id: user.id,
       module_id: module.id,
@@ -112,27 +116,15 @@ export function Reactor({ module, onBack }: ReactorProps) {
       time_spent: timeSpent,
     });
 
-    // Обновляем локальную статистику
     setProblemsSolved(prev => prev + 1);
     if (isCorrect) {
       setCorrectCount(prev => prev + 1);
     }
 
-    // Обновляем профиль пользователя (рейтинг)
     const newTotal = (profile?.total_experiments ?? 0) + 1;
-    // (Логика подсчета рейтинга упрощена для надежности)
-    const newCorrectTotal = isCorrect ? (profile?.success_rate ? (profile.success_rate / 100 * (newTotal - 1)) + 1 : 1) : (profile?.success_rate ? (profile.success_rate / 100 * (newTotal - 1)) : 0);
-    
-    // ВАЖНО: Мы просто инкрементируем счетчик, триггер в базе сам пересчитает уровень
-    await supabase
-      .from('profiles')
-      .update({
-        total_experiments: newTotal,
-        // Можно добавить логику success_rate здесь
-      })
-      .eq('id', user.id);
+    await supabase.from('profiles').update({ total_experiments: newTotal }).eq('id', user.id);
 
-    // Обновляем прогресс модуля
+    // Обновляем прогресс
     const { data: progressData } = await supabase
       .from('user_progress')
       .select('*')
@@ -141,26 +133,14 @@ export function Reactor({ module, onBack }: ReactorProps) {
       .maybeSingle();
 
     const newExperiments = (progressData?.experiments_completed ?? 0) + 1;
-    // Простая логика: 1 задача = +10% прогресса (максимум 100)
     const newPercentage = Math.min(newExperiments * 10, 100);
 
-    const handleKeyInput = (symbol: string) => {
-      setUserAnswer((prev) => prev + symbol);
-    };
-    
-    const handleBackspace = () => {
-      setUserAnswer((prev) => prev.slice(0, -1));
-    };
-
     if (progressData) {
-      await supabase
-        .from('user_progress')
-        .update({
+      await supabase.from('user_progress').update({
           experiments_completed: newExperiments,
           completion_percentage: newPercentage,
           last_accessed: new Date().toISOString(),
-        })
-        .eq('id', progressData.id);
+        }).eq('id', progressData.id);
     } else {
       await supabase.from('user_progress').insert({
         user_id: user.id,
@@ -170,7 +150,6 @@ export function Reactor({ module, onBack }: ReactorProps) {
       });
     }
 
-    // Через 2 секунды даем новую задачу
     setTimeout(() => {
       loadNextProblem();
     }, 2000);
@@ -178,7 +157,6 @@ export function Reactor({ module, onBack }: ReactorProps) {
 
   const successRate = problemsSolved > 0 ? ((correctCount / problemsSolved) * 100).toFixed(0) : 0;
 
-  // Если идет загрузка
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -191,7 +169,7 @@ export function Reactor({ module, onBack }: ReactorProps) {
   }
 
   return (
-    <div className="w-full h-full overflow-y-auto">
+    <div className="w-full h-full overflow-y-auto pb-20">
       <div className="max-w-4xl mx-auto p-8">
         <button
           onClick={onBack}
@@ -230,7 +208,6 @@ export function Reactor({ module, onBack }: ReactorProps) {
 
         {currentProblem ? (
           <div className="bg-slate-800/50 backdrop-blur-sm border border-cyan-500/30 rounded-2xl p-8 mb-6 relative overflow-hidden">
-            {/* Декоративный фон */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
             
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -239,15 +216,20 @@ export function Reactor({ module, onBack }: ReactorProps) {
             </div>
 
             <div className="mb-8 relative z-10">
+              {/* Если есть картинка - показываем */}
+              {currentProblem.image_url && (
+                <div className="mb-6 flex justify-center">
+                  <img 
+                    src={currentProblem.image_url} 
+                    alt="График к задаче" 
+                    className="max-h-64 rounded-lg border border-cyan-500/30 shadow-lg"
+                  />
+                </div>
+              )}
+
               <h2 className="text-2xl font-semibold text-white mb-4 leading-relaxed">
-                {/* Отрисовка LaTeX формул */}
                 <Latex>{currentProblem.question}</Latex>
               </h2>
-              <div className="inline-block px-3 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded-full">
-                <span className="text-cyan-400 text-xs font-mono uppercase">
-                  ТИП: {currentProblem.type}
-                </span>
-              </div>
             </div>
 
             {result === null ? (
@@ -260,12 +242,13 @@ export function Reactor({ module, onBack }: ReactorProps) {
                     type="text"
                     value={userAnswer}
                     onChange={(e) => setUserAnswer(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-900/80 border border-cyan-500/30 rounded-lg text-white text-lg placeholder-cyan-300/30 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
-                    placeholder="Введите числовой результат..."
+                    className="w-full px-4 py-3 bg-slate-900/80 border border-cyan-500/30 rounded-lg text-white text-lg placeholder-cyan-300/30 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all font-mono"
+                    placeholder="Ответ..."
                     autoFocus
                   />
                 </div>
 
+                {/* ВСТАВЛЯЕМ КЛАВИАТУРУ */}
                 <MathKeypad onKeyPress={handleKeyInput} onBackspace={handleBackspace} />
 
                 {showHint && currentProblem.hint && (
@@ -273,7 +256,9 @@ export function Reactor({ module, onBack }: ReactorProps) {
                     <AlertCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                     <div>
                       <div className="text-blue-400 font-semibold text-sm mb-1">Данные разведки</div>
-                      <div className="text-blue-300/80 text-sm"><Latex>{currentProblem.hint}</Latex></div>
+                      <div className="text-blue-300/80 text-sm">
+                         <Latex>{currentProblem.hint}</Latex>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -315,9 +300,6 @@ export function Reactor({ module, onBack }: ReactorProps) {
                         <div className="text-xl font-bold text-emerald-400">
                           Синтез успешен!
                         </div>
-                        <div className="text-emerald-300/60 text-sm">
-                          Результат записан в журнал. Загрузка следующего протокола...
-                        </div>
                       </div>
                     </>
                   ) : (
@@ -344,7 +326,7 @@ export function Reactor({ module, onBack }: ReactorProps) {
             <Zap className="w-12 h-12 text-cyan-400/30 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">Нет данных</h3>
             <p className="text-cyan-300/40">
-              В этом секторе пока нет задач. Попробуйте другой модуль.
+              В этом секторе пока нет задач.
             </p>
           </div>
         )}
