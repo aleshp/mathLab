@@ -56,7 +56,7 @@ export function Leaderboard({ onClose }: { onClose: () => void }) {
                Загрузка данных...
              </div>
           ) : leaders.map((player, index) => {
-            const rank = getRank(player.clearance_level);
+            const rank = getRank(player.clearance_level, player.is_admin);
             const isTop3 = index < 3;
             
             return (
