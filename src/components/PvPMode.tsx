@@ -219,7 +219,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
     e.preventDefault();
     if (!duelId || feedback || userAnswer.trim() === '') return; 
     const currentProb = problems[currentProbIndex];
-    const isCorrect = userAnswer.toLowerCase().trim() === currentProb.answer.toLowerCase().trim();
+    const isCorrect = checkAnswer(userAnswer, currentProb.answer);
     submitResult(isCorrect);
   }
 
