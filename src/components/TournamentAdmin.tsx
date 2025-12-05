@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import QRCode from 'react-qr-code';
-import { Users, Play, Trophy, Share2, X, Crown, Copy, Loader } from 'lucide-react';
+// Добавили RefreshCw (иконка обновления)
+import { Users, Play, Trophy, Share2, X, Crown, Copy, Loader, RefreshCw } from 'lucide-react';
 
 export function TournamentAdmin({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
@@ -10,12 +11,12 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
   const [joinCode, setJoinCode] = useState<string>('');
   const [participants, setParticipants] = useState<any[]>([]);
   const [status, setStatus] = useState('waiting');
+  const [loading, setLoading] = useState(false); // Состояние загрузки списка
 
   // 1. Создание турнира
   useEffect(() => {
     async function createTournament() {
       if (!user) return;
-      // Генерация кода
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       
       const { data } = await supabase
@@ -32,7 +33,10 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
         const channel = supabase
           .channel('admin-participants')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_participants', filter: `tournament_id=eq.${data.id}` }, 
-          () => { fetchParticipants(data.id); }) // Перезагружаем список при любом изменении
+          () => { 
+            console.log('Update received!'); // Лог для отладки
+            fetchParticipants(data.id); 
+          }) 
           .subscribe();
           
         return () => { supabase.removeChannel(channel); };
@@ -42,25 +46,37 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
   }, []);
 
   async function fetchParticipants(tId: string) {
-    const { data } = await supabase
+    // Если ID не передан, берем из стейта
+    const targetId = tId || tournamentId;
+    if (!targetId) return;
+
+    setLoading(true);
+    const { data, error } = await supabase
       .from('tournament_participants')
-      .select('*, profiles(username, mmr)')
-      .eq('tournament_id', tId);
-    if (data) setParticipants(data);
+      .select('*, profiles(username, mmr, clearance_level)') // Явно запрашиваем поля профиля
+      .eq('tournament_id', targetId);
+    
+    if (error) {
+      console.error("Ошибка загрузки участников:", error);
+    }
+    
+    if (data) {
+      console.log("Загружены участники:", data);
+      setParticipants(data);
+    }
+    setLoading(false);
   }
 
   // 2. СТАРТ ТУРНИРА
   async function startTournament() {
     if (!tournamentId || participants.length < 2) {
-      alert("Нужно минимум 2 участника!");
+      alert("Нужно минимум 2 участника для старта!");
       return;
     }
 
     setStatus('active');
-    // Ставим статус турнира в active -> У учеников сменится экран
     await supabase.from('tournaments').update({ status: 'active' }).eq('id', tournamentId);
 
-    // Логика перемешивания и создания пар
     const shuffled = [...participants].sort(() => 0.5 - Math.random());
     
     // Получаем задачи для PvP
@@ -69,34 +85,29 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
           .select('id')
           .eq('module_id', '00000000-0000-0000-0000-000000000099');
     
-    // Создаем дуэли
     const duelPromises = [];
     for (let i = 0; i < shuffled.length; i += 2) {
       if (i + 1 < shuffled.length) {
         const p1 = shuffled[i];
         const p2 = shuffled[i+1];
         
-        // 5 случайных задач
         const probIds = allProbs?.sort(() => 0.5 - Math.random()).slice(0, 5).map(p => p.id) || [];
 
         duelPromises.push(
           supabase.from('duels').insert({
             player1_id: p1.user_id,
             player2_id: p2.user_id,
-            status: 'active', // Сразу активны!
+            status: 'active', 
             problem_ids: probIds,
             tournament_id: tournamentId,
             round: 1
           })
         );
-      } else {
-        // Нечетный игрок (остался без пары) - Автопобеда или Ждет
-        console.log('Игрок без пары:', shuffled[i].profiles.username);
       }
     }
     
     await Promise.all(duelPromises);
-    onClose(); // Закрываем админку, учитель может идти смотреть лидерборд или дуэли
+    onClose(); 
   }
 
   const joinLink = `${window.location.origin}/?t=${joinCode}`;
@@ -156,32 +167,52 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
               </div>
               <h3 className="text-xl font-bold text-white">Список участников</h3>
             </div>
-            <span className="px-3 py-1 bg-slate-800 rounded-full text-slate-300 font-mono text-sm">
-              Всего: {participants.length}
-            </span>
+            
+            <div className="flex items-center gap-4">
+               {/* КНОПКА РУЧНОГО ОБНОВЛЕНИЯ */}
+               <button 
+                 onClick={() => tournamentId && fetchParticipants(tournamentId)}
+                 className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors"
+                 title="Обновить список"
+               >
+                 <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+               </button>
+
+               <span className="px-3 py-1 bg-slate-800 rounded-full text-slate-300 font-mono text-sm">
+                 Всего: {participants.length}
+               </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {participants.map((p) => (
-              <div key={p.id} className="group p-4 bg-slate-800 border border-slate-700 hover:border-cyan-500/50 rounded-xl flex items-center gap-4 transition-all hover:-translate-y-1">
-                <div className="w-12 h-12 bg-gradient-to-br from-cyan-600 to-blue-700 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                  {p.profiles.username[0].toUpperCase()}
-                </div>
-                <div>
-                  <div className="font-bold text-white text-lg group-hover:text-cyan-300 transition-colors">
-                    {p.profiles.username}
+            {participants.map((p) => {
+              // Защита от null (если профиль не загрузился из-за RLS)
+              const username = p.profiles?.username || 'Неизвестный';
+              const mmr = p.profiles?.mmr || '???';
+              const lvl = p.profiles?.clearance_level ?? 0;
+              const letter = username[0]?.toUpperCase() || '?';
+
+              return (
+                <div key={p.id} className="group p-4 bg-slate-800 border border-slate-700 hover:border-cyan-500/50 rounded-xl flex items-center gap-4 transition-all hover:-translate-y-1">
+                  <div className="w-12 h-12 bg-gradient-to-br from-cyan-600 to-blue-700 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                    {letter}
                   </div>
-                  <div className="text-xs text-slate-400 flex gap-2">
-                    <span>{p.profiles.mmr} MP</span>
-                    <span>•</span>
-                    <span>LVL {p.profiles.clearance_level}</span>
+                  <div>
+                    <div className="font-bold text-white text-lg group-hover:text-cyan-300 transition-colors">
+                      {username}
+                    </div>
+                    <div className="text-xs text-slate-400 flex gap-2">
+                      <span>{mmr} MP</span>
+                      <span>•</span>
+                      <span>LVL {lvl}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           
-          {participants.length === 0 && (
+          {participants.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center h-64 text-slate-500 border-2 border-dashed border-slate-800 rounded-2xl">
               <Loader className="w-10 h-10 mb-4 animate-spin opacity-50" />
               <p>Ожидание подключения учеников...</p>
