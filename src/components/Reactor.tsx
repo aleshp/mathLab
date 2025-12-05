@@ -31,7 +31,7 @@ type ReactorProps = {
 };
 
 export function Reactor({ module, onBack }: ReactorProps) {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   
   // Состояния
   const [problems, setProblems] = useState<Problem[]>([]);
