@@ -66,7 +66,7 @@ function MainApp() {
     setShowOnboarding(false);
   }
 
-  const currentRank = profile ? getRank(profile.clearance_level) : null;
+  const currentRank = profile ? getRank(profile.clearance_level, profile.is_admin) : null;
   const progressPercent = profile ? getLevelProgress(profile.total_experiments) : 0;
 
   if (loading) {
