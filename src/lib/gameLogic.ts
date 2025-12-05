@@ -3,11 +3,12 @@
 export type Rank = {
   title: string;
   minLevel: number;
-  icon: string; // Название иконки Lucide
+  icon: string; 
   description: string;
   color: string;
 };
 
+// 1. ОБЫЧНЫЕ РАНГИ (Я немного изменил 10 уровень, чтобы Архитектор был уникальным)
 export const RANKS: Rank[] = [
   { 
     title: "Подопытный", 
@@ -24,7 +25,7 @@ export const RANKS: Rank[] = [
     color: "text-cyan-400" 
   },
   { 
-    title: "Младший Научный Сотрудник", 
+    title: "Младший Н.С.", 
     minLevel: 3, 
     icon: "microscope", 
     description: "Доверенное лицо. Доступ к сложным вычислениям.", 
@@ -38,31 +39,44 @@ export const RANKS: Rank[] = [
     color: "text-purple-400" 
   },
   { 
-    title: "Архитектор Реальности", 
+    title: "Легенда Науки", // <--- ИЗМЕНИЛ (Архитектор теперь только админ)
     minLevel: 10, 
-    icon: "crown", 
-    description: "Легендарный статус. Вы видите матрицу.", 
-    color: "text-amber-400" 
+    icon: "star", 
+    description: "Вы достигли вершины человеческого познания.", 
+    color: "text-emerald-400" 
   }
 ];
 
-export function getRank(level: number): Rank {
-  // Ищем ранг, подходящий под уровень (от большего к меньшему)
+// 2. СПЕЦ-РАНГ ДЛЯ АДМИНА
+export const ADMIN_RANK: Rank = {
+  title: "Архитектор",
+  minLevel: 999, 
+  icon: "crown", // Корона только у админа
+  description: "Создатель системы. Управление реальностью.",
+  color: "text-amber-400" 
+};
+
+// 3. ФУНКЦИЯ ПОЛУЧЕНИЯ РАНГА
+// Теперь принимает второй аргумент: isAdmin
+export function getRank(level: number, isAdmin: boolean = false): Rank {
+  if (isAdmin) {
+    return ADMIN_RANK; // Если админ - сразу возвращаем Архитектора
+  }
+  // Иначе ищем по уровню
   return [...RANKS].reverse().find(r => level >= r.minLevel) || RANKS[0];
 }
 
 export function getLevelProgress(totalExperiments: number): number {
-  // Допустим, каждый уровень это 10 задач.
-  // 24 задачи = 2 уровень, 4 задачи в прогрессе (40%)
   return (totalExperiments % 10) * 10;
 }
 
+// 4. PVP РАНГИ (Оставляем как было)
 export function getPvPRank(mmr: number): string {
-  if (mmr < 1100) return "Новичок";      // 1000 - база
-  if (mmr < 1300) return "Боец";         // Выиграл 4-10 игр
-  if (mmr < 1600) return "Гладиатор";    // Серьезный игрок
-  if (mmr < 2000) return "Мастер";       // Олимпиадник
-  return "Легенда";                      // Монстр
+  if (mmr < 1100) return "Новичок";
+  if (mmr < 1300) return "Боец";
+  if (mmr < 1600) return "Гладиатор";
+  if (mmr < 2000) return "Мастер";
+  return "Легенда";
 }
 
 export function getPvPColor(mmr: number): string {
