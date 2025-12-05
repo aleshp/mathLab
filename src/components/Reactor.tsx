@@ -3,6 +3,7 @@ import { Module } from '../lib/supabase';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import Latex from 'react-latex-next';
+import { checkAnswer } from '../lib/mathUtils';
 import 'katex/dist/katex.min.css';
 import {
   ArrowLeft,
