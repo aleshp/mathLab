@@ -125,8 +125,14 @@ function MainApp() {
   }
 
   function handleBackToMap() {
-    setView('map');
-    setSelectedSector(null);
+    if (activeTournamentId) {
+      // Если мы в турнире - возвращаемся в лобби турнира (смотреть сетку)
+      setView('tournament_lobby');
+    } else {
+      // Иначе на карту
+      setView('map');
+      setSelectedSector(null);
+    }
   }
 
   function handleBackToModules() {
