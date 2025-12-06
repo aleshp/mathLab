@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import QRCode from 'react-qr-code';
+import { TournamentBracket } from './TournamentBracket';
 // Добавили RefreshCw (иконка обновления)
 import { Users, Play, Trophy, Share2, X, Crown, Copy, Loader, RefreshCw } from 'lucide-react';
 
