@@ -486,7 +486,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
               <h1 className="text-5xl font-black text-red-500 mb-4">
                 ПОРАЖЕНИЕ
               </h1>
-              <p className="text-slate-300 text-lg mb-8">Рейтинг понижен (-25 MP)</p>
+              <p className="text-slate-300 text-lg mb-8">Отдыхай</p>
             </>
           )}
           <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-700 mb-8">
