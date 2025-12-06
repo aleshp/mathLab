@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Users, Crown, Loader, Swords, Shield } from 'lucide-react';
+import { Users, Loader, Shield } from 'lucide-react';
+// Импортируем сетку, чтобы показать её после старта
+import { TournamentBracket } from './TournamentBracket';
 
 type LobbyProps = {
   tournamentId: string;
-  onBattleStart: () => void; // Функция переключения на PvP
+  onBattleStart: () => void; // Функция переключения на экран PvP (сама битва)
 };
 
 export function TournamentLobby({ tournamentId, onBattleStart }: LobbyProps) {
   const { user } = useAuth();
   const [participants, setParticipants] = useState<any[]>([]);
   const [tournamentCode, setTournamentCode] = useState<string>('');
-  const [status, setStatus] = useState('waiting');
+  // Статус турнира: waiting (список) или active (сетка)
+  const [status, setStatus] = useState<'waiting' | 'active' | 'finished'>('waiting');
 
   useEffect(() => {
     // 1. Загружаем инфу о турнире
@@ -20,22 +23,19 @@ export function TournamentLobby({ tournamentId, onBattleStart }: LobbyProps) {
       const { data } = await supabase.from('tournaments').select('*').eq('id', tournamentId).single();
       if (data) {
         setTournamentCode(data.code);
-        if (data.status === 'active') onBattleStart(); // Если уже идет - кидаем в бой
+        setStatus(data.status);
       }
-      
       // Загружаем участников
       fetchParticipants();
     }
     loadInfo();
 
-    // 2. Подписка на изменения ТУРНИРА (Старт)
+    // 2. Подписка на изменения ТУРНИРА (Ждем старта)
     const tourSub = supabase
       .channel(`tour-status-${tournamentId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournaments', filter: `id=eq.${tournamentId}` }, 
       (payload) => {
-        if (payload.new.status === 'active') {
-          onBattleStart(); // УЧИТЕЛЬ НАЖАЛ СТАРТ -> ПЕРЕХОДИМ В PVP
-        }
+        setStatus(payload.new.status);
       })
       .subscribe();
 
@@ -61,6 +61,19 @@ export function TournamentLobby({ tournamentId, onBattleStart }: LobbyProps) {
     if (data) setParticipants(data);
   }
 
+  // === ЕСЛИ ТУРНИР НАЧАЛСЯ — ПОКАЗЫВАЕМ СЕТКУ ===
+  if (status === 'active' || status === 'finished') {
+    return (
+      <div className="h-full p-4 md:p-8">
+        <TournamentBracket 
+          tournamentId={tournamentId} 
+          onEnterMatch={onBattleStart} // Передаем функцию входа в бой
+        />
+      </div>
+    );
+  }
+
+  // === ЕСЛИ ЖДЕМ — ПОКАЗЫВАЕМ СПИСОК ===
   return (
     <div className="flex items-center justify-center h-full p-4">
       <div className="w-full max-w-5xl bg-slate-900/90 border border-cyan-500/30 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
@@ -92,17 +105,21 @@ export function TournamentLobby({ tournamentId, onBattleStart }: LobbyProps) {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {participants.map((p) => {
               const isMe = p.user_id === user?.id;
+              // Защита от null
+              const username = p.profiles?.username || 'Загрузка...';
+              const mmr = p.profiles?.mmr || '???';
+              
               return (
                 <div key={p.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isMe ? 'bg-cyan-900/20 border-cyan-500/50' : 'bg-slate-900 border-slate-700'} animate-in zoom-in duration-300`}>
                   <div className="w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-800 rounded-full flex items-center justify-center text-white font-bold text-sm border border-slate-600">
-                    {p.profiles.username.substring(0, 2).toUpperCase()}
+                    {username.substring(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <div className={`font-bold truncate ${isMe ? 'text-cyan-400' : 'text-slate-200'}`}>
-                      {isMe ? 'Вы' : p.profiles.username}
+                      {isMe ? 'Вы' : username}
                     </div>
                     <div className="text-[10px] text-slate-500 font-mono">
-                      {p.profiles.mmr} MP
+                      {mmr} MP
                     </div>
                   </div>
                 </div>
@@ -119,7 +136,7 @@ export function TournamentLobby({ tournamentId, onBattleStart }: LobbyProps) {
         </div>
 
         <div className="mt-6 text-center text-slate-500 text-xs">
-          Приготовьтесь. Когда учитель начнет турнир, вы автоматически перейдете к задачам.
+          Приготовьтесь. Когда учитель начнет турнир, вы увидите турнирную таблицу.
         </div>
       </div>
     </div>
