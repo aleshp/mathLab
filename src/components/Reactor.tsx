@@ -32,6 +32,7 @@ type ReactorProps = {
 };
 
 export function Reactor({ module, onBack }: ReactorProps) {
+  // Достаем refreshProfile для мгновенного обновления шапки
   const { user, profile, refreshProfile } = useAuth();
   
   // Состояния
@@ -95,20 +96,20 @@ export function Reactor({ module, onBack }: ReactorProps) {
     setStartTime(Date.now());
   }
 
-  function normalizeAnswer(answer: string): string {
-    return answer.toLowerCase().replace(/\s+/g, '').replace(',', '.');
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentProblem || !user) return;
 
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+    
+    // ИСПОЛЬЗУЕМ УМНУЮ ПРОВЕРКУ (0.5 == 1/2)
     const isCorrect = checkAnswer(userAnswer, currentProblem.answer);
 
     setResult(isCorrect ? 'correct' : 'incorrect');
 
-    // 1. Отправляем в базу
+    // 1. ОТПРАВЛЯЕМ В БАЗУ
+    // SQL-триггер handle_new_experiment сам проверит, решал ли ты это раньше.
+    // Если решал -> XP не даст. Если нет -> даст +1 XP.
     await supabase.from('experiments').insert({
       user_id: user.id,
       module_id: module.id,
@@ -118,19 +119,19 @@ export function Reactor({ module, onBack }: ReactorProps) {
       time_spent: timeSpent,
     });
 
-    // 2. Локальная статистика сессии
+    // 2. Локальная статистика (для красивых цифр прямо сейчас)
     setProblemsSolved(prev => prev + 1);
     if (isCorrect) {
       setCorrectCount(prev => prev + 1);
       
-      // 3. ОБНОВЛЕНИЕ ПРОФИЛЯ (LVL & XP)
-      // Мы даем базе 100мс на выполнение триггера, а потом обновляем данные
+      // 3. ОБНОВЛЕНИЕ ПРОФИЛЯ
+      // Ждем 100мс, пока база обновит данные, и запрашиваем свежий профиль
       setTimeout(() => {
-        refreshProfile(); // <--- ВОТ ЭТА МАГИЯ
+        refreshProfile(); 
       }, 100);
     }
 
-    // 4. Обновляем прогресс модуля
+    // 4. Обновляем прогресс модуля (Это оставляем, чтобы видеть % прохождения темы)
     if (isCorrect) {
         const { data: progressData } = await supabase
           .from('user_progress')
@@ -158,12 +159,12 @@ export function Reactor({ module, onBack }: ReactorProps) {
        }
     }
 
+    // Переход к следующему вопросу
     setTimeout(() => {
       loadNextProblem();
     }, 2000);
   }
 
-  // Расчет локального КПД для отображения
   const successRate = problemsSolved > 0 ? ((correctCount / problemsSolved) * 100).toFixed(0) : 0;
 
   if (loading) {
@@ -225,6 +226,7 @@ export function Reactor({ module, onBack }: ReactorProps) {
             </div>
 
             <div className="mb-8 relative z-10">
+              {/* ПОДДЕРЖКА КАРТИНОК */}
               {currentProblem.image_url && (
                 <div className="mb-6 flex justify-center">
                   <img 
@@ -256,6 +258,7 @@ export function Reactor({ module, onBack }: ReactorProps) {
                   />
                 </div>
 
+                {/* КЛАВИАТУРА */}
                 <MathKeypad onKeyPress={handleKeyInput} onBackspace={handleBackspace} />
 
                 {showHint && currentProblem.hint && (
