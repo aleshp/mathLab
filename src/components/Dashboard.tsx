@@ -12,7 +12,8 @@ import {
   Zap,
   Clock,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Cat // Используем Cat как заглушку для питомца, или просто эмодзи
 } from 'lucide-react';
 
 type DashboardProps = {
@@ -37,7 +38,6 @@ const rarityColors = {
   legendary: 'from-amber-400 to-orange-500'
 };
 
-// Словарь для перевода типов задач
 const typeTranslations: Record<string, string> = {
   input: 'Ввод значения',
   choice: 'Тестирование',
@@ -83,7 +83,7 @@ export function Dashboard({ onClose }: DashboardProps) {
       .select('problem_type, correct, time_spent, attempted_at')
       .eq('user_id', profile.id)
       .order('attempted_at', { ascending: false })
-      .limit(10); // Берем последние 10
+      .limit(10);
 
     if (data) {
       setRecentExperiments(data);
@@ -103,6 +103,7 @@ export function Dashboard({ onClose }: DashboardProps) {
   return (
     <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[70] overflow-y-auto">
       <div className="max-w-6xl mx-auto p-8">
+        {/* ЗАГОЛОВОК */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-white">Лабораторный Журнал</h1>
           <div className="flex gap-3">
@@ -124,18 +125,34 @@ export function Dashboard({ onClose }: DashboardProps) {
 
         {profile && (
           <>
-            {/* СТАТИСТИКА */}
+            {/* ГЛАВНАЯ СТАТИСТИКА */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-cyan-500/30 rounded-xl p-6">
-                <div className="flex items-center gap-3 mb-3">
+              
+              {/* КАРТОЧКА ПРОФИЛЯ + СУРИКАТ */}
+              <div className="bg-slate-800/50 backdrop-blur-sm border border-cyan-500/30 rounded-xl p-6 relative overflow-hidden">
+                <div className="flex items-center gap-3 mb-3 relative z-10">
                   <div className="p-2 bg-cyan-500/20 rounded-lg">
                     <User className="w-5 h-5 text-cyan-400" />
                   </div>
                   <div className="text-cyan-400/60 text-sm">Сотрудник</div>
                 </div>
-                <div className="text-xl font-bold text-white truncate">{profile.username}</div>
+                <div className="text-xl font-bold text-white truncate relative z-10">{profile.username}</div>
+                
+                {/* БЛОК СУРИКАТА (ПОЯВЛЯЕТСЯ, ЕСЛИ ЕСТЬ ИМЯ) */}
+                {profile.companion_name && (
+                  <div className="mt-4 pt-4 border-t border-slate-700 flex items-center gap-3 animate-in slide-in-from-left-4 fade-in duration-500">
+                     <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center text-2xl border border-amber-500/50 shadow-lg shadow-amber-500/10">
+                       🦦
+                     </div>
+                     <div>
+                       <div className="text-[10px] text-amber-400/60 font-mono uppercase tracking-wider">Компаньон</div>
+                       <div className="text-amber-100 font-bold text-sm">{profile.companion_name}</div>
+                     </div>
+                  </div>
+                )}
               </div>
 
+              {/* УРОВЕНЬ */}
               <div className="bg-slate-800/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-purple-500/20 rounded-lg">
@@ -146,6 +163,7 @@ export function Dashboard({ onClose }: DashboardProps) {
                 <div className="text-2xl font-bold text-white">LVL {profile.clearance_level}</div>
               </div>
 
+              {/* ОПЫТ */}
               <div className="bg-slate-800/50 backdrop-blur-sm border border-emerald-500/30 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-emerald-500/20 rounded-lg">
@@ -156,6 +174,7 @@ export function Dashboard({ onClose }: DashboardProps) {
                 <div className="text-2xl font-bold text-white">{profile.total_experiments}</div>
               </div>
 
+              {/* ТОЧНОСТЬ */}
               <div className="bg-slate-800/50 backdrop-blur-sm border border-blue-500/30 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-blue-500/20 rounded-lg">
@@ -174,12 +193,12 @@ export function Dashboard({ onClose }: DashboardProps) {
                   <Trophy className="w-5 h-5 text-amber-400" />
                   <h2 className="text-xl font-bold text-white">Достижения</h2>
                 </div>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                   {achievements.length > 0 ? (
                     achievements.map((item, index) => (
                       <div
                         key={index}
-                        className="bg-slate-800/50 border border-amber-500/30 rounded-xl p-4 flex items-center gap-4"
+                        className="bg-slate-800/50 border border-amber-500/30 rounded-xl p-4 flex items-center gap-4 hover:bg-slate-800 transition-colors"
                       >
                         <div className={`p-3 rounded-lg bg-gradient-to-br ${rarityColors[item.achievement.rarity]} shadow-lg`}>
                           <Award className="w-6 h-6 text-white" />
@@ -190,17 +209,21 @@ export function Dashboard({ onClose }: DashboardProps) {
                           </div>
                           <p className="text-cyan-300/60 text-sm">{item.achievement.description}</p>
                         </div>
+                        <div className="text-xs text-slate-500 font-mono">
+                          {new Date(item.earned_at).toLocaleDateString()}
+                        </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-8 text-cyan-300/40 border border-dashed border-slate-700 rounded-xl">
-                      Пока нет достижений. Продолжайте исследования!
+                    <div className="text-center py-12 text-cyan-300/40 border-2 border-dashed border-slate-700 rounded-xl">
+                      <Award className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      Пока нет достижений. Решайте задачи, чтобы получить их!
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* ИСТОРИЯ (ИСПРАВЛЕННАЯ) */}
+              {/* ИСТОРИЯ */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <Clock className="w-5 h-5 text-cyan-400" />
@@ -215,37 +238,37 @@ export function Dashboard({ onClose }: DashboardProps) {
                           className="flex items-center justify-between py-3 px-4 rounded-lg bg-slate-900/40 hover:bg-slate-700/40 transition-colors border border-slate-700/50"
                         >
                           <div className="flex items-center gap-4">
-                            {/* Иконка успеха/неудачи */}
                             {exp.correct ? (
-                              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                              <div className="bg-emerald-500/10 p-1.5 rounded-full">
+                                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                              </div>
                             ) : (
-                              <XCircle className="w-5 h-5 text-red-400 shrink-0" />
+                              <div className="bg-red-500/10 p-1.5 rounded-full">
+                                <XCircle className="w-5 h-5 text-red-400 shrink-0" />
+                              </div>
                             )}
                             
                             <div>
-                              {/* Тип задачи на русском */}
                               <div className="text-white text-sm font-medium">
                                 {typeTranslations[exp.problem_type] || exp.problem_type}
                               </div>
-                              {/* Время выполнения */}
-                              <div className="text-cyan-300/40 text-xs flex items-center gap-1">
+                              <div className="text-cyan-300/40 text-xs flex items-center gap-1 mt-0.5">
                                 <Clock className="w-3 h-3" />
                                 {exp.time_spent} сек.
                               </div>
                             </div>
                           </div>
 
-                          {/* Дата */}
                           <div className="text-right">
-                             <div className="text-slate-400 text-xs font-mono bg-slate-800 px-2 py-1 rounded">
+                             <div className="text-slate-400 text-xs font-mono bg-slate-800 px-2 py-1 rounded border border-slate-700">
                                {formatDate(exp.attempted_at)}
                              </div>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-8 text-cyan-300/40 text-sm">
-                        Журнал пуст
+                      <div className="text-center py-12 text-cyan-300/40 text-sm">
+                        Журнал пуст. Начните решать задачи!
                       </div>
                     )}
                   </div>
