@@ -6,7 +6,7 @@ import { ModuleViewer } from './components/ModuleViewer';
 import { Reactor } from './components/Reactor';
 import { Dashboard } from './components/Dashboard';
 import { Sector, Module } from './lib/supabase';
-import { CompanionSetup } from './components/CompanionSetup';
+// ИКОНКИ
 import { Menu, User, Settings, Trophy, Zap, MonitorPlay, Crown, Keyboard } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import 'katex/dist/katex.min.css';
@@ -20,6 +20,7 @@ import { TournamentAdmin } from './components/TournamentAdmin';
 import { TournamentLobby } from './components/TournamentLobby';
 import { JoinTournamentModal } from './components/JoinTournamentModal';
 import { CompanionLair } from './components/CompanionLair';
+import { CompanionSetup } from './components/CompanionSetup';
 
 type View = 'map' | 'modules' | 'reactor' | 'pvp' | 'tournament_lobby';
 
@@ -28,7 +29,8 @@ function MainApp() {
   const [view, setView] = useState<View>('map');
   const [selectedSector, setSelectedSector] = useState<Sector | null>(null);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
-  const [showCompanion, setShowCompanion] = useState(false);
+  
+  // Состояния модальных окон
   const [showDashboard, setShowDashboard] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -36,6 +38,7 @@ function MainApp() {
   const [showTournamentAdmin, setShowTournamentAdmin] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
   const [showJoinCode, setShowJoinCode] = useState(false);
+  const [showCompanion, setShowCompanion] = useState(false);
   const [showCompanionSetup, setShowCompanionSetup] = useState(false);
 
   const [activeTournamentId, setActiveTournamentId] = useState<string | null>(null);
@@ -45,7 +48,7 @@ function MainApp() {
     if (!user) return;
     
     // 1. Ищем турнир по коду
-    const { data: tour, error } = await supabase
+    const { data: tour } = await supabase
       .from('tournaments')
       .select('id, status')
       .eq('code', code)
@@ -58,7 +61,7 @@ function MainApp() {
         user_id: user.id
       });
       
-      // 3. Закрываем модалку, чистим URL
+      // 3. Чистим URL
       setShowJoinCode(false);
       window.history.replaceState({}, document.title, "/");
       
@@ -70,27 +73,9 @@ function MainApp() {
     }
   }
 
-  useEffect(() => {
-    if (!profile) return;
-  
-    // 1. Проверка первого входа (Обычный онбординг)
-    if (profile.total_experiments === 0 && profile.clearance_level === 0) {
-      const hasSeen = localStorage.getItem('onboarding_seen');
-      if (!hasSeen) {
-        setShowOnboarding(true);
-        return; // Прерываем, чтобы окна не наслоились
-      }
-    }
-  
-    // 2. Проверка Суриката (Если онбординг пройден, но имени нет)
-    // profile.companion_name будет null, если еще не выбрали
-    if (!profile.companion_name) {
-      setShowCompanionSetup(true);
-    }
-  
-  }, [profile, showOnboarding]);
+  // === ПРОВЕРКИ ПРИ ЗАГРУЗКЕ ===
 
-  // Проверка URL при загрузке
+  // 1. Проверка URL (код турнира)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tCode = params.get('t');
@@ -99,7 +84,7 @@ function MainApp() {
     }
   }, [user]);
 
-  // Авто-реконнект к битве (если вылетел)
+  // 2. Авто-реконнект к битве (если вылетел)
   useEffect(() => {
     async function checkActiveDuel() {
       if (!user) return;
@@ -117,13 +102,24 @@ function MainApp() {
     checkActiveDuel();
   }, [user]);
 
-  // Онбординг
+  // 3. Онбординг и Встреча с Сурикатом
   useEffect(() => {
-    if (profile && profile.total_experiments === 0 && profile.clearance_level === 0) {
+    if (!profile) return;
+
+    // Сначала обычный онбординг
+    if (profile.total_experiments === 0 && profile.clearance_level === 0) {
       const hasSeen = localStorage.getItem('onboarding_seen');
-      if (!hasSeen) setShowOnboarding(true);
+      if (!hasSeen) {
+        setShowOnboarding(true);
+        return; // Прерываем, чтобы не наслоилось
+      }
     }
-  }, [profile]);
+
+    // Потом проверка суриката (если еще нет имени)
+    if (!profile.companion_name) {
+      setShowCompanionSetup(true);
+    }
+  }, [profile, showOnboarding]); // Добавил зависимость от showOnboarding
 
   function finishOnboarding() {
     localStorage.setItem('onboarding_seen', 'true');
@@ -133,7 +129,7 @@ function MainApp() {
   const currentRank = profile ? getRank(profile.clearance_level, profile.is_admin) : null;
   const progressPercent = profile ? getLevelProgress(profile.total_experiments) : 0;
 
-  // ... (Обработчики навигации те же) ...
+  // ... (Обработчики навигации) ...
   function handleSectorSelect(sector: Sector) {
     setSelectedSector(sector);
     setView('modules');
@@ -143,13 +139,12 @@ function MainApp() {
     setView('reactor');
   }
   function handleBackToMap() {
-    // Если выходим из PvP и были в турнире - возвращаемся в лобби
     if (activeTournamentId && view === 'pvp') {
        setView('tournament_lobby');
     } else {
        setView('map');
        setSelectedSector(null);
-       setActiveTournamentId(null); // Сбрасываем турнир при выходе на карту
+       setActiveTournamentId(null); 
     }
   }
   function handleBackToModules() {
@@ -174,6 +169,7 @@ function MainApp() {
 
       <header className="relative border-b border-cyan-500/20 bg-slate-900/50 backdrop-blur-sm z-10">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between gap-4">
+          
           <button onClick={handleBackToMap} className="flex items-center gap-3 hover:opacity-80 transition-opacity group min-w-fit">
             <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg group-hover:shadow-lg group-hover:shadow-cyan-500/20 transition-all">
               <Menu className="w-6 h-6 text-white" />
@@ -185,12 +181,41 @@ function MainApp() {
           </button>
 
           <div className="flex items-center gap-3 md:gap-6">
+            
+            {/* 1. КНОПКА СУРИКАТА (Перенесена в Header) */}
+            {profile?.companion_name && (
+              <button 
+                onClick={() => setShowCompanion(true)}
+                className="relative group p-1 bg-amber-500/10 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-all mr-2 overflow-hidden"
+                title={`Домик ${profile.companion_name}`}
+              >
+                {/* Картинка или эмодзи, если картинки нет */}
+                <div className="w-8 h-8 flex items-center justify-center">
+                   <img 
+                     src="/meerkat/avatar.png" 
+                     alt="Pet" 
+                     className="w-full h-full object-cover mix-blend-screen group-hover:scale-110 transition-transform"
+                     onError={(e) => { e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerText = '🦦'; }}
+                   />
+                </div>
+                {/* Индикатор голода */}
+                {profile.companion_hunger < 30 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                )}
+              </button>
+            )}
+
+            {/* 2. Кнопка Архива */}
             <button onClick={() => setShowArchive(true)} className="p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/20 transition-colors group" title="Архив Знаний">
               <MonitorPlay className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
             </button>
+
+            {/* 3. Кнопка Рейтинга */}
             <button onClick={() => setShowLeaderboard(true)} className="p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-colors group" title="Рейтинг">
               <Trophy className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
             </button>
+
+            {/* 4. Профиль */}
             <button onClick={() => setShowDashboard(true)} className="flex flex-col items-end min-w-[140px] group">
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-bold uppercase tracking-wider ${currentRank?.color}`}>{currentRank?.title}</span>
@@ -259,6 +284,7 @@ function MainApp() {
         )}
       </main>
 
+      {/* МОДАЛЬНЫЕ ОКНА */}
       {showCompanionSetup && <CompanionSetup onComplete={() => setShowCompanionSetup(false)} />}
       {showOnboarding && <Onboarding onComplete={finishOnboarding} />}
       {showLeaderboard && <Leaderboard onClose={() => setShowLeaderboard(false)} />}
@@ -269,26 +295,7 @@ function MainApp() {
       {showJoinCode && <JoinTournamentModal onJoin={joinTournament} onClose={() => setShowJoinCode(false)} />}
       {showCompanion && <CompanionLair onClose={() => setShowCompanion(false)} />}
 
-      {profile?.companion_name && (
-        <button 
-          onClick={() => setShowCompanion(true)}
-          className="relative group p-1 bg-amber-500/10 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-all mr-2 overflow-hidden"
-          title={`Домик ${profile.companion_name}`}
-        >
-          {/* Картинка вместо эмодзи */}
-          <img 
-            src="/meerkat/avatar.png" 
-            alt="Pet" 
-            className="w-8 h-8 object-cover mix-blend-screen group-hover:scale-110 transition-transform"
-          />
-          
-          {/* Индикатор голода */}
-          {profile.companion_hunger < 30 && (
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
-          )}
-        </button>
-      )}
-
+      {/* АДМИНСКИЕ КНОПКИ */}
       {profile?.is_admin && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
           <button onClick={() => setShowTournamentAdmin(true)} className="p-3 bg-amber-500/20 border border-amber-500/50 rounded-full text-amber-400 hover:bg-amber-500 hover:text-black transition-all shadow-lg">
