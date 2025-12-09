@@ -22,10 +22,11 @@ export function CompanionLair({ onClose }: Props) {
     }
   }, [profile]);
 
+  // ФУНКЦИЯ КОРМЛЕНИЯ
   const feedCompanion = async () => {
     if (hunger >= 100) return;
     
-    setAnimationState('eating'); // ВКЛЮЧАЕМ EATING.PNG
+    setAnimationState('eating'); // Начинает есть
     
     const newHunger = Math.min(100, hunger + 20);
     setHunger(newHunger);
@@ -35,30 +36,32 @@ export function CompanionLair({ onClose }: Props) {
       last_fed_at: new Date().toISOString()
     }).eq('id', profile!.id);
 
-    setTimeout(() => setAnimationState('happy'), 1500); // ПОТОМ HAPPY.PNG
-    setTimeout(() => setAnimationState('idle'), 3500);  // ПОТОМ IDLE.PNG
+    // Таймеры стали намного короче:
+    setTimeout(() => setAnimationState('happy'), 500); // Через 0.5 сек радуется
+    setTimeout(() => setAnimationState('idle'), 1500); // Через 1.5 сек (суммарно) успокаивается
     
     refreshProfile();
   };
 
-  // УМНЫЙ ВЫБОР СПРАЙТА
+  // ФУНКЦИЯ ПОГЛАЖИВАНИЯ (КЛИК ПО ПЕРСОНАЖУ)
+  const handlePet = () => {
+    setAnimationState('happy');
+    // Автоматически убираем радость через 1 секунду
+    setTimeout(() => setAnimationState('idle'), 1000);
+  };
+
   const getSprite = () => {
-    // 1. Приоритет анимациям (ест или радуется)
     if (animationState === 'eating') return '/meerkat/eating.png';
     if (animationState === 'happy') return '/meerkat/happy.png';
-    
-    // 2. Если анимации нет, смотрим на состояние (голод)
-    if (hunger < 30) return '/meerkat/crying.png'; // ПЛАЧЕТ, ЕСЛИ ГОЛОДЕН
-    
-    // 3. Стандарт
+    if (hunger < 30) return '/meerkat/crying.png';
     return '/meerkat/idle.png';
   };
 
   const getAnimationClass = () => {
     switch (animationState) {
-      case 'eating': return 'animate-bounce'; 
+      case 'eating': return 'scale-105'; // Просто чуть увеличивается, БЕЗ ПРЫЖКОВ
       case 'happy': return 'animate-pulse scale-110';
-      default: return hunger < 30 ? 'animate-pulse opacity-80' : 'hover:scale-105'; // Если плачет - пульсирует грустно
+      default: return hunger < 30 ? 'animate-pulse opacity-80' : 'hover:scale-105 transition-transform';
     }
   };
 
@@ -87,8 +90,8 @@ export function CompanionLair({ onClose }: Props) {
 
           {/* ПЕРСОНАЖ */}
           <div 
-             className={`relative z-10 transition-all duration-500 cursor-pointer ${getAnimationClass()}`}
-             onClick={() => setAnimationState('happy')} // Клик = Погладить
+             className={`relative z-10 transition-all duration-300 cursor-pointer ${getAnimationClass()}`}
+             onClick={handlePet} // Используем новую функцию с авто-сбросом
           >
              <img 
                src={getSprite()} 
