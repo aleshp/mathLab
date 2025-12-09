@@ -97,7 +97,7 @@ export function CompanionLair({ onClose }: Props) {
                  src={
                    animationState === 'idle' 
                      ? "/meerkat/idle.png" 
-                     : "/meerkat/firstime.gif" // Пока нет анимации еды/счастья, используем гифку радости
+                     : "/meerkat/firsttime.gif" // Пока нет анимации еды/счастья, используем гифку радости
                  }
                  alt="Сурикат"
                  // mix-blend-screen убирает черный фон
