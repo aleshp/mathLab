@@ -18,7 +18,8 @@ import { PvPMode } from './components/PvPMode';
 import { VideoArchive } from './components/VideoArchive';
 import { TournamentAdmin } from './components/TournamentAdmin';
 import { TournamentLobby } from './components/TournamentLobby';
-import { JoinTournamentModal } from './components/JoinTournamentModal'; // <--- Импорт
+import { JoinTournamentModal } from './components/JoinTournamentModal';
+import { CompanionLair } from './components/CompanionLair';
 
 type View = 'map' | 'modules' | 'reactor' | 'pvp' | 'tournament_lobby';
 
