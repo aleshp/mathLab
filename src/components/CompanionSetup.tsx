@@ -44,7 +44,7 @@ export function CompanionSetup({ onComplete }: Props) {
           {/* ЗАМЕНИ SRC НА КАРТИНКУ ВАШЕГО СУРИКАТА */}
           <div className="w-48 h-48 bg-black rounded-full border-4 border-amber-500 flex items-center justify-center overflow-hidden shadow-2xl relative z-10">
              <img 
-               src="/meerkat/firstime.gif" 
+               src="/meerkat/firsttime.gif" 
                alt="Сурикат" 
                // mix-blend-screen уберет черный фон!
                className="w-full h-full object-cover scale-110" 
