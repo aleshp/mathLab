@@ -187,7 +187,7 @@ function MainApp() {
                 <img 
                   src="/meerkat/avatar.png" 
                   alt="Pet" 
-                  className="w-6 h-6 object-cover rounded-sm opacity-90 group-hover:opacity-100 transition-opacity"
+                  className="w-8 h-8 object-cover rounded-sm opacity-90 group-hover:opacity-100 transition-opacity"
                   onError={(e) => { e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerText = '🦦'; }}
                 />
                 
