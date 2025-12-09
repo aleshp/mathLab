@@ -195,7 +195,7 @@ function MainApp() {
                   alt="Pet" 
                   // object-contain: чтобы картинка не обрезалась
                   // mix-blend-screen: убирает черный фон, если он есть
-                  className="w-10 h-10 object-contain mix-blend-screen drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                  className="w-8 h-8 object-contain group-hover:scale-110 transition-transform"
                   onError={(e) => { e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerText = '🦦'; }}
                 />
                 
