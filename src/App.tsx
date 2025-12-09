@@ -180,15 +180,15 @@ function MainApp() {
             {profile?.companion_name && (
               <button 
                 onClick={() => setShowCompanion(true)}
-                className="relative group p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-colors mr-2"
+                // p-1 (вместо p-2) чтобы картинка заняла больше места
+                className="relative group p-1 bg-amber-500/10 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-colors mr-2"
                 title={`Домик ${profile.companion_name}`}
               >
-                {/* Картинка теперь внутри, как иконка */}
+                {/* Картинка побольше (w-8 h-8) */}
                 <img 
                   src="/meerkat/avatar.png" 
                   alt="Pet" 
-                  className="w-6 h-6
-                  object-cover rounded-sm opacity-90 group-hover:opacity-100 transition-opacity"
+                  className="w-8 h-8 object-cover rounded-md opacity-90 group-hover:opacity-100 transition-opacity"
                   onError={(e) => { e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerText = '🦦'; }}
                 />
                 
