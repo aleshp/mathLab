@@ -26,25 +26,24 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
   const [userAnswer, setUserAnswer] = useState('');
   const [winner, setWinner] = useState<'me' | 'opponent' | 'draw' | null>(null);
   
+  // Храним изменение рейтинга за этот матч
+  const [mmrChange, setMmrChange] = useState(0); 
+
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [showSurrenderModal, setShowSurrenderModal] = useState(false);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [timeLeft, setTimeLeft] = useState(60);
 
-  // === ФУНКЦИИ КЛАВИАТУРЫ ===
   const handleKeyInput = (s: string) => setUserAnswer(p => p + s);
   const handleBackspace = () => setUserAnswer(p => p.slice(0, -1));
 
-  // === ЛОГИКА СДАЧИ ===
   const confirmSurrender = async () => {
     setShowSurrenderModal(false);
     if (duelId && user) {
       await supabase.rpc('surrender_duel', { duel_uuid: duelId, surrendering_uuid: user.id });
-      // Не ждем подписки, сразу пробуем завершить локально, страховка подхватит
     }
   };
 
-  // === 1. ТАЙМЕР ЗАДАЧИ ===
   useEffect(() => {
     let timer: any;
     if (status === 'battle' && !feedback && currentProbIndex < problems.length) {
@@ -61,7 +60,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
   useEffect(() => { setTimeLeft(60); }, [currentProbIndex]);
   const handleTimeout = () => submitResult(false);
 
-  // === 2. HEARTBEAT (Проверка соединения) ===
+  // HEARTBEAT
   useEffect(() => {
     let interval: any;
     if (status === 'battle' && duelId) {
@@ -87,30 +86,27 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
     return () => clearInterval(interval);
   }, [status, duelId]);
 
-  // === 3. СТРАХОВКА ФИНИША (FIX ЗАВИСАНИЯ) ===
-  // Если мы ответили на все вопросы, но статус еще не finished — долбим базу
+  // СТРАХОВКА ФИНИША
   useEffect(() => {
     let interval: any;
-    // Условие: Битва идет, но мы прошли все вопросы (индекс >= кол-ва задач)
     if (status === 'battle' && problems.length > 0 && currentProbIndex >= problems.length) {
-      console.log("Ждем финиша, запускаем проверку...");
       interval = setInterval(async () => {
         const { data } = await supabase
           .from('duels')
-          .select('status, winner_id')
+          .select('status, winner_id, elo_change') // Читаем elo_change
           .eq('id', duelId)
           .single();
 
         if (data && data.status === 'finished') {
           clearInterval(interval);
-          endGame(data.winner_id);
+          endGame(data.winner_id, data.elo_change);
         }
-      }, 1000); // Каждую секунду
+      }, 1000);
     }
     return () => clearInterval(interval);
   }, [status, currentProbIndex, problems.length, duelId]);
 
-  // === 4. ПОИСК (POLLING) ===
+  // ПОИСК
   useEffect(() => {
     let interval: any;
     if (status === 'searching' && duelId) {
@@ -133,14 +129,13 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
     const range = 300;
     const oldTime = new Date(Date.now() - 20000).toISOString();
     
-    // Чистка старых
     await supabase.from('duels').delete().eq('status', 'waiting').lt('last_seen', oldTime).is('tournament_id', null);
 
     const { data: waitingDuel } = await supabase
       .from('duels')
       .select('*')
       .eq('status', 'waiting')
-      .is('tournament_id', null) // Только обычные дуэли
+      .is('tournament_id', null)
       .neq('player1_id', user!.id)
       .gte('player1_mmr', myMMR - range)
       .lte('player1_mmr', myMMR + range)
@@ -168,7 +163,6 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
     }
   }
 
-  // === ПОДПИСКА ===
   function startBattleSubscription(id: string, myRole: 'player1' | 'player2') {
     supabase.channel(`duel-${id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'duels', filter: `id=eq.${id}` }, 
@@ -184,7 +178,8 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
           setOppScore(newData.player1_score);
           setOppProgress(newData.player1_progress);
         }
-        if (newData.status === 'finished') endGame(newData.winner_id);
+        // Передаем elo_change в endGame
+        if (newData.status === 'finished') endGame(newData.winner_id, newData.elo_change);
       })
       .subscribe();
   }
@@ -209,10 +204,8 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
       ? { player1_score: newScore, player1_progress: newProgress, player1_last_seen: new Date().toISOString() }
       : { player2_score: newScore, player2_progress: newProgress, player2_last_seen: new Date().toISOString() };
     
-    // Сначала обновляем очки
     await supabase.from('duels').update(updateData).eq('id', duelId!);
 
-    // Если это был последний вопрос - вызываем ФИНИШ
     if (newProgress >= problems.length) {
        await supabase.rpc('finish_duel', { duel_uuid: duelId, finisher_uuid: user!.id });
     }
@@ -227,9 +220,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
   async function loadProblems(ids: string[]) {
     if (!ids || ids.length === 0) return;
     const { data } = await supabase.from('problems').select('*').in('id', ids);
-    // Сортировка по порядку в массиве ID
-    const sorted = ids.map(id => data?.find(p => p.id === id)).filter(Boolean);
-    setProblems(sorted);
+    setProblems(ids.map(id => data?.find(p => p.id === id)).filter(Boolean));
   }
 
   async function fetchOpponentData(uid: string) {
@@ -240,13 +231,14 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
     }
   }
 
-  function endGame(winnerId: string) {
+  // Обновленная функция endGame
+  function endGame(winnerId: string, eloChange: number = 25) {
     setStatus('finished');
+    setMmrChange(eloChange); // Запоминаем точное число
     if (winnerId === user!.id) setWinner('me');
     else setWinner('opponent');
   }
 
-  // === РЕНДЕР ===
   if (status === 'lobby') {
     return (
       <div className="flex items-center justify-center h-full">
@@ -301,8 +293,6 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
 
     return (
       <div className="max-w-4xl mx-auto p-4 md:p-8 h-full flex flex-col relative">
-        
-        {/* Уведомление о дисконнекте */}
         {opponentDisconnected && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-4 py-2 rounded-full flex items-center gap-2 animate-bounce z-50 shadow-lg">
             <WifiOff className="w-4 h-4" />
@@ -320,7 +310,6 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
           </div>
         )}
 
-        {/* МОДАЛКА СДАЧИ */}
         {showSurrenderModal && (
           <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-slate-900 border border-red-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
@@ -330,7 +319,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">Признать поражение?</h3>
                 <p className="text-slate-400 text-sm">
-                  Вы потеряете <span className="text-red-400 font-bold">25 MP</span>.
+                  Вы потеряете MP (рейтинг).
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -358,14 +347,11 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
           <div className="flex flex-col items-center">
              <div className="text-slate-500 font-mono text-xs mb-1">ВРЕМЯ</div>
              <div className={`flex items-center gap-1 font-mono font-bold text-xl ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-                <Timer className="w-4 h-4" />
-                {timeLeft}
+                <Timer className="w-4 h-4" /> {timeLeft}
              </div>
           </div>
           <div className="text-left">
-            <div className="text-red-400 font-bold text-lg flex items-center gap-2">
-              {opponentName}
-            </div>
+            <div className="text-red-400 font-bold text-lg">{opponentName}</div>
             <div className="text-3xl font-black text-white">{oppScore}/10</div>
           </div>
         </div>
@@ -384,7 +370,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="flex-1 flex flex-col justify-center">
-          {currentProbIndex < 10 && currentProb ? (
+          {currentProbIndex < 10 && problems[currentProbIndex] ? (
             <div className="bg-slate-800 border border-slate-600 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
                <div className="flex justify-between items-center mb-6">
                  <div className="text-slate-400 text-sm font-mono">ЗАДАЧА {currentProbIndex + 1}</div>
@@ -392,7 +378,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
                </div>
                
                <h2 className="text-3xl font-bold text-white mb-8 leading-relaxed">
-                 <Latex>{currentProb.question}</Latex>
+                 <Latex>{problems[currentProbIndex].question}</Latex>
                </h2>
                
                <form onSubmit={handleAnswer} className="flex flex-col gap-4">
@@ -443,7 +429,10 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
               {opponentDisconnected ? (
                  <p className="text-emerald-300 text-lg mb-8">Соперник сбежал с поля боя.</p>
               ) : (
-                 <p className="text-slate-300 text-lg mb-8">Рейтинг повышен! (+25 MP)</p>
+                 // ВОТ ТУТ ТЕПЕРЬ РЕАЛЬНАЯ ЦИФРА
+                 <p className="text-emerald-400 text-lg mb-8 font-bold animate-pulse">
+                   Рейтинг повышен! (+{mmrChange} MP)
+                 </p>
               )}
             </>
           ) : (
@@ -452,7 +441,10 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
               <h1 className="text-5xl font-black text-red-500 mb-4">
                 ПОРАЖЕНИЕ
               </h1>
-              <p className="text-slate-300 text-lg mb-8">Рейтинг понижен (-25 MP)</p>
+              {/* И ТУТ РЕАЛЬНАЯ */}
+              <p className="text-slate-300 text-lg mb-8">
+                 Рейтинг понижен (-{mmrChange} MP)
+              </p>
             </>
           )}
           <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-700 mb-8">
