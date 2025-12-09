@@ -268,6 +268,22 @@ function MainApp() {
       {showTournamentAdmin && <TournamentAdmin onClose={() => setShowTournamentAdmin(false)} />}
       {showJoinCode && <JoinTournamentModal onJoin={joinTournament} onClose={() => setShowJoinCode(false)} />}
 
+      {profile?.companion_name && (
+        <button 
+          onClick={() => setShowCompanion(true)}
+          className="relative group p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-all mr-2"
+          title={`Домик ${profile.companion_name}`}
+        >
+          <span className="text-xl filter drop-shadow-md group-hover:scale-110 block transition-transform">
+            🦦
+          </span>
+          {/* Индикатор голода (красная точка) */}
+          {profile.companion_hunger < 30 && (
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
+          )}
+        </button>
+      )}
+
       {profile?.is_admin && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
           <button onClick={() => setShowTournamentAdmin(true)} className="p-3 bg-amber-500/20 border border-amber-500/50 rounded-full text-amber-400 hover:bg-amber-500 hover:text-black transition-all shadow-lg">
