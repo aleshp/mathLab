@@ -60,7 +60,6 @@ export function CompanionLair({ onClose }: Props) {
   const getAnimationClass = () => {
     switch (animationState) {
       case 'eating': return 'scale-105'; // Просто чуть увеличивается, БЕЗ ПРЫЖКОВ
-      case 'happy': return 'animate-pulse scale-110';
       default: return hunger < 30 ? 'animate-pulse opacity-80' : 'hover:scale-105 transition-transform';
     }
   };
