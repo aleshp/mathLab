@@ -6,7 +6,7 @@ import { ModuleViewer } from './components/ModuleViewer';
 import { Reactor } from './components/Reactor';
 import { Dashboard } from './components/Dashboard';
 import { Sector, Module } from './lib/supabase';
-// ИКОНКИ
+// ИКОНКИ (Все нужные)
 import { Menu, User, Settings, Trophy, Zap, MonitorPlay, Crown, Keyboard } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import 'katex/dist/katex.min.css';
@@ -43,10 +43,11 @@ function MainApp() {
 
   const [activeTournamentId, setActiveTournamentId] = useState<string | null>(null);
 
-  // === ФУНКЦИЯ ВХОДА В ТУРНИР ===
+  // === ФУНКЦИЯ ВХОДА В ТУРНИР (Универсальная) ===
   async function joinTournament(code: string) {
     if (!user) return;
     
+    // 1. Ищем турнир по коду
     const { data: tour } = await supabase
       .from('tournaments')
       .select('id, status')
@@ -54,14 +55,17 @@ function MainApp() {
       .single();
 
     if (tour) {
+      // 2. Регистрируемся
       await supabase.from('tournament_participants').upsert({
         tournament_id: tour.id,
         user_id: user.id
       });
       
+      // 3. Закрываем модалку, чистим URL
       setShowJoinCode(false);
       window.history.replaceState({}, document.title, "/");
       
+      // 4. Переходим в лобби
       setActiveTournamentId(tour.id);
       setView('tournament_lobby');
     } else {
@@ -80,7 +84,7 @@ function MainApp() {
     }
   }, [user]);
 
-  // 2. Авто-реконнект к битве
+  // 2. Авто-реконнект к битве (если вылетел)
   useEffect(() => {
     async function checkActiveDuel() {
       if (!user) return;
@@ -102,18 +106,20 @@ function MainApp() {
   useEffect(() => {
     if (!profile) return;
 
+    // Сначала обычный онбординг
     if (profile.total_experiments === 0 && profile.clearance_level === 0) {
       const hasSeen = localStorage.getItem('onboarding_seen');
       if (!hasSeen) {
         setShowOnboarding(true);
-        return; 
+        return; // Прерываем, чтобы не наслоилось
       }
     }
 
+    // Потом проверка суриката (если еще нет имени)
     if (!profile.companion_name) {
       setShowCompanionSetup(true);
     }
-  }, [profile, showOnboarding]);
+  }, [profile, showOnboarding]); // Добавил зависимость от showOnboarding
 
   function finishOnboarding() {
     localStorage.setItem('onboarding_seen', 'true');
@@ -123,7 +129,7 @@ function MainApp() {
   const currentRank = profile ? getRank(profile.clearance_level, profile.is_admin) : null;
   const progressPercent = profile ? getLevelProgress(profile.total_experiments) : 0;
 
-  // ... Навигация ...
+  // ... (Обработчики навигации) ...
   function handleSectorSelect(sector: Sector) {
     setSelectedSector(sector);
     setView('modules');
@@ -176,21 +182,23 @@ function MainApp() {
 
           <div className="flex items-center gap-3 md:gap-6">
             
-            {/* 1. КНОПКА СУРИКАТА (Вернул рамку и стиль кнопки) */}
+            {/* 1. КНОПКА СУРИКАТА (Квадратная, как просил) */}
             {profile?.companion_name && (
               <button 
                 onClick={() => setShowCompanion(true)}
-                // p-1 (вместо p-2) чтобы картинка заняла больше места
+                // Квадратная кнопка, как у Архива/Рейтинга (p-2 -> p-1 для большей картинки)
                 className="relative group p-1 bg-amber-500/10 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-colors mr-2"
                 title={`Домик ${profile.companion_name}`}
               >
-                {/* Картинка побольше (w-8 h-8) */}
-                <img 
-                  src="/meerkat/avatar.png" 
-                  alt="Pet" 
-                  className="w-8 h-8 object-cover rounded-md opacity-90 group-hover:opacity-100 transition-opacity"
-                  onError={(e) => { e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerText = '🦦'; }}
-                />
+                <div className="w-8 h-8 flex items-center justify-center">
+                   {/* Картинка без обрезки, большая */}
+                   <img 
+                     src="/meerkat/avatar.png" 
+                     alt="Pet" 
+                     className="w-full h-full object-contain group-hover:scale-110 transition-transform"
+                     onError={(e) => { e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerText = '🦦'; }}
+                   />
+                </div>
                 
                 {/* Индикатор голода */}
                 {profile.companion_hunger < 30 && (
@@ -234,7 +242,10 @@ function MainApp() {
           <>
             <LabMap onSectorSelect={handleSectorSelect} />
             
+            {/* КНОПКИ ГЛАВНОГО ЭКРАНА */}
             <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 w-full justify-center px-4">
+              
+              {/* Кнопка 1: Войти по коду */}
               <button 
                 onClick={() => setShowJoinCode(true)}
                 className="group flex items-center gap-2 bg-slate-800 border-2 border-slate-600 px-6 py-4 rounded-full shadow-lg hover:border-cyan-400 hover:scale-105 transition-all"
@@ -243,6 +254,7 @@ function MainApp() {
                 <span className="text-lg font-bold text-slate-300 group-hover:text-white uppercase tracking-wider hidden sm:inline">Ввести код</span>
               </button>
 
+              {/* Кнопка 2: PvP Арена (Большая) */}
               <button 
                 onClick={() => setView('pvp')}
                 className="group relative flex items-center gap-3 bg-slate-900 border-2 border-red-600 px-8 py-4 rounded-full shadow-[0_0_30px_rgba(220,38,38,0.4)] hover:shadow-[0_0_50px_rgba(220,38,38,0.6)] hover:scale-105 transition-all overflow-hidden"
@@ -273,6 +285,7 @@ function MainApp() {
         )}
       </main>
 
+      {/* Модальные окна */}
       {showCompanionSetup && <CompanionSetup onComplete={() => setShowCompanionSetup(false)} />}
       {showOnboarding && <Onboarding onComplete={finishOnboarding} />}
       {showLeaderboard && <Leaderboard onClose={() => setShowLeaderboard(false)} />}
