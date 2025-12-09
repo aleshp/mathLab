@@ -10,7 +10,7 @@ import { checkAnswer } from '../lib/mathUtils';
 type DuelState = 'lobby' | 'searching' | 'battle' | 'finished';
 
 export function PvPMode({ onBack }: { onBack: () => void }) {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth(); // Добавили refreshProfile
   
   const [status, setStatus] = useState<DuelState>('lobby');
   const [duelId, setDuelId] = useState<string | null>(null);
@@ -26,66 +26,53 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
   const [userAnswer, setUserAnswer] = useState('');
   const [winner, setWinner] = useState<'me' | 'opponent' | 'draw' | null>(null);
   
+  // Храним РЕАЛЬНОЕ изменение рейтинга из базы
+  const [mmrChange, setMmrChange] = useState<number | null>(null); 
+
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [showSurrenderModal, setShowSurrenderModal] = useState(false);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-  
-  // ТАЙМЕР
   const [timeLeft, setTimeLeft] = useState(60);
-  // Чтобы не вызвать таймаут дважды
-  const isProcessingTimeout = useRef(false);
-
-  // Храним изменение рейтинга
-  const [mmrChange, setMmrChange] = useState(0); 
 
   // === ФУНКЦИИ КЛАВИАТУРЫ ===
   const handleKeyInput = (s: string) => setUserAnswer(p => p + s);
   const handleBackspace = () => setUserAnswer(p => p.slice(0, -1));
 
-  // === 1. ИСПРАВЛЕННЫЙ ТАЙМЕР ===
-  useEffect(() => {
-    let timerId: any;
+  // === ЛОГИКА СДАЧИ ===
+  const confirmSurrender = async () => {
+    setShowSurrenderModal(false);
+    if (duelId && user) {
+      await supabase.rpc('surrender_duel', { duel_uuid: duelId, surrendering_uuid: user.id });
+      // Результат придет через Realtime или Polling
+    }
+  };
 
-    // Таймер тикает только если идет битва, нет фидбека и вопросы не кончились
-    if (status === 'battle' && !feedback && problems.length > 0 && currentProbIndex < problems.length) {
-      timerId = setInterval(() => {
+  // === 1. ТАЙМЕР ===
+  useEffect(() => {
+    let timer: any;
+    if (status === 'battle' && !feedback && currentProbIndex < problems.length) {
+      timer = setInterval(() => {
         setTimeLeft((prev) => {
-          if (prev <= 0) return 0;
+          if (prev <= 1) { handleTimeout(); return 60; }
           return prev - 1;
         });
       }, 1000);
     }
-
-    return () => clearInterval(timerId);
+    return () => clearInterval(timer);
   }, [status, feedback, currentProbIndex, problems.length]);
 
-  // === 2. ОБРАБОТЧИК ВРЕМЕНИ (ВЫНЕСЕН ОТДЕЛЬНО) ===
-  useEffect(() => {
-    if (timeLeft === 0 && status === 'battle' && !feedback && !isProcessingTimeout.current) {
-      // Время вышло!
-      isProcessingTimeout.current = true;
-      submitResult(false); // Засчитываем ошибку
-    }
-  }, [timeLeft, status, feedback]);
+  useEffect(() => { setTimeLeft(60); }, [currentProbIndex]);
+  const handleTimeout = () => submitResult(false);
 
-  // Сброс таймера при новом вопросе
-  useEffect(() => {
-    setTimeLeft(60);
-    isProcessingTimeout.current = false;
-  }, [currentProbIndex]);
-
-
-  // === 3. HEARTBEAT (Проверка соединения) ===
+  // === 2. HEARTBEAT ===
   useEffect(() => {
     let interval: any;
     if (status === 'battle' && duelId) {
       interval = setInterval(async () => {
         const { data: duelInfo } = await supabase.from('duels').select('player1_id').eq('id', duelId).single();
         if (!duelInfo) return;
-
         const isP1 = duelInfo.player1_id === user!.id;
         const updateField = isP1 ? 'player1_last_seen' : 'player2_last_seen';
-        
         await supabase.from('duels').update({ [updateField]: new Date().toISOString() }).eq('id', duelId);
 
         const { data } = await supabase.from('duels').select('player1_last_seen, player2_last_seen').eq('id', duelId).single();
@@ -101,12 +88,21 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
     return () => clearInterval(interval);
   }, [status, duelId]);
 
-  // === 4. СТРАХОВКА ФИНИША ===
+  // === 3. СТРАХОВКА ФИНИША (ГЛАВНОЕ ИСПРАВЛЕНИЕ) ===
+  // Здесь мы тянем elo_change из базы
   useEffect(() => {
     let interval: any;
-    if (status === 'battle' && problems.length > 0 && currentProbIndex >= problems.length) {
+    if ((status === 'battle' && problems.length > 0 && currentProbIndex >= problems.length) || status === 'searching') {
+      // Если мы ждем финиша (или ищем и вдруг нас убили)
       interval = setInterval(async () => {
-        const { data } = await supabase.from('duels').select('status, winner_id, elo_change').eq('id', duelId).single();
+        if(!duelId) return;
+        
+        const { data } = await supabase
+          .from('duels')
+          .select('status, winner_id, elo_change') // <-- БЕРЕМ РЕАЛЬНЫЕ ОЧКИ
+          .eq('id', duelId)
+          .single();
+
         if (data && data.status === 'finished') {
           clearInterval(interval);
           endGame(data.winner_id, data.elo_change);
@@ -116,7 +112,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
     return () => clearInterval(interval);
   }, [status, currentProbIndex, problems.length, duelId]);
 
-  // === 5. ПОИСК ===
+  // === 4. ПОИСК ===
   useEffect(() => {
     let interval: any;
     if (status === 'searching' && duelId) {
@@ -173,6 +169,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
     }
   }
 
+  // === ПОДПИСКА ===
   function startBattleSubscription(id: string, myRole: 'player1' | 'player2') {
     supabase.channel(`duel-${id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'duels', filter: `id=eq.${id}` }, 
@@ -188,7 +185,9 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
           setOppScore(newData.player1_score);
           setOppProgress(newData.player1_progress);
         }
-        if (newData.status === 'finished') endGame(newData.winner_id, newData.elo_change);
+        if (newData.status === 'finished') {
+            endGame(newData.winner_id, newData.elo_change); // <-- БЕРЕМ РЕАЛЬНЫЕ ОЧКИ ИЗ REALTIME
+        }
       })
       .subscribe();
   }
@@ -203,13 +202,10 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
 
   async function submitResult(isCorrect: boolean) {
     setFeedback(isCorrect ? 'correct' : 'wrong');
-    
-    // Считаем новые очки
     const newScore = isCorrect ? myScore + 1 : myScore;
     setMyScore(newScore);
     const newProgress = currentProbIndex + 1;
 
-    // Отправляем в базу
     const { data: duel } = await supabase.from('duels').select('player1_id').eq('id', duelId!).single();
     if (duel) {
         const isP1 = duel.player1_id === user!.id;
@@ -219,18 +215,15 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
         
         await supabase.from('duels').update(updateData).eq('id', duelId!);
 
-        // ВАЖНО: Финиш вызываем только если это был ПОСЛЕДНИЙ вопрос
-        if (problems.length > 0 && newProgress >= problems.length) {
-            await supabase.rpc('finish_duel', { duel_uuid: duelId, finisher_uuid: user!.id });
+        if (newProgress >= problems.length) {
+           await supabase.rpc('finish_duel', { duel_uuid: duelId, finisher_uuid: user!.id });
         }
     }
 
-    // Переходим к следующему вопросу (локально)
     setTimeout(() => {
       setFeedback(null);
       setCurrentProbIndex(newProgress);
       setUserAnswer('');
-      // Таймер сбросится сам через useEffect
     }, 1000);
   }
 
@@ -248,19 +241,22 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
     }
   }
 
-  function endGame(winnerId: string, eloChange: number = 25) {
+  // === КОНЕЦ ИГРЫ ===
+  function endGame(winnerId: string, eloChange: number = 0) {
     setStatus('finished');
-    setMmrChange(eloChange);
-    if (winnerId === user!.id) setWinner('me');
-    else setWinner('opponent');
-  }
+    
+    // Если очков нет (старая версия базы), ставим заглушку, иначе показываем реальные
+    setMmrChange(eloChange > 0 ? eloChange : 25); 
 
-  const confirmSurrender = async () => {
-    setShowSurrenderModal(false);
-    if (duelId && user) {
-      await supabase.rpc('surrender_duel', { duel_uuid: duelId, surrendering_uuid: user.id });
+    if (winnerId === user!.id) {
+        setWinner('me');
+    } else {
+        setWinner('opponent');
     }
-  };
+
+    // Мгновенно обновляем шапку, чтобы юзер увидел новый рейтинг
+    refreshProfile(); 
+  }
 
   // === РЕНДЕР ===
   if (status === 'lobby') {
@@ -317,6 +313,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
 
     return (
       <div className="max-w-4xl mx-auto p-4 md:p-8 h-full flex flex-col relative">
+        
         {opponentDisconnected && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-4 py-2 rounded-full flex items-center gap-2 animate-bounce z-50 shadow-lg">
             <WifiOff className="w-4 h-4" />
@@ -343,7 +340,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">Признать поражение?</h3>
                 <p className="text-slate-400 text-sm">
-                  Вы потеряете MP (рейтинг).
+                  Вы потеряете рейтинг (MP).
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -394,7 +391,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="flex-1 flex flex-col justify-center">
-          {currentProbIndex < 10 && currentProb ? (
+          {currentProbIndex < 10 && problems[currentProbIndex] ? (
             <div className="bg-slate-800 border border-slate-600 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
                <div className="flex justify-between items-center mb-6">
                  <div className="text-slate-400 text-sm font-mono">ЗАДАЧА {currentProbIndex + 1}</div>
@@ -402,7 +399,7 @@ export function PvPMode({ onBack }: { onBack: () => void }) {
                </div>
                
                <h2 className="text-3xl font-bold text-white mb-8 leading-relaxed">
-                 <Latex>{currentProb.question}</Latex>
+                 <Latex>{problems[currentProbIndex].question}</Latex>
                </h2>
                
                <form onSubmit={handleAnswer} className="flex flex-col gap-4">
