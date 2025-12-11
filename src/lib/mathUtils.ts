@@ -1,47 +1,51 @@
 import { evaluate } from 'mathjs';
 
-// Функция для превращения "человеческой" или LaTeX записи в понятную для MathJS
+// Функция для превращения любого математического текста в формулу для JS
 function normalizeForCalculation(str: string): string {
   if (!str) return '';
   let s = str.toLowerCase().trim();
   
-  // 1. Заменяем запятые на точки
+  // 1. Убираем пробелы, они мешают парсингу (кроме случаев типа "x y")
+  // Но для формул типа "8 sqrt 3" лучше убрать пробелы
+  s = s.replace(/\s+/g, '');
+
+  // 2. Меняем символы
   s = s.replace(/,/g, '.');
-
-  // 2. LaTeX синтаксис (то, что лежит в базе)
-  // \sqrt{3} -> sqrt(3)
-  s = s.replace(/\\sqrt\{([^}]+)\}/g, 'sqrt($1)');
-  // \frac{a}{b} -> (a)/(b)
-  s = s.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '(($1)/($2))');
-  // \cdot -> *
-  s = s.replace(/\\cdot/g, '*');
-  // \pi -> pi
-  s = s.replace(/\\pi/g, 'pi');
-  // Степени: {2} -> (2) (чтобы x^{2} стало x^(2))
-  s = s.replace(/\{([^}]+)\}/g, '($1)');
-  // Убираем оставшиеся слеши
-  s = s.replace(/\\/g, '');
-
-  // 3. Пользовательский ввод (с клавиатуры)
   s = s.replace(/√/g, 'sqrt');
   s = s.replace(/π/g, 'pi');
-  s = s.replace(/°/g, 'deg'); // MathJS понимает 90deg как градусы
+  s = s.replace(/°/g, 'deg');
   s = s.replace(/×/g, '*');
   s = s.replace(/⋅/g, '*');
+  s = s.replace(/:/g, '/');
   
-  // 4. ГЛАВНОЕ: Исправление синтаксиса (Implicit Multiplication)
+  // 3. Обработка LaTeX (из базы)
+  // Сначала дроби: \frac{a}{b} -> (a)/(b)
+  s = s.replace(/\\frac\{(.+?)\}\{(.+?)\}/g, '(($1)/($2))');
+  // Корни с аргументом: \sqrt{3} -> sqrt(3)
+  s = s.replace(/\\sqrt\{(.+?)\}/g, 'sqrt($1)');
+  // Просто \sqrt -> sqrt (если вдруг без скобок)
+  s = s.replace(/\\sqrt/g, 'sqrt');
+  // \pi -> pi
+  s = s.replace(/\\pi/g, 'pi');
+  // \cdot -> *
+  s = s.replace(/\\cdot/g, '*');
+  // Убираем лишние фигурные скобки от LaTeX (например 2^{3} -> 2^3)
+  s = s.replace(/\{/g, '(').replace(/\}/g, ')');
+  // Убираем все оставшиеся слеши
+  s = s.replace(/\\/g, '');
+
+  // 4. ГЛАВНОЕ: Исправление "человеческой" записи (8sqrt3 -> 8*sqrt(3))
   
-  // Если число стоит перед sqrt, pi или скобкой — добавляем умножение
+  // Если после цифры идет буква (2x), скобка (2(x)), или sqrt (2sqrt) — ставим *
   // Пример: "8sqrt" -> "8*sqrt"
-  s = s.replace(/(\d)\s*sqrt/g, '$1*sqrt');
-  s = s.replace(/(\d)\s*pi/g, '$1*pi');
-  s = s.replace(/(\d)\s*\(/g, '$1*(');
+  s = s.replace(/(\d)(?=[a-z\(]|sqrt)/g, '$1*');
+  
+  // Если после sqrt идет просто число (sqrt3) — оборачиваем число в скобки
+  // Пример: "sqrt3" -> "sqrt(3)", "sqrt25" -> "sqrt(25)"
+  s = s.replace(/sqrt(\d+(\.\d+)?)/g, 'sqrt($1)');
 
-  // Если после sqrt идет просто число без скобок — добавляем скобки
-  // Пример: "sqrt3" -> "sqrt(3)"
-  // (Ловим sqrt, за которым НЕ идет скобка, а идет число)
-  s = s.replace(/sqrt\s*(\d+(\.\d+)?)/g, 'sqrt($1)');
-
+  // Если после pi идет число (pi2) или наоборот (2pi) — мы это уже обработали в шаге 4 (цифра перед буквой)
+  
   return s;
 }
 
@@ -50,7 +54,7 @@ export function checkAnswer(userAnswer: string, dbAnswer: string): boolean {
 
   // === 1. ОБРАБОТКА ± (ПЛЮС-МИНУС) ===
   function expandPlusMinus(str: string): string[] {
-    const clean = str.replace(/\s+/g, '');
+    const clean = str.replace(/\s+/g, ''); // Удаляем пробелы
     if (clean.includes('±') || clean.startsWith('+-')) {
        const val = clean.replace('±', '').replace('+-', '');
        return [val, `-${val}`];
@@ -68,9 +72,12 @@ export function checkAnswer(userAnswer: string, dbAnswer: string): boolean {
   try {
     const getNumber = (str: string) => {
       const normalized = normalizeForCalculation(str);
-      // Пытаемся вычислить
       try {
-        return evaluate(normalized);
+        const result = evaluate(normalized);
+        // Если результат комплексное число или объект — приводим к строке или NaN, 
+        // но для ЕНТ обычно нужны просто числа.
+        if (typeof result === 'object') return NaN;
+        return result;
       } catch (e) {
         return NaN;
       }
@@ -79,28 +86,27 @@ export function checkAnswer(userAnswer: string, dbAnswer: string): boolean {
     const dbValues = dbOptions.map(getNumber).sort((a, b) => a - b);
     const userValues = userOptions.map(getNumber).sort((a, b) => a - b);
 
-    // Сравниваем массивы чисел
-    if (dbValues.length === userValues.length && dbValues.length > 0) {
-      const allMatch = dbValues.every((val, index) => {
-        const uVal = userValues[index];
-        // Если оба числа валидные
-        if (typeof val === 'number' && !isNaN(val) && typeof uVal === 'number' && !isNaN(uVal)) {
-          // Погрешность 0.05
+    // Если удалось получить числа из обоих ответов
+    if (dbValues.length > 0 && userValues.length > 0 && !dbValues.some(isNaN) && !userValues.some(isNaN)) {
+       if (dbValues.length !== userValues.length) return false;
+       
+       const allMatch = dbValues.every((val, index) => {
+          const uVal = userValues[index];
+          // Погрешность 0.05 для корней и дробей
           return Math.abs(val - uVal) < 0.05;
-        }
-        return false;
-      });
-      
-      if (allMatch) return true;
+       });
+       
+       if (allMatch) return true;
     }
 
-    // Фоллбэк: Прямое сравнение строк после нормализации
-    // (Если вычисление вернуло NaN, например для "x>5")
+    // === 3. ЗАПАСНОЙ ВАРИАНТ (ТЕКСТОВОЕ СРАВНЕНИЕ) ===
+    // Если mathjs не справился или вернул NaN (например, ответ "x>5"), сравниваем строки
     return normalizeForCalculation(userAnswer) === normalizeForCalculation(dbAnswer);
 
   } catch (e) {
-    const cleanUser = userAnswer.toLowerCase().trim().replace(/,/g, '.');
-    const cleanDb = dbAnswer.toLowerCase().trim().replace(/,/g, '.');
+    // Совсем всё плохо — просто сравниваем очищенные строки
+    const cleanUser = userAnswer.toLowerCase().replace(/\s+/g, '').replace(/,/g, '.');
+    const cleanDb = dbAnswer.toLowerCase().replace(/\s+/g, '').replace(/,/g, '.');
     return cleanUser === cleanDb;
   }
 }
