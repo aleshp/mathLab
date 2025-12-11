@@ -12,10 +12,13 @@ import {
   XCircle,
   Clock,
   Zap,
-  Loader
+  Loader,
+  MessageSquare // Иконка для чата
 } from 'lucide-react';
 // Импортируем нашу клавиатуру
 import { MathKeypad } from './MathKeypad';
+// Импортируем чат с сурикатом
+import { CompanionChat } from './CompanionChat';
 
 type Problem = {
   id: string;
@@ -39,6 +42,9 @@ export function Reactor({ module, onBack }: ReactorProps) {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [currentProblem, setCurrentProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Состояние чата
+  const [showChat, setShowChat] = useState(false);
   
   const [userAnswer, setUserAnswer] = useState('');
   const [result, setResult] = useState<'correct' | 'incorrect' | null>(null);
@@ -108,8 +114,7 @@ export function Reactor({ module, onBack }: ReactorProps) {
     setResult(isCorrect ? 'correct' : 'incorrect');
 
     // 1. ОТПРАВЛЯЕМ В БАЗУ
-    // SQL-триггер handle_new_experiment сам проверит, решал ли ты это раньше.
-    // Если решал -> XP не даст. Если нет -> даст +1 XP.
+    // SQL-триггер handle_new_experiment сам начислит XP и обновит точность
     await supabase.from('experiments').insert({
       user_id: user.id,
       module_id: module.id,
@@ -119,19 +124,18 @@ export function Reactor({ module, onBack }: ReactorProps) {
       time_spent: timeSpent,
     });
 
-    // 2. Локальная статистика (для красивых цифр прямо сейчас)
+    // 2. Локальная статистика
     setProblemsSolved(prev => prev + 1);
     if (isCorrect) {
       setCorrectCount(prev => prev + 1);
       
-      // 3. ОБНОВЛЕНИЕ ПРОФИЛЯ
-      // Ждем 100мс, пока база обновит данные, и запрашиваем свежий профиль
+      // 3. ОБНОВЛЕНИЕ ПРОФИЛЯ (чтобы полоска XP прыгнула сразу)
       setTimeout(() => {
         refreshProfile(); 
       }, 100);
     }
 
-    // 4. Обновляем прогресс модуля (Это оставляем, чтобы видеть % прохождения темы)
+    // 4. Обновляем прогресс модуля
     if (isCorrect) {
         const { data: progressData } = await supabase
           .from('user_progress')
@@ -159,7 +163,6 @@ export function Reactor({ module, onBack }: ReactorProps) {
        }
     }
 
-    // Переход к следующему вопросу
     setTimeout(() => {
       loadNextProblem();
     }, 2000);
@@ -261,18 +264,7 @@ export function Reactor({ module, onBack }: ReactorProps) {
                 {/* КЛАВИАТУРА */}
                 <MathKeypad onKeyPress={handleKeyInput} onBackspace={handleBackspace} />
 
-                {showHint && currentProblem.hint && (
-                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
-                    <AlertCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                    <div>
-                      <div className="text-blue-400 font-semibold text-sm mb-1">Данные разведки</div>
-                      <div className="text-blue-300/80 text-sm">
-                         <Latex>{currentProblem.hint}</Latex>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
+                {/* БЛОК КНОПОК */}
                 <div className="flex gap-3 pt-2">
                   <button
                     type="submit"
@@ -281,6 +273,21 @@ export function Reactor({ module, onBack }: ReactorProps) {
                   >
                     Синтезировать ответ
                   </button>
+
+                  {/* КНОПКА СУРИКАТА (ИИ ПОМОЩЬ) */}
+                  {profile?.companion_name && (
+                    <button
+                      type="button"
+                      onClick={() => setShowChat(true)}
+                      className="px-4 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-medium py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+                      title="Спросить суриката"
+                    >
+                      <MessageSquare className="w-5 h-5" />
+                      <span className="hidden sm:inline">Помощь</span>
+                    </button>
+                  )}
+
+                  {/* СТАРАЯ КНОПКА ПОДСКАЗКИ (Если есть статическая подсказка) */}
                   {!showHint && currentProblem.hint && (
                     <button
                       type="button"
@@ -291,6 +298,19 @@ export function Reactor({ module, onBack }: ReactorProps) {
                     </button>
                   )}
                 </div>
+                
+                {/* ОТОБРАЖЕНИЕ СТАТИЧЕСКОЙ ПОДСКАЗКИ */}
+                {showHint && currentProblem.hint && (
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 mt-4">
+                    <AlertCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-blue-400 font-semibold text-sm mb-1">Данные разведки</div>
+                      <div className="text-blue-300/80 text-sm">
+                         <Latex>{currentProblem.hint}</Latex>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </form>
             ) : (
               <div
@@ -341,6 +361,14 @@ export function Reactor({ module, onBack }: ReactorProps) {
           </div>
         )}
       </div>
+
+      {/* ЧАТ С СУРИКАТОМ (МОДАЛКА) */}
+      {showChat && currentProblem && (
+         <CompanionChat 
+            onClose={() => setShowChat(false)} 
+            problemContext={currentProblem.question} 
+         />
+      )}
     </div>
   );
 }
