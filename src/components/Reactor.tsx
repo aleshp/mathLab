@@ -148,7 +148,7 @@ export function Reactor({ module, onBack }: ReactorProps) {
 
     setTimeout(() => {
       loadNextProblem();
-    }, 2000);
+    }, 3000); // Даем 3 секунды посмотреть на правильный ответ
   }
 
   const successRate = problemsSolved > 0 ? ((correctCount / problemsSolved) * 100).toFixed(0) : 0;
@@ -320,9 +320,9 @@ export function Reactor({ module, onBack }: ReactorProps) {
                         </div>
                         <div className="text-red-300/60 text-sm mt-1">
                           Верное значение: 
+                          {/* ВОТ ТУТ МЫ ДОБАВИЛИ ДОЛЛАРЫ ДЛЯ КОРРЕКТНОГО ОТОБРАЖЕНИЯ */}
                           <span className="font-mono font-bold ml-2 text-lg">
-                            {/* ТУТ МЫ ДОБАВИЛИ LATEX */}
-                            <Latex>{currentProblem.answer}</Latex>
+                            <Latex>{`$${currentProblem.answer}$`}</Latex>
                           </span>
                         </div>
                       </div>
