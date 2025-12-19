@@ -6,6 +6,7 @@ import { ModuleViewer } from './components/ModuleViewer';
 import { Reactor } from './components/Reactor';
 import { Dashboard } from './components/Dashboard';
 import { Sector, Module } from './lib/supabase';
+// ИКОНКИ
 import { Menu, User, Settings, Trophy, Zap, MonitorPlay, Crown, Keyboard } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import 'katex/dist/katex.min.css';
@@ -42,18 +43,29 @@ function MainApp() {
 
   const [activeTournamentId, setActiveTournamentId] = useState<string | null>(null);
 
-  // === ФУНКЦИЯ ВХОДА В ТУРНИР ===
+  // === ФУНКЦИЯ ВХОДА В ТУРНИР (Универсальная) ===
   async function joinTournament(code: string) {
     if (!user) return;
-    const { data: tour } = await supabase.from('tournaments').select('id, status').eq('code', code).single();
+    
+    // 1. Ищем турнир по коду
+    const { data: tour } = await supabase
+      .from('tournaments')
+      .select('id, status')
+      .eq('code', code)
+      .single();
 
     if (tour) {
+      // 2. Регистрируемся
       await supabase.from('tournament_participants').upsert({
         tournament_id: tour.id,
         user_id: user.id
       });
+      
+      // 3. Чистим URL и закрываем окно
       setShowJoinCode(false);
       window.history.replaceState({}, document.title, "/");
+      
+      // 4. Переходим в лобби
       setActiveTournamentId(tour.id);
       setView('tournament_lobby');
     } else {
@@ -62,29 +74,52 @@ function MainApp() {
   }
 
   // === ПРОВЕРКИ ПРИ ЗАГРУЗКЕ ===
+
+  // 1. Проверка URL (код турнира)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tCode = params.get('t');
-    if (tCode) joinTournament(tCode);
+    if (tCode) {
+      joinTournament(tCode);
+    }
   }, [user]);
 
+  // 2. Авто-реконнект к битве (если вылетел)
   useEffect(() => {
     async function checkActiveDuel() {
       if (!user) return;
-      const { data } = await supabase.from('duels').select('id').eq('status', 'active').or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`).maybeSingle();
-      if (data) setView('pvp');
+      const { data } = await supabase
+        .from('duels')
+        .select('id')
+        .eq('status', 'active')
+        .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
+        .maybeSingle();
+
+      if (data) {
+        setView('pvp');
+      }
     }
     checkActiveDuel();
   }, [user]);
 
+  // 3. Онбординг и Встреча с Сурикатом
   useEffect(() => {
     if (!profile) return;
+
+    // Сначала обычный онбординг
     if (profile.total_experiments === 0 && profile.clearance_level === 0) {
       const hasSeen = localStorage.getItem('onboarding_seen');
-      if (!hasSeen) { setShowOnboarding(true); return; }
+      if (!hasSeen) {
+        setShowOnboarding(true);
+        return; // Прерываем, чтобы не наслоилось
+      }
     }
-    if (!profile.companion_name) setShowCompanionSetup(true);
-  }, [profile, showOnboarding]);
+
+    // Потом проверка суриката (если еще нет имени)
+    if (!profile.companion_name) {
+      setShowCompanionSetup(true);
+    }
+  }, [profile, showOnboarding]); // Добавил зависимость от showOnboarding
 
   function finishOnboarding() {
     localStorage.setItem('onboarding_seen', 'true');
@@ -94,17 +129,35 @@ function MainApp() {
   const currentRank = profile ? getRank(profile.clearance_level, profile.is_admin) : null;
   const progressPercent = profile ? getLevelProgress(profile.total_experiments) : 0;
 
-  // Навигация
-  function handleSectorSelect(sector: Sector) { setSelectedSector(sector); setView('modules'); }
-  function handleStartExperiment(module: Module) { setSelectedModule(module); setView('reactor'); }
-  function handleBackToMap() {
-    if (activeTournamentId && view === 'pvp') { setView('tournament_lobby'); } 
-    else { setView('map'); setSelectedSector(null); setActiveTournamentId(null); }
+  // ... (Обработчики навигации) ...
+  function handleSectorSelect(sector: Sector) {
+    setSelectedSector(sector);
+    setView('modules');
   }
-  function handleBackToModules() { setView('modules'); setSelectedModule(null); }
+  function handleStartExperiment(module: Module) {
+    setSelectedModule(module);
+    setView('reactor');
+  }
+  function handleBackToMap() {
+    if (activeTournamentId && view === 'pvp') {
+       setView('tournament_lobby');
+    } else {
+       setView('map');
+       setSelectedSector(null);
+       setActiveTournamentId(null); 
+    }
+  }
+  function handleBackToModules() {
+    setView('modules');
+    setSelectedModule(null);
+  }
 
   if (loading) {
-    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-cyan-400">Загрузка...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-cyan-900 to-slate-900 flex items-center justify-center">
+        <div className="text-cyan-400 text-lg animate-pulse font-mono">Инициализация системы...</div>
+      </div>
+    );
   }
 
   if (!user) return <Auth />;
@@ -112,27 +165,24 @@ function MainApp() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-cyan-900 to-slate-900 relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(6,182,212,0.05),transparent_70%)]" />
-      
-      {/* === ШАПКА (ОПТИМИЗИРОВАНА ДЛЯ МОБИЛОК) === */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#06b6d410_1px,transparent_1px),linear-gradient(to_bottom,#06b6d410_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+
       <header className="relative border-b border-cyan-500/20 bg-slate-900/50 backdrop-blur-sm z-10">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between gap-4">
           
-          {/* ЛЕВАЯ ЧАСТЬ: Меню */}
-          <button onClick={handleBackToMap} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg shadow-lg">
-              <Menu className="w-5 h-5 md:w-6 md:h-6 text-white" />
+          <button onClick={handleBackToMap} className="flex items-center gap-3 hover:opacity-80 transition-opacity group min-w-fit">
+            <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg group-hover:shadow-lg group-hover:shadow-cyan-500/20 transition-all">
+              <Menu className="w-6 h-6 text-white" />
             </div>
-            {/* Скрываем текст на мобильных */}
-            <div className="hidden md:block text-left">
-              <h1 className="text-xl font-bold text-white leading-tight">MathLab</h1>
-              <p className="text-cyan-400/60 text-xs">Научный центр</p>
+            <div className="hidden sm:block text-left">
+              <h1 className="text-xl font-bold text-white leading-tight">Алгебраическая Лаборатория</h1>
+              <p className="text-cyan-400/60 text-xs">Научный центр математических исследований</p>
             </div>
           </button>
 
-          {/* ПРАВАЯ ЧАСТЬ: Иконки и Профиль */}
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-3 md:gap-6">
             
-            {/* 1. СУРИКАТ */}
+            {/* 1. КНОПКА СУРИКАТА */}
             {profile?.companion_name && (
               <button 
                 onClick={() => setShowCompanion(true)}
@@ -147,28 +197,29 @@ function MainApp() {
                      onError={(e) => { e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerText = '🦦'; }}
                    />
                 </div>
+                {/* Индикатор голода */}
                 {profile.companion_hunger < 30 && (
                   <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 border border-slate-900 rounded-full animate-ping" />
                 )}
               </button>
             )}
 
-            {/* 2. АРХИВ */}
-            <button onClick={() => setShowArchive(true)} className="p-1.5 md:p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/20 transition-colors">
-              <MonitorPlay className="w-5 h-5 text-cyan-400" />
+            {/* 2. Кнопка Архива */}
+            <button onClick={() => setShowArchive(true)} className="p-1.5 md:p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/20 transition-colors group" title="Архив Знаний">
+              <MonitorPlay className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
             </button>
 
-            {/* 3. РЕЙТИНГ */}
-            <button onClick={() => setShowLeaderboard(true)} className="p-1.5 md:p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-colors">
-              <Trophy className="w-5 h-5 text-amber-400" />
+            {/* 3. Кнопка Рейтинга */}
+            <button onClick={() => setShowLeaderboard(true)} className="p-1.5 md:p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-colors group" title="Рейтинг">
+              <Trophy className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
             </button>
 
-            {/* 4. ПРОФИЛЬ (Компактный на мобилах) */}
+            {/* 4. Профиль */}
             <button onClick={() => setShowDashboard(true)} className="flex items-center gap-2 pl-2 border-l border-slate-700/50">
               <div className="flex flex-col items-end">
                 {/* Скрываем имя на мобилах, оставляем только ранг */}
                 <span className={`text-[10px] md:text-xs font-bold uppercase ${currentRank?.color}`}>
-                  {currentRank?.title.split(' ')[0]} {/* Берем только первое слово ранга для компактности */}
+                  {currentRank?.title.split(' ')[0]}
                 </span>
                 <span className="hidden md:block text-white font-medium text-sm leading-none">
                   {profile?.username}
@@ -184,7 +235,6 @@ function MainApp() {
                  <User className="w-4 h-4 md:w-5 md:h-5 text-slate-400" />
               </div>
             </button>
-
           </div>
         </div>
       </header>
@@ -198,14 +248,16 @@ function MainApp() {
             {/* КНОПКИ ГЛАВНОГО ЭКРАНА (Адаптивные) */}
             <div className="fixed bottom-6 left-0 right-0 px-4 z-40 flex justify-center gap-3">
               
+              {/* Кнопка 1: Войти по коду */}
               <button 
                 onClick={() => setShowJoinCode(true)}
                 className="flex-1 max-w-[160px] group flex items-center justify-center gap-2 bg-slate-800 border-2 border-slate-600 px-4 py-3 rounded-2xl shadow-lg active:scale-95 transition-all"
               >
-                <Keyboard className="w-5 h-5 text-slate-400" />
+                <Keyboard className="w-5 h-5 text-slate-400 group-hover:text-cyan-400 transition-colors" />
                 <span className="font-bold text-slate-300 text-sm uppercase">КОД</span>
               </button>
 
+              {/* Кнопка 2: PvP Арена (Большая) */}
               <button 
                 onClick={() => setView('pvp')}
                 className="flex-[2] max-w-[240px] group relative flex items-center justify-center gap-2 bg-slate-900 border-2 border-red-600 px-6 py-3 rounded-2xl shadow-lg shadow-red-900/20 active:scale-95 transition-all overflow-hidden"
