@@ -13,17 +13,17 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
   const [participants, setParticipants] = useState<any[]>([]);
   const [status, setStatus] = useState('waiting');
   const [loading, setLoading] = useState(false);
-  const [starting, setStarting] = useState(false); // Индикатор запуска
+  const [starting, setStarting] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
 
-  // 1. Инициализация (Создание + Безопасная Чистка)
+  // 1. Инициализация
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
 
     async function initTournament() {
       if (!user) return;
 
-      // БЕЗОПАСНАЯ АВТО-ЧИСТКА: Удаляем только старые (>1 часа)
+      // Авто-чистка старых турниров (>1 часа)
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       await supabase.from('tournaments').delete()
         .eq('created_by', user.id)
@@ -34,17 +34,22 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
 
       // Создаем новый
       const code = Math.floor(1000 + Math.random() * 9000).toString();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('tournaments')
         .insert({ created_by: user.id, code })
         .select()
         .single();
         
+      if (error) {
+        console.error('Ошибка создания турнира:', error);
+        alert('Не удалось создать турнир. Попробуйте еще раз.');
+        return;
+      }
+        
       if (data) {
         setTournamentId(data.id);
         setJoinCode(code);
         
-        // Подписка
         channel = supabase
           .channel('admin-participants')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_participants', filter: `tournament_id=eq.${data.id}` }, 
@@ -55,7 +60,6 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
 
     initTournament();
 
-    // Cleanup функция
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
@@ -66,12 +70,17 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
     if (!targetId) return;
 
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('tournament_participants')
       .select('*, profiles(username, mmr, clearance_level)')
       .eq('tournament_id', targetId);
     
-    if (data) setParticipants(data);
+    if (error) {
+      console.error("Ошибка загрузки участников:", error);
+      // Не спамим алертом при каждом обновлении, только в консоль, чтобы не мешать
+    } else if (data) {
+      setParticipants(data);
+    }
     setLoading(false);
   }
 
@@ -84,11 +93,8 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
 
     setStarting(true);
     try {
-      // Вызываем мощную функцию на сервере
       const { error } = await supabase.rpc('start_tournament_engine', { t_id: tournamentId });
-      
       if (error) throw error;
-      
       setStatus('active'); 
     } catch (err) {
       console.error('Ошибка старта:', err);
