@@ -3,13 +3,14 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Users, Loader, Shield } from 'lucide-react';
 import { TournamentBracket } from './TournamentBracket';
+import { TournamentPlay } from './TournamentPlay';
 
 type LobbyProps = {
   tournamentId: string;
   onBattleStart: () => void;
 };
 
-export function TournamentLobby({ tournamentId, onBattleStart }: LobbyProps) {
+export function TournamentLobby({ tournamentId }: LobbyProps) {
   const { user } = useAuth();
   const [participants, setParticipants] = useState<any[]>([]);
   const [tournamentCode, setTournamentCode] = useState<string>('');
@@ -19,8 +20,7 @@ export function TournamentLobby({ tournamentId, onBattleStart }: LobbyProps) {
 
   useEffect(() => {
     async function loadInfo() {
-      if (!user) return; // Проверка
-
+      if (!user) return;
       const { data } = await supabase.from('tournaments').select('*').eq('id', tournamentId).single();
       if (data) {
         setTournamentCode(data.code);
@@ -51,7 +51,7 @@ export function TournamentLobby({ tournamentId, onBattleStart }: LobbyProps) {
       supabase.removeChannel(partSub);
       supabase.removeChannel(duelSub);
     };
-  }, [tournamentId, user]); // Добавили user
+  }, [tournamentId, user]);
 
   async function fetchParticipants() {
     const { data } = await supabase.from('tournament_participants').select('*, profiles(username, mmr)').eq('tournament_id', tournamentId);
@@ -75,14 +75,20 @@ export function TournamentLobby({ tournamentId, onBattleStart }: LobbyProps) {
     }
   }
 
-  if (activeDuelId && onBattleStart) {
-      // Здесь мы не рендерим компонент, а вызываем функцию переключения в App.tsx
-      // В твоей архитектуре это делает App.tsx через checkActiveDuel, 
-      // но для надежности можно оставить и тут, если структура изменится.
-      // В текущем варианте App.tsx сам следит за дуэлями.
+  // === РЕЖИМ БОЯ ===
+  if (activeDuelId) {
+    return (
+      <TournamentPlay 
+        duelId={activeDuelId} 
+        onFinished={() => {
+           setActiveDuelId(null); 
+           fetchParticipants(); 
+        }} 
+      />
+    );
   }
 
-  // Если турнир активен - показываем сетку
+  // === СЕТКА ===
   if (status === 'active' || status === 'finished') {
     return (
       <div className="h-full p-4 md:p-8 flex flex-col">
@@ -94,13 +100,15 @@ export function TournamentLobby({ tournamentId, onBattleStart }: LobbyProps) {
         <div className="flex-1 overflow-hidden">
            <TournamentBracket 
              tournamentId={tournamentId} 
-             onEnterMatch={onBattleStart} 
+             // ВАЖНО: Передаем пустую функцию, так как переход делает checkForActiveDuel выше
+             onEnterMatch={() => {}} 
            />
         </div>
       </div>
     );
   }
 
+  // === ЛОББИ ===
   return (
     <div className="flex items-center justify-center h-full p-4">
       <div className="w-full max-w-5xl bg-slate-900/90 border border-cyan-500/30 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
