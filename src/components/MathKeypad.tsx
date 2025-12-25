@@ -70,4 +70,11 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
       {/* НИЖНИЙ РЯД */}
       <div className="grid grid-cols-4 gap-2">
          <button onPointerDown={(e) => preventBlur(e)} onClick={onClear} className="bg-slate-800 text-slate-500 text-xs font-bold uppercase rounded-xl py-4 active:scale-95">СБРОС</button>
-         <button onPointerDown={(e) => prevent
+         <button onPointerDown={(e) => preventBlur(e)} onClick={() => onCommand('insert', '-')} className="bg-slate-700 text-white text-xl font-bold rounded-xl py-4 active:scale-95">−</button>
+         <button onPointerDown={(e) => preventBlur(e)} onClick={() => onCommand('insert', '+')} className="bg-slate-700 text-white text-xl font-bold rounded-xl py-4 active:scale-95">+</button>
+         <button onPointerDown={(e) => preventBlur(e)} onClick={onSubmit} className="bg-emerald-600 text-white rounded-xl py-4 flex justify-center items-center shadow-lg active:scale-95"><CornerDownLeft className="w-6 h-6"/></button>
+      </div>
+
+    </div>
+  );
+}
