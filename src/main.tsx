@@ -3,7 +3,11 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
-// jQuery больше НЕ НУЖЕН. Удалили все строки с ним.
+// === ОТКЛЮЧЕНИЕ ВСТРОЕННОЙ КЛАВИАТУРЫ MATHLIVE ===
+import { mathVirtualKeyboard } from 'mathlive';
+// Запрещаем ей появляться вообще
+mathVirtualKeyboard.enabled = false;
+// =================================================
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
