@@ -9,66 +9,58 @@ type MathKeypadProps = {
 
 export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypadProps) {
   const keys = [
-    // Ряд 1
     { label: '1', cmd: 'insert', arg: '1' },
     { label: '2', cmd: 'insert', arg: '2' },
     { label: '3', cmd: 'insert', arg: '3' },
     { label: '+', cmd: 'insert', arg: '+' },
     
-    // Ряд 2
     { label: '4', cmd: 'insert', arg: '4' },
     { label: '5', cmd: 'insert', arg: '5' },
     { label: '6', cmd: 'insert', arg: '6' },
     { label: '−', cmd: 'insert', arg: '-' },
 
-    // Ряд 3
     { label: '7', cmd: 'insert', arg: '7' },
     { label: '8', cmd: 'insert', arg: '8' },
     { label: '9', cmd: 'insert', arg: '9' },
     { label: '=', cmd: 'insert', arg: '=' },
 
-    // Ряд 4
     { label: '0', cmd: 'insert', arg: '0' },
     { label: '.', cmd: 'insert', arg: '.' },
     { label: 'x', cmd: 'insert', arg: 'x' },
     { label: '÷', cmd: 'insert', arg: '\\frac{#@}{#?}' }, 
 
-    // Ряд 5
     { label: 'sin', cmd: 'insert', arg: '\\sin(#?)' },
     { label: 'cos', cmd: 'insert', arg: '\\cos(#?)' },
     { label: 'tan', cmd: 'insert', arg: '\\tan(#?)' },
     { label: 'cot', cmd: 'insert', arg: '\\cot(#?)' },
 
-    // Ряд 6
     { label: 'logₐ', cmd: 'insert', arg: '\\log_{#?}(#@)' }, 
     { label: '√', cmd: 'insert', arg: '\\sqrt{#?}' },
     { label: 'xⁿ', cmd: 'insert', arg: '#@^{#?}' },
     { label: 'π', cmd: 'insert', arg: '\\pi' },
     
-    // Ряд 7
     { label: '∞', cmd: 'insert', arg: '\\infty' },
     { label: '∅', cmd: 'insert', arg: '\\emptyset' },
     { label: '°', cmd: 'insert', arg: '^\\circ' },
     { label: '←', cmd: 'perform', arg: 'moveToPreviousChar' },
   ];
 
-  // === МАГИЧЕСКАЯ ФУНКЦИЯ ПРОТИВ СКАЧКОВ ===
-  // Она запрещает браузеру забирать фокус у поля ввода при клике на кнопку
-  const preventBlur = (e: React.SyntheticEvent) => {
+  // Эта функция - главная защита от скачков
+  const handlePress = (e: React.PointerEvent, action: () => void) => {
+    // Останавливаем всё, что браузер хочет сделать по умолчанию (скролл, зум, фокус)
     e.preventDefault();
     e.stopPropagation();
+    action();
   };
 
   return (
-    <div className="grid grid-cols-4 gap-2 mb-4 select-none touch-none">
+    <div className="grid grid-cols-4 gap-2 mb-4 select-none" style={{ touchAction: 'none' }}>
       {keys.map((key, idx) => (
         <button
           key={idx}
           type="button"
-          // ВАЖНО: Добавили preventBlur и на мышь, и на тач
-          onMouseDown={preventBlur}
-          onTouchStart={preventBlur}
-          onClick={() => onCommand(key.cmd, key.arg)}
+          // Используем onPointerDown - это универсально для мыши и пальца
+          onPointerDown={(e) => handlePress(e, () => onCommand(key.cmd, key.arg))}
           className={`
             py-3 rounded-xl font-bold text-lg md:text-xl transition-all active:scale-95 shadow-[0_2px_0_0_rgba(0,0,0,0.2)] active:shadow-none active:translate-y-[2px]
             ${['sin', 'cos', 'tan', 'cot', 'logₐ'].includes(key.label) 
@@ -82,11 +74,9 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
         </button>
       ))}
 
-      {/* УПРАВЛЕНИЕ КУРСОРОМ */}
+      {/* УПРАВЛЕНИЕ */}
       <button 
-        onMouseDown={preventBlur}
-        onTouchStart={preventBlur}
-        onClick={() => onCommand('perform', 'moveToNextChar')} 
+        onPointerDown={(e) => handlePress(e, () => onCommand('perform', 'moveToNextChar'))}
         className="bg-slate-800 p-3 rounded-xl border border-slate-700 text-slate-400 active:scale-95"
       >
         <ArrowRight className="w-6 h-6 mx-auto" />
@@ -94,9 +84,7 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
 
       {/* УДАЛЕНИЕ */}
       <button 
-        onMouseDown={preventBlur}
-        onTouchStart={preventBlur}
-        onClick={onDelete} 
+        onPointerDown={(e) => handlePress(e, onDelete)}
         className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 p-3 rounded-xl active:scale-95"
       >
         <Delete className="w-6 h-6 mx-auto" />
@@ -104,9 +92,7 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
       
       {/* ОЧИСТКА */}
       <button 
-        onMouseDown={preventBlur}
-        onTouchStart={preventBlur}
-        onClick={onClear} 
+        onPointerDown={(e) => handlePress(e, onClear)}
         className="bg-slate-800 border border-slate-700 text-slate-500 text-xs font-bold uppercase rounded-xl active:scale-95"
       >
         СБРОС
@@ -114,9 +100,7 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
 
       {/* ENTER */}
       <button 
-        onMouseDown={preventBlur}
-        onTouchStart={preventBlur}
-        onClick={onSubmit}
+        onPointerDown={(e) => handlePress(e, onSubmit)}
         className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl shadow-lg shadow-emerald-900/20 active:scale-95"
       >
         <CornerDownLeft className="w-6 h-6 mx-auto" />
