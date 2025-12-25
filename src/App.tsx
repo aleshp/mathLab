@@ -227,11 +227,35 @@ function MainApp() {
           {/* КНОПКИ АДМИНА / УЧИТЕЛЯ (Показываем и тем, и другим) */}
           {(profile?.is_admin || profile?.role === 'teacher') && (
             <div className="fixed bottom-28 right-4 z-50 flex flex-col gap-3">
-              <button onClick={() => setShowTournamentAdmin(true)} className="p-3 bg-amber-500/20 border border-amber-500/50 rounded-full text-amber-400 hover:bg-amber-500 hover:text-black transition-all shadow-lg backdrop-blur-sm" title="Турниры"><Crown className="w-6 h-6" /></button>
               
-              {/* Терминал Архитектора только для Админа */}
+              {/* 1. Кнопка ТУРНИРОВ (Учитель + Админ) */}
+              <button 
+                onClick={() => setShowTournamentAdmin(true)} 
+                className="p-3 bg-amber-500/20 border border-amber-500/50 rounded-full text-amber-400 hover:bg-amber-500 hover:text-black transition-all shadow-lg backdrop-blur-sm"
+                title="Панель Учителя (Турниры)"
+              >
+                <Crown className="w-6 h-6" />
+              </button>
+              
+              {/* 2. Кнопка ЗАДАЧ (Учитель + Админ) */}
+              <button 
+                onClick={() => setShowAdmin(true)} 
+                className="p-3 bg-slate-800/90 border border-cyan-500/30 rounded-full text-cyan-400 shadow-lg backdrop-blur-sm hover:bg-slate-700 hover:border-cyan-400 transition-all"
+                title="Генератор Задач"
+              >
+                <Settings className="w-6 h-6" />
+              </button>
+
+              {/* 3. Кнопка СУПЕР-АДМИНА (Только Админ) */}
+              {/* Для управления юзерами и рассылками */}
               {profile?.is_admin && (
-                <button onClick={() => setShowAdmin(true)} className="p-3 bg-slate-800/90 border border-cyan-500/30 rounded-full text-cyan-400 shadow-lg backdrop-blur-sm" title="Добавить задачу"><Settings className="w-6 h-6" /></button>
+                <button 
+                  onClick={() => setShowAdminDashboard(true)} // Убедись, что у тебя есть этот стейт и компонент
+                  className="p-3 bg-red-600/20 border border-red-500/50 rounded-full text-red-400 shadow-lg backdrop-blur-sm hover:bg-red-600 hover:text-white transition-all"
+                  title="Управление Системой"
+                >
+                  <Shield className="w-6 h-6" />
+                </button>
               )}
             </div>
           )}
