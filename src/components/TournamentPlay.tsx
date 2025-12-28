@@ -1,3 +1,5 @@
+а тут че то надо?
+ 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,30 +8,24 @@ import { Zap, Loader, Trophy, XCircle, CheckCircle2, Timer, ArrowLeft, Flag, Ale
 import { MathKeypad } from './MathKeypad';
 import { checkAnswer } from '../lib/mathUtils';
 import { RealtimeChannel } from '@supabase/supabase-js';
-
 type Props = {
   duelId: string;
   onFinished: () => void;
 };
-
 export function TournamentPlay({ duelId, onFinished }: Props) {
   const { user } = useAuth();
- 
   // === СОСТОЯНИЯ ===
   const [loading, setLoading] = useState(true);
   const [opponentName, setOpponentName] = useState<string>('Соперник');
- 
   const [problems, setProblems] = useState<any[]>([]);
   const [currentProbIndex, setCurrentProbIndex] = useState(0);
   const [myScore, setMyScore] = useState(0);
   const [oppScore, setOppScore] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
- 
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [timeLeft, setTimeLeft] = useState(60);
   const [matchStatus, setMatchStatus] = useState<'active' | 'finished'>('active');
   const [winnerId, setWinnerId] = useState<string | null>(null);
- 
   const [showSurrenderModal, setShowSurrenderModal] = useState(false);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   // === ФУНКЦИИ КЛАВИАТУРЫ ===
@@ -40,7 +36,7 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
     let channel: RealtimeChannel | null = null;
     async function initMatch() {
       if (!user) return;
-     
+    
       // 1. Загружаем дуэль
       const { data: duel } = await supabase.from('duels').select('*').eq('id', duelId).single();
       if (!duel) { onFinished(); return; }
@@ -63,10 +59,10 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
       // Определяем кто есть кто
       const isP1 = duel.player1_id === user.id;
       const oppId = isP1 ? duel.player2_id : duel.player1_id;
-     
+    
       // Загружаем задачи
       await loadProblems(duel.problem_ids);
-     
+    
       // Загружаем имя врага
       if (oppId) {
         const { data: oppProfile } = await supabase.from('profiles').select('username').eq('id', oppId).single();
@@ -78,12 +74,12 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
       const myProg = isP1 ? duel.player1_progress : duel.player2_progress;
       const myPts = isP1 ? duel.player1_score : duel.player2_score;
       const oppPts = isP1 ? duel.player2_score : duel.player1_score;
-     
+    
       setCurrentProbIndex(myProg);
       setMyScore(myPts);
       setOppScore(oppPts);
       setLoading(false);
-     
+    
       // 2. Подписываемся на обновления
       channel = supabase
         .channel(`t-duel-${duel.id}`)
@@ -116,7 +112,7 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
         if (!duelInfo) return;
         const isP1 = duelInfo.player1_id === user.id;
         const updateField = isP1 ? 'player1_last_seen' : 'player2_last_seen';
-       
+      
         await supabase.from('duels').update({ [updateField]: new Date().toISOString() }).eq('id', duelId);
         // 2. Проверяем врага
         const { data } = await supabase.from('duels').select('player1_last_seen, player2_last_seen').eq('id', duelId).single();
@@ -137,7 +133,7 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
   const submitResult = useCallback(async (isCorrect: boolean) => {
     if (!user || !duelId) return;
     setFeedback(isCorrect ? 'correct' : 'wrong');
-   
+  
     // Оптимистичное обновление UI
     const newScore = isCorrect ? myScore + 1 : myScore;
     setMyScore(newScore);
@@ -206,7 +202,7 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
         console.error("Нет задач для этого матча!");
         return;
     }
-    
+   
     const { data } = await supabase.from('problems').select('*').in('id', ids);
     // Сортировка по порядку ID
     const sorted = ids.map(id => data?.find(p => p.id === id)).filter(Boolean);
@@ -237,7 +233,7 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
               <p className="text-slate-300 mb-8">Хорошая игра. Тренируйтесь в лаборатории!</p>
             </>
           )}
-         
+        
           <div className="text-4xl font-mono font-bold text-white mb-8">
             {myScore} : {oppScore}
           </div>
@@ -251,7 +247,7 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
   const currentProb = problems[currentProbIndex];
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 h-full flex flex-col relative">
-     
+    
       {/* Модалка сдачи */}
       {showSurrenderModal && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -297,14 +293,14 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
           <div className="text-cyan-400 font-bold text-lg">ВЫ</div>
           <div className="text-3xl font-black text-white">{myScore}</div>
         </div>
-       
+      
         <div className="flex flex-col items-center">
             <div className="text-slate-500 font-mono text-xs mb-1">ВРЕМЯ</div>
             <div className={`flex items-center gap-1 font-mono font-bold text-xl ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
               <Timer className="w-4 h-4" /> {timeLeft}
             </div>
         </div>
-       
+      
         <div className="text-left">
           <div className="text-red-400 font-bold text-lg">{opponentName}</div>
           <div className="text-3xl font-black text-white">{oppScore}</div>
@@ -316,11 +312,11 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
                 <div className="flex justify-between items-center mb-6">
                   <div className="text-slate-400 text-sm font-mono">ВОПРОС {currentProbIndex + 1} / {problems.length}</div>
                 </div>
-               
+              
                 <h2 className="text-3xl font-bold text-white mb-8 leading-relaxed">
                   <Latex>{currentProb.question}</Latex>
                 </h2>
-               
+              
                 <form onSubmit={handleAnswer} className="flex flex-col gap-4">
                   <div className="flex flex-col sm:flex-row gap-3">
                     <input
