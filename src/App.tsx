@@ -8,7 +8,7 @@ import { Reactor } from './components/Reactor';
 import { Dashboard } from './components/Dashboard';
 import { Sector, Module } from './lib/supabase';
 // ИКОНКИ
-import { Zap, Keyboard, Lock } from 'lucide-react';
+import { Zap, Keyboard, Lock, Plus, Settings, Trophy } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import 'katex/dist/katex.min.css';
 import { AdminGenerator } from './components/AdminGenerator';
@@ -278,54 +278,51 @@ function MainApp() {
           
           <LevelUpManager />
 
-(profile?.role === 'admin' || profile?.role === 'teacher') && (
-  <div className="fixed bottom-28 right-4 z-50 flex flex-col gap-3">
-    
-    {/* Кнопка Генератора задач (Админ) */}
-    {profile?.role === 'admin' && (
-      <button
-        onClick={() => setShowAdmin(true)}
-        className="group relative p-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl shadow-lg hover:shadow-purple-500/50 active:scale-95 transition-all border-2 border-purple-400/30"
-        title="Генератор задач"
-      >
-        <div className="absolute inset-0 bg-purple-400/20 rounded-2xl blur-xl group-hover:bg-purple-400/40 transition-all" />
-        <svg className="w-6 h-6 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-      </button>
-    )}
+          {/* === КНОПКИ УПРАВЛЕНИЯ ДЛЯ АДМИНОВ/УЧИТЕЛЕЙ === */}
+          {(profile?.role === 'admin' || profile?.role === 'teacher') && (
+            <div className="fixed bottom-28 right-4 z-50 flex flex-col gap-3">
+              
+              {/* Кнопка Генератора задач (только Админ) */}
+              {profile?.role === 'admin' && (
+                <button
+                  onClick={() => setShowAdmin(true)}
+                  className="group relative p-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl shadow-lg hover:shadow-purple-500/50 active:scale-95 transition-all border-2 border-purple-400/30"
+                  title="Генератор задач"
+                >
+                  <div className="absolute inset-0 bg-purple-400/20 rounded-2xl blur-xl group-hover:bg-purple-400/40 transition-all" />
+                  <Plus className="w-6 h-6 text-white relative z-10" />
+                </button>
+              )}
 
-    {/* Кнопка Админ Dashboard (только для супер-админов) */}
-    {profile?.is_admin && (
-      <button
-        onClick={() => setShowAdminDashboard(true)}
-        className="group relative p-4 bg-gradient-to-br from-red-600 to-red-800 rounded-2xl shadow-lg hover:shadow-red-500/50 active:scale-95 transition-all border-2 border-red-400/30"
-        title="Админ Dashboard"
-      >
-        <div className="absolute inset-0 bg-red-400/20 rounded-2xl blur-xl group-hover:bg-red-400/40 transition-all" />
-        <svg className="w-6 h-6 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      </button>
-    )}
+              {/* Кнопка Админ Dashboard (только супер-админы) */}
+              {profile?.is_admin && (
+                <button
+                  onClick={() => setShowAdminDashboard(true)}
+                  className="group relative p-4 bg-gradient-to-br from-red-600 to-red-800 rounded-2xl shadow-lg hover:shadow-red-500/50 active:scale-95 transition-all border-2 border-red-400/30"
+                  title="Админ Dashboard"
+                >
+                  <div className="absolute inset-0 bg-red-400/20 rounded-2xl blur-xl group-hover:bg-red-400/40 transition-all" />
+                  <Settings className="w-6 h-6 text-white relative z-10" />
+                </button>
+              )}
 
-    {/* Кнопка Управления Турнирами (Учителя) */}
-            {(profile?.role === 'teacher' || profile?.role === 'admin') && (
-              <button
-                onClick={() => setShowTournamentAdmin(true)}
-                className="group relative p-4 bg-gradient-to-br from-amber-600 to-orange-700 rounded-2xl shadow-lg hover:shadow-amber-500/50 active:scale-95 transition-all border-2 border-amber-400/30"
-                title="Управление турнирами"
-              >
-                <div className="absolute inset-0 bg-amber-400/20 rounded-2xl blur-xl group-hover:bg-amber-400/40 transition-all" />
-                <svg className="w-6 h-6 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                </svg>
-              </button>
-            )}
-        
-          </div>
-        )}
+              {/* Кнопка Управления Турнирами (Учителя и Админы) */}
+              {(profile?.role === 'teacher' || profile?.role === 'admin') && (
+                <button
+                  onClick={() => setShowTournamentAdmin(true)}
+                  className="group relative p-4 bg-gradient-to-br from-amber-600 to-orange-700 rounded-2xl shadow-lg hover:shadow-amber-500/50 active:scale-95 transition-all border-2 border-amber-400/30"
+                  title="Управление турнирами"
+                >
+                  <div className="absolute inset-0 bg-amber-400/20 rounded-2xl blur-xl group-hover:bg-amber-400/40 transition-all" />
+                  <Trophy className="w-6 h-6 text-white relative z-10" />
+                </button>
+              )}
+
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
