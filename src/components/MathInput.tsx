@@ -22,46 +22,37 @@ type Props = {
 
 export function MathInput({ value, onChange, onSubmit, mfRef }: Props) {
   const internalRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Хак: Блокируем попытки браузера скроллить при фокусе
-  useEffect(() => {
-    const preventScroll = (e: Event) => {
-      // Это не дает браузеру делать "Scroll Into View"
-      e.preventDefault(); 
-    };
-    
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('focus', preventScroll, true); // true = capture phase
-      
-      return () => {
-        container.removeEventListener('focus', preventScroll, true);
-      };
-    }
-  }, []);
 
   useEffect(() => {
     const mf = internalRef.current;
     if (!mf) return;
 
-    mf.smartMode = true;
-    mf.virtualKeyboardMode = 'manual';
-    mf.menuItems = [];
+    mf.smartMode = true; 
+    mf.virtualKeyboardMode = 'manual'; 
+    mf.menuItems = []; 
     mf.keypressSound = null;
-    
-    // Отключаем встроенные отступы MathLive
-    mf.mathModeSpace = '\\,';
-    
+
     const handleInput = (e: any) => {
       onChange(e.target.value);
     };
 
-    mf.addEventListener('input', handleInput);
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault(); 
+        onSubmit();
+      }
+    };
 
-    if (mfRef) {
-      mfRef.current = mf;
-    }
+    // Блокируем скролл при фокусе
+    const handleFocus = (e: FocusEvent) => {
+      // Logic handled via Reactor, but keeping listener for safety
+    };
+
+    mf.addEventListener('input', handleInput);
+    mf.addEventListener('keydown', handleKeydown);
+    mf.addEventListener('focus', handleFocus);
+
+    if (mfRef) mfRef.current = mf;
 
     if (value !== mf.value) {
       mf.setValue(value);
@@ -69,35 +60,23 @@ export function MathInput({ value, onChange, onSubmit, mfRef }: Props) {
 
     return () => {
       mf.removeEventListener('input', handleInput);
+      mf.removeEventListener('keydown', handleKeydown);
+      mf.removeEventListener('focus', handleFocus);
     };
   }, []);
 
   useEffect(() => {
     const mf = internalRef.current;
-    if (mf && value !== mf.value) {
-      // Пытаемся сохранить позицию курсора, если это возможно
-      const selectionRange = mf.selection;
+    if (mf && value !== mf.value && document.activeElement !== mf) {
       mf.setValue(value);
-      try {
-        mf.selection = selectionRange;
-      } catch (e) { /* игнор */ }
     }
   }, [value]);
 
   return (
-    <div 
-      ref={containerRef}
-      className="w-full bg-slate-900 border border-cyan-500/30 rounded-xl px-4 py-2 shadow-inner min-h-[60px] flex items-center overflow-hidden"
-      // Блокируем свайпы по полю, чтобы не сдвигать страницу
-      onTouchMove={(e) => {
-        if (e.target === internalRef.current) {
-          e.stopPropagation();
-        }
-      }}
-    >
+    <div className="w-full bg-slate-900 border border-cyan-500/30 rounded-xl px-4 py-2 shadow-inner min-h-[60px] flex items-center overflow-hidden">
       <math-field
         ref={internalRef}
-        inputmode="none"
+        inputmode="none" 
         virtual-keyboard-mode="manual"
         style={{
           width: '100%',
@@ -106,11 +85,22 @@ export function MathInput({ value, onChange, onSubmit, mfRef }: Props) {
           color: 'white',
           border: 'none',
           outline: 'none',
-          touchAction: 'pan-x', // Разрешаем скроллить формулу влево-вправо, но не страницу
+          touchAction: 'none',
           
-          '--caret-color': '#22d3ee', // Вернул цвет, чтобы ты видел курсор
-          '--selection-background-color': 'rgba(34, 211, 238, 0.2)',
-          '--contains-highlight-backgound-color': 'transparent',
+          // === ВИЗУАЛЬНЫЙ СТИЛЬ ===
+          
+          // 1. Курсор (Каретка) - делаем его Cyan, чтобы было видно, где печатаем
+          '--caret-color': '#22d3ee', 
+          
+          // 2. ВЫДЕЛЕНИЕ (Стеклянный эффект)
+          // Используем Cyan цвет (34, 211, 238) с прозрачностью 0.3 (30%)
+          '--selection-background-color': 'rgba(34, 211, 238, 0.3)',
+          
+          // Цвет текста при выделении оставляем белым (или можно сделать чуть ярче)
+          '--selection-color': '#ffffff',
+          
+          // Фон "пустого квадратика" (placeholder) - делаем едва заметным
+          '--contains-highlight-backgound-color': 'rgba(255, 255, 255, 0.05)',
         } as any}
       >
         {value}
