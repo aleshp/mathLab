@@ -43,10 +43,10 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
   const [loading, setLoading] = useState(true);
   const [showChat, setShowChat] = useState(false);
   
-  // Храним LaTeX строку от MathLive
+  // Здесь хранится LaTeX из редактора
   const [userAnswer, setUserAnswer] = useState('');
   
-  // Ссылка на компонент MathLive
+  // Ссылка на MathLive поле для управления курсором и командами
   const mfRef = useRef<any>(null);
 
   const [result, setResult] = useState<'correct' | 'incorrect' | null>(null);
@@ -80,7 +80,7 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
     fetchProblems();
   }, [module.id]);
 
-  // === 2. ПЕРЕХОД К СЛЕДУЮЩЕЙ ===
+  // === 2. СМЕНА ЗАДАЧИ ===
   function loadNextProblem() {
     // Лимит для гостей
     if (!user && problemsSolved >= GUEST_LIMIT) {
@@ -90,6 +90,7 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
 
     if (problems.length === 0) return;
     
+    // Выбираем случайную (можно улучшить логику)
     const randomProblem = problems[Math.floor(Math.random() * problems.length)];
     
     setCurrentProblem(randomProblem);
@@ -97,58 +98,48 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
     setShowHint(false);
     setStartTime(Date.now());
     
-    // Очистка поля
+    // ОЧИСТКА MATHLIVE
     setUserAnswer('');
     if (mfRef.current) {
-      mfRef.current.setValue('');
-      // Используем мягкий фокус с preventScroll, чтобы экран не прыгал
-      setTimeout(() => {
-        if (mfRef.current) {
-          mfRef.current.focus({ preventScroll: true });
-        }
-      }, 50);
+      mfRef.current.setValue(''); // Сбрасываем значение поля
+      // Небольшой таймаут для фокуса, чтобы клавиатура на мобилках вела себя прилично
+      setTimeout(() => mfRef.current.focus(), 50);
     }
   }
 
-  // === 3. УПРАВЛЕНИЕ КЛАВИАТУРОЙ ===
+  // === 3. ОБРАБОТЧИКИ КЛАВИАТУРЫ ===
   const handleKeypadCommand = (cmd: string, arg?: string) => {
     if (!mfRef.current) return;
     
-    // Если фокус потерян (юзер кликнул мимо), возвращаем его аккуратно
-    if (document.activeElement !== mfRef.current) {
-       mfRef.current.focus({ preventScroll: true });
-    }
-
     if (cmd === 'insert') {
+      // Вставка символов или шаблонов (дробь, логарифм)
       mfRef.current.executeCommand(['insert', arg]);
     } else if (cmd === 'perform') {
+      // Команды навигации (влево, вправо)
       mfRef.current.executeCommand([arg]);
     }
+    mfRef.current.focus();
   };
 
   const handleKeypadDelete = () => {
     if (!mfRef.current) return;
-    // Убеждаемся, что фокус на месте перед удалением
-    if (document.activeElement !== mfRef.current) {
-       mfRef.current.focus({ preventScroll: true });
-    }
     mfRef.current.executeCommand(['deleteBackward']);
+    mfRef.current.focus();
   };
 
   const handleKeypadClear = () => {
     if (!mfRef.current) return;
     mfRef.current.setValue('');
     setUserAnswer('');
-    // Возвращаем фокус без скролла
-    mfRef.current.focus({ preventScroll: true });
+    mfRef.current.focus();
   };
 
-  // === 4. ОТПРАВКА ОТВЕТА ===
+  // === 4. ПРОВЕРКА ОТВЕТА ===
   async function handleSubmit(e?: React.FormEvent) {
-    if (e) e.preventDefault();
+    if (e) e.preventDefault(); // Предотвращаем перезагрузку формы, если нажали Enter
     if (!currentProblem) return;
 
-    // MathLive выдает LaTeX, наша функция checkAnswer его понимает
+    // checkAnswer уже умеет работать с LaTeX, который выдает MathLive
     const isCorrect = checkAnswer(userAnswer, currentProblem.answer);
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
 
@@ -156,6 +147,7 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
     setProblemsSolved(prev => prev + 1);
     if (isCorrect) setCorrectCount(prev => prev + 1);
 
+    // Логика сохранения (только для зарегистрированных)
     if (user) {
       await supabase.from('experiments').insert({
         user_id: user.id,
@@ -167,21 +159,32 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
       });
 
       if (isCorrect) {
+        // Обновляем профиль (монеты, XP)
         setTimeout(() => refreshProfile(), 100);
         
-        const { data: progressData } = await supabase.from('user_progress').select('*').eq('user_id', user.id).eq('module_id', module.id).maybeSingle();
+        // Обновляем прогресс модуля
+        const { data: progressData } = await supabase
+          .from('user_progress')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('module_id', module.id)
+          .maybeSingle();
+          
         const newExperiments = (progressData?.experiments_completed ?? 0) + 1;
         const newPercentage = Math.min(newExperiments * 10, 100); // 10 задач = 100%
 
         if (progressData) {
-          await supabase.from('user_progress').update({ experiments_completed: newExperiments, completion_percentage: newPercentage }).eq('id', progressData.id);
+          await supabase.from('user_progress')
+            .update({ experiments_completed: newExperiments, completion_percentage: newPercentage })
+            .eq('id', progressData.id);
         } else {
-          await supabase.from('user_progress').insert({ user_id: user.id, module_id: module.id, experiments_completed: 1, completion_percentage: 10 });
+          await supabase.from('user_progress')
+            .insert({ user_id: user.id, module_id: module.id, experiments_completed: 1, completion_percentage: 10 });
         }
       }
     }
 
-    // Авто-переход к следующей задаче
+    // Авто-переход через 2 секунды
     setTimeout(() => {
       loadNextProblem();
     }, 2000);
@@ -191,7 +194,7 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
 
   if (loading) return <div className="flex h-full items-center justify-center"><Loader className="animate-spin text-cyan-400 w-10 h-10"/></div>;
 
-  // === PAYWALL ===
+  // === ЭКРАН PAYWALL ===
   if (showPaywall) {
     return (
       <div className="flex flex-col h-full items-center justify-center p-8 text-center animate-in zoom-in duration-300">
@@ -204,7 +207,7 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
           
           <h2 className="text-2xl font-bold text-white mb-3">Демо-режим завершен</h2>
           <p className="text-slate-400 mb-8">
-            Вы решили {GUEST_LIMIT} задачи! Чтобы продолжить обучение, сохранять прогресс и открыть PvP — нужно создать аккаунт. Это бесплатно.
+            Вы решили {GUEST_LIMIT} задачи! Чтобы продолжить обучение и сохранять прогресс — создайте аккаунт.
           </p>
 
           <button 
@@ -222,7 +225,7 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
     );
   }
 
-  // === РЕНДЕР ИНТЕРФЕЙСА ===
+  // === ОСНОВНОЙ РЕНДЕР ===
   return (
     <div className="w-full h-full overflow-y-auto pb-20 custom-scrollbar">
       <div className="max-w-4xl mx-auto p-4 md:p-8">
@@ -241,7 +244,7 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
            )}
         </div>
 
-        {/* Заголовок */}
+        {/* Заголовок и Статистика */}
         <div className="mb-6 md:mb-8">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg animate-pulse">
@@ -269,7 +272,7 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
           </div>
         </div>
 
-        {/* Карточка задачи */}
+        {/* Тело задачи */}
         {currentProblem ? (
           <div className="bg-slate-800/50 backdrop-blur-sm border border-cyan-500/30 rounded-2xl p-4 md:p-8 mb-6 relative overflow-hidden shadow-2xl">
             <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
@@ -290,15 +293,15 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
               </h2>
             </div>
 
-            {/* ЗОНА ВВОДА (ЕСЛИ НЕТ РЕЗУЛЬТАТА) */}
+            {/* ЗОНА ВВОДА РЕШЕНИЯ */}
             {result === null ? (
               <div className="relative z-10">
                 <div className="mb-4">
                   <label className="block text-cyan-300 text-xs font-bold uppercase tracking-wider mb-2">
-                    Ввод решения
+                    Ввод решения (MathLive)
                   </label>
                   
-                  {/* === MATHLIVE INPUT (ОТКЛЮЧЕНА СИСТЕМНАЯ КЛАВА) === */}
+                  {/* === КОМПОНЕНТ ВВОДА === */}
                   <MathInput 
                     value={userAnswer}
                     onChange={setUserAnswer}
@@ -307,7 +310,7 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
                   />
                 </div>
 
-                {/* === ПОЛНАЯ КАСТОМНАЯ КЛАВИАТУРА === */}
+                {/* === КЛАВИАТУРА === */}
                 <MathKeypad 
                   onCommand={handleKeypadCommand} 
                   onDelete={handleKeypadDelete}
@@ -316,7 +319,7 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
                 />
 
                 <div className="flex justify-end gap-3 pt-4">
-                    {/* Чат суриката */}
+                    {/* Чат (только для зарегистрированных) */}
                     {user && (
                       <button type="button" onClick={() => setShowChat(true)} className="px-4 py-3 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl flex items-center justify-center gap-2 hover:bg-amber-500/20 transition-colors">
                         <MessageSquare className="w-5 h-5" />
@@ -340,7 +343,7 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
                 )}
               </div>
             ) : (
-              // ЗОНА РЕЗУЛЬТАТА (ПОСЛЕ ОТВЕТА)
+              // ЗОНА РЕЗУЛЬТАТА
               <div className={`p-6 rounded-2xl border-2 flex items-center gap-4 animate-in zoom-in duration-300 ${result === 'correct' ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-red-500/10 border-red-500/50'}`}>
                 <div className={`p-3 rounded-full shrink-0 ${result === 'correct' ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
                   {result === 'correct' ? (
