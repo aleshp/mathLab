@@ -45,7 +45,7 @@ export function TournamentLobby({ tournamentId }: LobbyProps) {
         .from('tournament_participants')
         .select('tournament_id, tournaments(status)')
         .eq('user_id', user.id)
-        .neq('tournament_id', tournamentId)
+        .neq('tournament_id', tournamentId) // ❗ Игнорируем текущий турнир
         .in('tournaments.status', ['active', 'waiting'])
         .maybeSingle();
 
