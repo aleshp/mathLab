@@ -92,8 +92,6 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
     setUserAnswer('');
     if (mfRef.current) {
       mfRef.current.setValue('');
-      // Здесь фокус нужен, так как это начало новой задачи
-      // preventScroll: true ОБЯЗАТЕЛЕН
       setTimeout(() => {
         if (mfRef.current) mfRef.current.focus({ preventScroll: true });
       }, 50);
@@ -103,7 +101,6 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
   const handleKeypadCommand = (cmd: string, arg?: string) => {
     if (!mfRef.current) return;
     
-    // Сохраняем позицию скролла ДО изменения
     const scrollY = window.scrollY;
     const scrollX = window.scrollX;
     
@@ -113,7 +110,6 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
       mfRef.current.executeCommand([arg]);
     }
     
-    // Принудительно фиксируем скролл после изменения DOM
     requestAnimationFrame(() => {
       window.scrollTo(scrollX, scrollY);
     });
@@ -157,9 +153,26 @@ export function Reactor({ module, onBack, onRequestAuth }: ReactorProps) {
     if (isCorrect) setCorrectCount(prev => prev + 1);
 
     if (user) {
+      // 1. Сохраняем попытку в experiments
       await supabase.from('experiments').insert({
-        user_id: user.id, module_id: module.id, problem_id: currentProblem.id, problem_type: currentProblem.type, correct: isCorrect, time_spent: timeSpent,
+        user_id: user.id, 
+        module_id: module.id, 
+        problem_id: currentProblem.id, 
+        problem_type: currentProblem.type, 
+        correct: isCorrect, 
+        time_spent: timeSpent,
       });
+
+      // 2. Если ошибка -> сохраняем в user_errors для анализатора (хранится 48 часов)
+      if (!isCorrect) {
+        await supabase.from('user_errors').insert({
+          user_id: user.id,
+          problem_id: currentProblem.id,
+          module_id: module.id,
+          user_answer: userAnswer,
+          correct_answer: currentProblem.answer
+        });
+      }
 
       if (isCorrect) {
         setTimeout(() => refreshProfile(), 100);
