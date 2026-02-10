@@ -361,7 +361,7 @@ function MainApp() {
                     >
                       <ClipboardList className="w-5 h-5 text-amber-400 group-hover:text-amber-300 transition-colors" />
                       <span className="font-bold text-amber-300 text-xs uppercase hidden sm:inline tracking-wider">
-                        Ошибки
+                        Мои Ошибки
                       </span>
                     </button>
 
