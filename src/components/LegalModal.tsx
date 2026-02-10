@@ -1,6 +1,6 @@
 import { X, Shield, FileText } from 'lucide-react';
 
-type LegalType = 'privacy' | 'terms';
+type LegalType = 'privacy' | 'terms' | 'refund';
 
 type Props = {
   type: LegalType;
@@ -9,6 +9,8 @@ type Props = {
 
 export function LegalModal({ type, onClose }: Props) {
   const isPrivacy = type === 'privacy';
+  const isTerms = type === 'terms';
+  const isRefund = type === 'refund';
 
   return (
     <div className="fixed inset-0 z-[200] bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
@@ -21,7 +23,7 @@ export function LegalModal({ type, onClose }: Props) {
               {isPrivacy ? <Shield className="w-6 h-6 text-cyan-400" /> : <FileText className="w-6 h-6 text-amber-400" />}
             </div>
             <h2 className="text-2xl font-bold text-white">
-              {isPrivacy ? 'Политика конфиденциальности' : 'Пользовательское соглашение'}
+              {isPrivacy ? 'Политика конфиденциальности' : isTerms ? 'Пользовательское соглашение' : 'Политика возврата'}
             </h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors">
@@ -35,7 +37,7 @@ export function LegalModal({ type, onClose }: Props) {
           {isPrivacy ? (
             <>
               <p className="opacity-70 text-xs">Последнее обновление: {new Date().toLocaleDateString()}</p>
-              
+
               <section>
                 <h3 className="text-white font-bold text-lg mb-2">1. Введение</h3>
                 <p>Мы уважаем вашу конфиденциальность. Настоящая Политика описывает, как проект <strong>MathLab PvP</strong> (далее "Сервис") собирает и использует ваши данные.</p>
@@ -72,7 +74,7 @@ export function LegalModal({ type, onClose }: Props) {
                 <p>По вопросам данных пишите на: <a href="mailto:support@mathlabpvp.org" className="text-cyan-400 hover:underline">support@mathlabpvp.org</a></p>
               </section>
             </>
-          ) : (
+          ) : isTerms ? (
             <>
               <p className="opacity-70 text-xs">Последнее обновление: {new Date().toLocaleDateString()}</p>
 
@@ -105,6 +107,51 @@ export function LegalModal({ type, onClose }: Props) {
               <section>
                 <h3 className="text-white font-bold text-lg mb-2">5. Связь</h3>
                 <p>Техническая поддержка: <a href="mailto:support@mathlabpvp.org" className="text-amber-400 hover:underline">support@mathlabpvp.org</a></p>
+              </section>
+            </>
+          ) : (
+            <>
+              <p className="opacity-70 text-xs">Последнее обновление: {new Date().toLocaleDateString()}</p>
+
+              <section>
+                <h3 className="text-white font-bold text-lg mb-2">1. Общие положения</h3>
+                <p><strong>MathLab PvP</strong> предоставляет образовательный контент и сервис соревнования. Услуга условно бесплатна, однако некоторые функции могут требовать оплату премиум-подписки.</p>
+              </section>
+
+              <section>
+                <h3 className="text-white font-bold text-lg mb-2">2. Возврат средств за премиум-подписку</h3>
+                <p>Если вы приобрели премиум-подписку и не удовлетворены услугой, вы можете запросить возврат в течение <strong>14 дней</strong> с момента покупки.</p>
+                <ul className="list-disc pl-5 space-y-1 mt-2">
+                  <li>Возврат возможен только при условии, что подписка не использовалась активно (менее 5 боев).</li>
+                  <li>Возврат обрабатывается в течение 5-10 рабочих дней.</li>
+                  <li>Для начала процесса возврата отправьте запрос на <a href="mailto:support@mathlabpvp.org" className="text-emerald-400 hover:underline">support@mathlabpvp.org</a></li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="text-white font-bold text-lg mb-2">3. Исключения</h3>
+                <p>Возврат <strong>невозможен</strong> в следующих случаях:</p>
+                <ul className="list-disc pl-5 space-y-1 text-red-300">
+                  <li>Прошло более 14 дней с момента покупки.</li>
+                  <li>Подписка активно использовалась (более 5 боев, посещение турниров).</li>
+                  <li>Причина: технические проблемы с устройством пользователя.</li>
+                  <li>Нарушение правил поведения (см. Условия использования).</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="text-white font-bold text-lg mb-2">4. Процесс возврата</h3>
+                <ol className="list-decimal pl-5 space-y-2">
+                  <li>Отправьте email на <a href="mailto:support@mathlabpvp.org" className="text-emerald-400 hover:underline">support@mathlabpvp.org</a> с указанием причины возврата.</li>
+                  <li>Указать email и ID вашего аккаунта в сервисе.</li>
+                  <li>Ожидать подтверждение от администрации (2-3 рабочих дня).</li>
+                  <li>После одобрения возврат средств будет обработан способом, выбранным при первоначальной оплате.</li>
+                </ol>
+              </section>
+
+              <section>
+                <h3 className="text-white font-bold text-lg mb-2">5. Связь</h3>
+                <p>По вопросам возврата пишите на: <a href="mailto:support@mathlabpvp.org" className="text-emerald-400 hover:underline">support@mathlabpvp.org</a></p>
               </section>
             </>
           )}

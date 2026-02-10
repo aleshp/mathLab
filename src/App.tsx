@@ -54,7 +54,7 @@ function MainApp() {
   const [showJoinCode, setShowJoinCode] = useState(false);
   const [showCompanion, setShowCompanion] = useState(false);
   const [showCompanionSetup, setShowCompanionSetup] = useState(false);
-  const [showLegal, setShowLegal] = useState<'privacy' | 'terms' | null>(null);
+  const [showLegal, setShowLegal] = useState<'privacy' | 'terms' | 'refund' | null>(null);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 
   // === ЛОГИКА АКТИВНОЙ СЕССИИ ===

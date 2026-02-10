@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { LogIn, UserPlus, Loader, Mail, CheckSquare, Square } from 'lucide-react';
 
 type Props = {
-  onOpenLegal: (type: 'privacy' | 'terms') => void;
+  onOpenLegal: (type: 'privacy' | 'terms' | 'refund') => void;
 };
 
 export function Auth({ onOpenLegal }: Props) {

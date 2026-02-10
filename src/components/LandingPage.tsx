@@ -5,7 +5,7 @@ import Squares from './Squares';
 type Props = {
   onStartDemo: () => void;
   onLogin: () => void;
-  onOpenLegal: (type: 'privacy' | 'terms') => void;
+  onOpenLegal: (type: 'privacy' | 'terms' | 'refund') => void;
 };
 
 export function LandingPage({ onStartDemo, onLogin, onOpenLegal }: Props) {
@@ -103,13 +103,16 @@ export function LandingPage({ onStartDemo, onLogin, onOpenLegal }: Props) {
             
             <div className="flex flex-col md:flex-row items-center gap-4 text-slate-500 text-sm">
               <p>© {new Date().getFullYear()} MathLab PvP. All rights reserved.</p>
-              
-              <div className="flex gap-4 text-xs font-medium">
+
+              <div className="flex flex-wrap gap-4 text-xs font-medium justify-center">
                 <button onClick={() => onOpenLegal('privacy')} className="hover:text-cyan-400 transition-colors underline decoration-slate-700 underline-offset-4">
-                  Политика конфиденциальности
+                  Privacy Policy
+                </button>
+                <button onClick={() => onOpenLegal('refund')} className="hover:text-emerald-400 transition-colors underline decoration-slate-700 underline-offset-4">
+                  Refund Policy
                 </button>
                 <button onClick={() => onOpenLegal('terms')} className="hover:text-amber-400 transition-colors underline decoration-slate-700 underline-offset-4">
-                  Условия использования
+                  Terms & Conditions
                 </button>
               </div>
             </div>
