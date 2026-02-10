@@ -9,33 +9,52 @@ type BotConfig = {
   isEnabled: boolean;
   difficulty?: 'easy' | 'medium' | 'hard';
   maxQuestions: number;
+  initialScore?: number;    // <--- НОВОЕ
+  initialProgress?: number; // <--- НОВОЕ
   onProgressUpdate: (score: number, progress: number) => void;
 };
 
-export function useBotOpponent({ isEnabled, difficulty = 'medium', maxQuestions, onProgressUpdate }: BotConfig) {
+export function useBotOpponent({ 
+  isEnabled, 
+  difficulty = 'medium', 
+  maxQuestions, 
+  initialScore = 0,     // <--- Дефолт 0
+  initialProgress = 0,  // <--- Дефолт 0
+  onProgressUpdate 
+}: BotConfig) {
+  
   const [botName, setBotName] = useState('???');
-  const [botScore, setBotScore] = useState(0);
-  const [botProgress, setBotProgress] = useState(0);
+  const [botScore, setBotScore] = useState(initialScore);
+  const [botProgress, setBotProgress] = useState(initialProgress);
   
   // Храним таймеры
   const timeouts = useRef<NodeJS.Timeout[]>([]);
 
-  // 1. При старте выбираем случайное имя
+  // 1. Синхронизация с базой данных при загрузке страницы
+  // Если из базы пришли данные (например, 3 очка), обновляем состояние хука
+  useEffect(() => {
+    if (initialScore > 0 || initialProgress > 0) {
+      setBotScore(initialScore);
+      setBotProgress(initialProgress);
+    }
+  }, [initialScore, initialProgress]);
+
+  // 2. При старте выбираем случайное имя
   useEffect(() => {
     if (isEnabled && botName === '???') {
       setBotName(BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]);
     }
   }, [isEnabled]);
 
-  // 2. Логика решения задач
+  // 3. Логика решения задач
   useEffect(() => {
+    // Если бот выключен или уже закончил все вопросы — стоп
     if (!isEnabled || botProgress >= maxQuestions) return;
 
     // Настройки скорости (в миллисекундах)
-    // medium: от 4 до 9 секунд на задачу
     let minTime = 4000;
     let maxTime = 9000;
-    let accuracy = 0.8; // 80% правильных ответов
+    let accuracy = 0.8; 
 
     if (difficulty === 'hard') { minTime = 3000; maxTime = 6000; accuracy = 0.95; }
     if (difficulty === 'easy') { minTime = 7000; maxTime = 12000; accuracy = 0.6; }
@@ -63,7 +82,7 @@ export function useBotOpponent({ isEnabled, difficulty = 'medium', maxQuestions,
       timeouts.current.forEach(clearTimeout);
       timeouts.current = [];
     };
-  }, [isEnabled, botProgress, difficulty, maxQuestions]);
+  }, [isEnabled, botProgress, difficulty, maxQuestions, botScore]); // Добавил botScore в зависимости
 
   return { botName, botScore, botProgress };
 }
