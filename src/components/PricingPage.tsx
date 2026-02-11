@@ -40,7 +40,6 @@ export function PricingPage() {
         'Добавление своих задач'
       ],
       color: 'amber',
-      icon: <Zap className="w-5 h-5" />,
       btnText: 'Купить Premium',
       highlight: true
     },
@@ -58,7 +57,6 @@ export function PricingPage() {
       ],
       notIncluded: [],
       color: 'cyan',
-      icon: <GraduationCap className="w-5 h-5" />,
       btnText: 'Стать ментором',
       highlight: false
     }
@@ -79,7 +77,6 @@ export function PricingPage() {
         <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg shadow-orange-900/20">
-
             </div>
             <div>
               <h1 className="text-3xl font-black text-white uppercase tracking-wider">Тарифы</h1>
