@@ -496,7 +496,6 @@ function MainApp() {
 }
 
 function App() {
-  // Простая проверка роута
   const [path, setPath] = useState(window.location.pathname);
 
   useEffect(() => {
@@ -505,9 +504,13 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Если путь /terms-and-conditions (или /terms), показываем страницу
+  // Роутинг для служебных страниц
   if (path === '/terms-and-conditions' || path === '/terms') {
     return <TermsPage />;
+  }
+  
+  if (path === '/pricing') {
+    return <PricingPage />;
   }
 
   return (
