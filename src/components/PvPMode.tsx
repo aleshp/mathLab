@@ -27,7 +27,7 @@ import { RankUpModal } from './RankUpModal';
 
 const BOT_UUID = 'c00d4ad6-1ed1-4195-b596-ac6960f3830a';
 const PVP_MODULE_ID = '00000000-0000-0000-0000-000000000099';
-const BASE_MMR = 1000;
+const BASE_MMR = 700;
 
 type DuelState = 'lobby' | 'searching' | 'battle' | 'finished';
 
