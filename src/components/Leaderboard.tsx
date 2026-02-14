@@ -1,8 +1,7 @@
-// src/components/Leaderboard.tsx
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Trophy, Zap, Target, X, Crown, Medal, Star, Swords, User, ChevronLeft, ChevronRight, Loader } from 'lucide-react';
+import { Trophy, Zap, Target, X, Crown, Medal, Swords, User, ChevronLeft, ChevronRight, Loader } from 'lucide-react';
 import { getRank } from '../lib/gameLogic';
 import { getPvPRank, getPvPShortRank } from '../lib/gameLogic';
 
@@ -31,6 +30,7 @@ export function Leaderboard({ onClose }: { onClose: () => void }) {
 
   async function loadLeaders(pageNum: number, currentFilter: string) {
     setLoading(true);
+    // Вызываем обновленную SQL функцию
     const { data, error } = await supabase.rpc('get_leaderboard', {
       sort_type: currentFilter,
       page_number: pageNum,
@@ -144,9 +144,15 @@ export function Leaderboard({ onClose }: { onClose: () => void }) {
 
               // PvP rank calculation (safe)
               const mmrForRank = typeof player.mmr === 'number' ? player.mmr : 1000;
+              
+              // === ИСПРАВЛЕНИЕ: Берем сыгранные матчи из ответа базы ===
+              const matchesPlayed = player.calibration_matches_played || 0;
+              
+              // Формируем лейбл
               const pvprank = getPvPRank(mmrForRank);
-              const pvprankLabel = player.has_calibrated ? pvprank.fullName : `Unranked (${player.calibration_matches_played ?? 0}/5)`;
-              const pvpshort = player.has_calibrated ? getPvPShortRank(mmrForRank) : 'Unranked';
+              const pvprankLabel = player.has_calibrated 
+                ? pvprank.fullName 
+                : `Unranked (${matchesPlayed}/5)`; // <--- Показываем реальный прогресс
 
               return (
                 <div
@@ -176,8 +182,8 @@ export function Leaderboard({ onClose }: { onClose: () => void }) {
                         {rankInfo.title}
                       </span>
                       <span className="text-[9px] text-slate-500 font-mono">LVL {player.clearance_level}</span>
-                      {/* PvP rank badge (only show when PvP filter or always in details) */}
-                      <span className="ml-2 text-[9px] px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono">
+                      {/* PvP rank badge */}
+                      <span className={`ml-2 text-[9px] px-2 py-0.5 rounded border font-mono ${player.has_calibrated ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-yellow-900/20 border-yellow-500/30 text-yellow-400'}`}>
                         {pvprankLabel}
                       </span>
                     </div>
@@ -198,7 +204,7 @@ export function Leaderboard({ onClose }: { onClose: () => void }) {
                     <div className="flex items-center gap-1.5 opacity-80">
                       <div className="flex items-center gap-1 bg-red-500/10 px-1.5 py-0.5 rounded text-red-400 border border-red-500/20" title="PvP Рейтинг">
                         <Swords className="w-3 h-3" />
-                        <span className="text-[9px] font-bold">{player.has_calibrated ? player.mmr : '—'}</span>
+                        <span className="text-[9px] font-bold">{player.has_calibrated ? player.mmr : '---'}</span>
                       </div>
                       <div className="flex items-center gap-1 bg-cyan-500/10 px-1.5 py-0.5 rounded text-cyan-400 border border-cyan-500/20" title="Всего задач">
                         <Zap className="w-3 h-3 fill-current" />
