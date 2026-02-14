@@ -222,7 +222,8 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       // No match found — use bot
       supabase.removeChannel(channel);
 
-      const fakeBotMMR = (profile?.mmr ?? 1000) + Math.floor(Math.random() * 100 - 50);
+      const fakeBotMMR = (profile?.mmr ?? BASE_MMR) + Math.floor(Math.random() * 100 - 50);
+
       setOpponentMMR(fakeBotMMR);
 
       await supabase.from('duels').update({
