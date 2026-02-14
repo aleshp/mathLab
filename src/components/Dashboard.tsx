@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, Achievement } from '../lib/supabase';
 import {
-  User, LogOut, Trophy, Target, TrendingUp, Award, Zap, Clock, CheckCircle2, XCircle, X, Mail, ShieldCheck, GraduationCap, CreditCard, Loader
+  User, LogOut, Trophy, Target, TrendingUp, Award, Zap, Clock, CheckCircle2, 
+  XCircle, X, Mail, ShieldCheck, GraduationCap, CreditCard, Loader, Shield
 } from 'lucide-react';
 import { BecomeTeacherModal } from './BecomeTeacherModal';
 
@@ -53,9 +54,9 @@ export function Dashboard({ onClose }: DashboardProps) {
     loadRecentExperiments();
     checkTeacherRequest();
     
-    // === ДОБАВЛЯЕМ REALTIME ПОДПИСКУ НА СТАТУС ===
     if (!profile) return;
     
+    // Realtime подписка на статус заявки
     const channel = supabase
       .channel('teacher-status-changes')
       .on(
@@ -67,9 +68,8 @@ export function Dashboard({ onClose }: DashboardProps) {
           filter: `user_id=eq.${profile.id}` 
         },
         (payload) => {
-          console.log('Status updated real-time:', payload.new.status);
           setTeacherRequestStatus(payload.new.status);
-          refreshProfile(); // На случай если роль тоже изменилась
+          refreshProfile(); 
         }
       )
       .subscribe();
@@ -132,7 +132,6 @@ export function Dashboard({ onClose }: DashboardProps) {
 
   const handleTeacherPayment = () => {
     alert("Переход к оплате тарифа Teacher ($9)... (Paddle Integration)");
-    // Здесь будет вызов Paddle
   };
 
   async function handleSignOut() {
@@ -145,237 +144,211 @@ export function Dashboard({ onClose }: DashboardProps) {
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   };
 
-  const TeacherStatusSection = () => {
-    // Если роль уже teacher - кнопка вообще не нужна
-    if (profile?.role === 'teacher') {
-      return (
-        <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-cyan-400 font-bold">
-          <ShieldCheck className="w-4 h-4" />
-          <span>Верифицирован</span>
-        </div>
-      );
+  // === ЛОГИКА ОТОБРАЖЕНИЯ РОЛИ ===
+  const getRoleDisplay = () => {
+    if (!profile) return { label: 'Guest', color: 'text-slate-400', icon: User, bg: 'bg-slate-700' };
+
+    // Приоритет: Admin > Teacher > Premium > Student
+    if (profile.role === 'admin') {
+      return { 
+        label: 'ADMINISTRATOR', 
+        color: 'text-red-400', 
+        icon: Shield, 
+        bg: 'bg-red-500/10 border-red-500/50' 
+      };
     }
-
-    if (loadingRequest) return <Loader className="w-5 h-5 animate-spin text-slate-500" />;
-
-    if (teacherRequestStatus === 'pending') {
-      return (
-        <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400 font-bold animate-pulse">
-          <Clock className="w-4 h-4" />
-          <span>На проверке</span>
-        </div>
-      );
+    if (profile.role === 'teacher') {
+      return { 
+        label: 'MENTOR', 
+        color: 'text-cyan-400', 
+        icon: GraduationCap, 
+        bg: 'bg-cyan-500/10 border-cyan-500/50' 
+      };
     }
-
-    if (teacherRequestStatus === 'approved') {
-      return (
-        <button
-          onClick={handleTeacherPayment}
-          className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/30 rounded-lg transition-colors shadow-lg shadow-emerald-900/20 font-bold"
-        >
-          <CreditCard className="w-4 h-4" />
-          <span>Оплатить Teacher</span>
-        </button>
-      );
+    if (profile.is_premium) {
+      return { 
+        label: 'PREMIUM AGENT', 
+        color: 'text-amber-400', 
+        icon: Zap, 
+        bg: 'bg-amber-500/10 border-amber-500/50' 
+      };
     }
-
-    if (!profile?.is_admin) {
-      return (
-        <button
-          onClick={() => setShowTeacherModal(true)}
-          className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg transition-colors font-bold"
-        >
-          <GraduationCap className="w-4 h-4" />
-          <span>Я учитель</span>
-        </button>
-      );
-    }
-
-    return null;
+    return { 
+      label: 'CADET', 
+      color: 'text-slate-300', 
+      icon: User, 
+      bg: 'bg-slate-800 border-slate-700' 
+    };
   };
+
+  const roleInfo = getRoleDisplay();
+  const RoleIcon = roleInfo.icon;
 
   return (
     <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[70] overflow-y-auto">
       <div className="max-w-6xl mx-auto p-4 md:p-8 animate-in fade-in duration-300">
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8 gap-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl md:text-3xl font-bold text-white uppercase tracking-tighter">Журнал</h1>
-              
-              {profile?.is_premium && profile.role !== 'teacher' && (
-                <div className="px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full flex items-center gap-1.5 shadow-lg">
-                  <Zap className="w-3 h-3 text-white fill-current" />
-                  <span className="text-[10px] font-black text-white uppercase tracking-widest">Premium</span>
-                </div>
-              )}
-              
-              {profile?.role === 'teacher' && (
-                <div className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center gap-1.5 shadow-lg">
-                  <GraduationCap className="w-4 h-4 text-white" />
-                  <span className="text-[10px] font-black text-white uppercase tracking-widest">Mentor</span>
-                </div>
-              )}
-            </div>
-
-            <button onClick={onClose} className="md:hidden p-2 text-slate-400 hover:text-white">
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-
-          <div className="flex gap-3">
-            <TeacherStatusSection />
-
-            <button
-              onClick={onClose}
-              className="hidden md:block px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors font-bold"
-            >
-              Закрыть
-            </button>
-            <button
-              onClick={handleSignOut}
-              className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg transition-colors font-bold"
-            >
-              <LogOut className="w-4 h-4" />
-              Выход
-            </button>
-          </div>
-          
-          {/* МОБИЛЬНАЯ ВЕРСИЯ КНОПОК */}
-          <div className="md:hidden space-y-2">
-            {profile?.role !== 'teacher' && !profile?.is_admin && teacherRequestStatus === 'none' && (
-              <button
-                onClick={() => setShowTeacherModal(true)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white font-bold"
-              >
-                <GraduationCap className="w-5 h-5 text-amber-400" /> Стать учителем
-              </button>
-            )}
-            {teacherRequestStatus === 'pending' && (
-               <div className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400 font-bold animate-pulse">
-                  <Clock className="w-5 h-5" /> Заявка на проверке
-               </div>
-            )}
-            {teacherRequestStatus === 'approved' && profile?.role !== 'teacher' && (
-               <button
-                onClick={handleTeacherPayment}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-xl font-black shadow-lg shadow-emerald-900/40"
-              >
-                <CreditCard className="w-5 h-5" /> ОПЛАТИТЬ TEACHER ($9)
-              </button>
-            )}
-             {profile?.role === 'teacher' && (
-               <div className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400 font-bold">
-                  <ShieldCheck className="w-5 h-5" /> СТАТУС ПОДТВЕРЖДЕН
-               </div>
-            )}
-          </div>
+        {/* === HEADER === */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-black text-white uppercase tracking-tighter flex items-center gap-2">
+            <User className="w-8 h-8 text-cyan-500" />
+            Личное Дело
+          </h1>
+          <button onClick={onClose} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors text-slate-400 hover:text-white">
+            <X className="w-6 h-6" />
+          </button>
         </div>
 
         {profile && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* === MAIN ID CARD === */}
+            <div className={`p-6 rounded-3xl border ${roleInfo.bg} relative overflow-hidden shadow-2xl`}>
+              {/* Фоновые элементы */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
               
-              <div className={`backdrop-blur-sm border rounded-2xl p-6 relative overflow-hidden transition-all ${
-                profile.is_premium 
-                  ? 'bg-slate-800/80 border-amber-500/40' 
-                  : profile.role === 'teacher'
-                    ? 'bg-slate-800/80 border-cyan-500/40'
-                    : 'bg-slate-800/50 border-slate-700'
-              }`}>
-                <div className="flex items-center gap-3 mb-4 relative z-10">
-                  <div className={`p-2 rounded-xl ${profile.is_premium ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-400'}`}>
-                    <User className="w-5 h-5" />
+              <div className="flex flex-col md:flex-row gap-6 items-center md:items-start relative z-10">
+                
+                {/* Аватар / Иконка роли */}
+                <div className={`w-24 h-24 rounded-2xl flex items-center justify-center shrink-0 border-2 ${roleInfo.color.replace('text', 'border')} bg-slate-900/50 shadow-lg`}>
+                   <RoleIcon className={`w-12 h-12 ${roleInfo.color}`} />
+                </div>
+
+                {/* Инфо о пользователе */}
+                <div className="flex-1 text-center md:text-left">
+                  <div className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 border ${roleInfo.bg} ${roleInfo.color}`}>
+                    {roleInfo.label}
                   </div>
-                  <div className="text-xs uppercase font-black tracking-tighter opacity-50">
-                    {profile.role === 'teacher' ? 'Ментор' : profile.is_premium ? 'Premium' : 'Standard'}
+                  <h2 className="text-3xl md:text-4xl font-black text-white mb-1">{profile.username}</h2>
+                  <p className="text-slate-400 font-mono text-xs uppercase tracking-wider">ID: {profile.id.split('-')[0]}</p>
+                
+                  {/* Кнопки действий (Выход / Учитель) */}
+                  <div className="flex flex-wrap gap-3 mt-6 justify-center md:justify-start">
+                    <button
+                      onClick={handleSignOut}
+                      className="px-4 py-2 bg-slate-800 hover:bg-red-500/20 text-slate-300 hover:text-red-400 border border-slate-700 hover:border-red-500/30 rounded-lg transition-all font-bold text-sm flex items-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4" /> Выход
+                    </button>
+
+                    {/* Статус заявки на учителя */}
+                    {profile.role !== 'teacher' && profile.role !== 'admin' && (
+                      <>
+                        {teacherRequestStatus === 'none' && (
+                          <button
+                            onClick={() => setShowTeacherModal(true)}
+                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 rounded-lg transition-colors font-bold text-sm flex items-center gap-2"
+                          >
+                            <GraduationCap className="w-4 h-4" /> Стать учителем
+                          </button>
+                        )}
+                        {teacherRequestStatus === 'pending' && (
+                          <div className="px-4 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-lg font-bold text-sm flex items-center gap-2 animate-pulse cursor-wait">
+                            <Clock className="w-4 h-4" /> Заявка на проверке
+                          </div>
+                        )}
+                        {teacherRequestStatus === 'approved' && (
+                          <button
+                            onClick={handleTeacherPayment}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-sm flex items-center gap-2 shadow-lg shadow-emerald-900/20"
+                          >
+                            <CreditCard className="w-4 h-4" /> Оплатить тариф Teacher
+                          </button>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
-                <div className="text-xl font-black text-white truncate relative z-10">{profile.username}</div>
-                
+
+                {/* Компаньон (справа) */}
                 {profile.companion_name && (
-                  <div className="mt-6 pt-6 border-t border-white/5 flex items-center gap-4">
-                     <div className="w-16 h-16 bg-black/20 rounded-2xl p-2">
-                        <img src="/meerkat/avatar.png" alt="Pet" className="w-full h-full object-contain" />
-                     </div>
-                     <div>
-                       <div className="text-[10px] text-slate-500 uppercase font-bold">Спутник</div>
-                       <div className="text-white font-bold">{profile.companion_name}</div>
-                     </div>
+                  <div className="hidden md:flex flex-col items-center bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                    <img src="/meerkat/avatar.png" alt="Pet" className="w-16 h-16 object-contain mb-2" />
+                    <div className="text-xs font-bold text-white">{profile.companion_name}</div>
+                    <div className="text-[10px] text-slate-500 uppercase">LVL {profile.companion_level || 1}</div>
                   </div>
                 )}
               </div>
+            </div>
 
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-purple-500/20 rounded-xl text-purple-400">
-                    <Target className="w-5 h-5" />
-                  </div>
-                  <div className="text-xs uppercase font-black tracking-tighter opacity-50 text-purple-300">Ранг</div>
+            {/* === STATS GRID === */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-5 flex items-center gap-4">
+                <div className="p-3 bg-purple-500/20 rounded-xl text-purple-400">
+                  <Target className="w-6 h-6" />
                 </div>
-                <div className="text-2xl font-black text-white">LVL {profile.clearance_level}</div>
+                <div>
+                  <div className="text-xs text-slate-400 uppercase font-bold tracking-wider">Уровень</div>
+                  <div className="text-2xl font-black text-white">{profile.clearance_level}</div>
+                </div>
               </div>
 
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-emerald-500/20 rounded-xl text-emerald-400">
-                    <Zap className="w-5 h-5" />
-                  </div>
-                  <div className="text-xs uppercase font-black tracking-tighter opacity-50 text-emerald-300">Эксперименты</div>
+              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-5 flex items-center gap-4">
+                <div className="p-3 bg-emerald-500/20 rounded-xl text-emerald-400">
+                  <Zap className="w-6 h-6" />
                 </div>
-                <div className="text-2xl font-black text-white">{profile.total_experiments}</div>
+                <div>
+                  <div className="text-xs text-slate-400 uppercase font-bold tracking-wider">Задач решено</div>
+                  <div className="text-2xl font-black text-white">{profile.total_experiments}</div>
+                </div>
               </div>
 
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-500/20 rounded-xl text-blue-400">
-                    <TrendingUp className="w-5 h-5" />
-                  </div>
-                  <div className="text-xs uppercase font-black tracking-tighter opacity-50 text-blue-300">Точность</div>
+              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-5 flex items-center gap-4">
+                <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400">
+                  <TrendingUp className="w-6 h-6" />
                 </div>
-                <div className="text-2xl font-black text-white">{profile.success_rate.toFixed(0)}%</div>
+                <div>
+                  <div className="text-xs text-slate-400 uppercase font-bold tracking-wider">Точность</div>
+                  <div className="text-2xl font-black text-white">{profile.success_rate.toFixed(0)}%</div>
+                </div>
               </div>
             </div>
 
+            {/* === ACHIEVEMENTS & HISTORY === */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* Достижения */}
               <div>
-                <div className="flex items-center gap-2 mb-4 px-2">
+                <div className="flex items-center gap-2 mb-4 px-1">
                   <Trophy className="w-5 h-5 text-amber-400" />
                   <h2 className="text-lg font-bold text-white uppercase tracking-tight">Достижения</h2>
                 </div>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                  {achievements.length > 0 ? (
-                    achievements.map((item, index) => (
-                      <div key={index} className="bg-slate-800/40 border border-slate-700 rounded-2xl p-4 flex items-center gap-4">
-                        <div className={`p-3 rounded-xl bg-gradient-to-br ${rarityColors[item.achievement.rarity]} shadow-lg`}>
-                          <Award className="w-6 h-6 text-white" />
+                <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 min-h-[200px]">
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    {achievements.length > 0 ? (
+                      achievements.map((item, index) => (
+                        <div key={index} className="bg-slate-800 border border-slate-700 rounded-xl p-3 flex items-center gap-3">
+                          <div className={`p-2 rounded-lg bg-gradient-to-br ${rarityColors[item.achievement.rarity]} shadow-lg`}>
+                            <Award className="w-5 h-5 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-white text-sm truncate">{item.achievement.name}</h3>
+                            <p className="text-slate-400 text-[10px] truncate">{item.achievement.description}</p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-white truncate">{item.achievement.name}</h3>
-                          <p className="text-slate-400 text-xs truncate">{item.achievement.description}</p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-12 border-2 border-dashed border-slate-800 rounded-2xl text-slate-600 text-sm">Нет наград</div>
-                  )}
+                      ))
+                    ) : (
+                      <div className="text-center py-12 text-slate-600 text-sm italic">Нет наград</div>
+                    )}
+                  </div>
                 </div>
               </div>
 
+              {/* История */}
               <div>
-                <div className="flex items-center gap-2 mb-4 px-2">
+                <div className="flex items-center gap-2 mb-4 px-1">
                   <Clock className="w-5 h-5 text-cyan-400" />
-                  <h2 className="text-lg font-bold text-white uppercase tracking-tight">История активности</h2>
+                  <h2 className="text-lg font-bold text-white uppercase tracking-tight">Последняя активность</h2>
                 </div>
-                <div className="bg-slate-800/40 border border-slate-700 rounded-2xl p-4">
-                  <div className="space-y-2 max-h-[340px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 min-h-[200px]">
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                     {recentExperiments.length > 0 ? (
                       recentExperiments.map((exp, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/50 border border-slate-700/50">
+                        <div key={index} className="flex items-center justify-between p-3 rounded-xl bg-slate-800 border border-slate-700/50">
                           <div className="flex items-center gap-3">
-                            {exp.correct ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <XCircle className="w-5 h-5 text-red-500" />}
+                            {exp.correct ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
                             <div>
-                              <div className="text-white text-xs font-bold">{typeTranslations[exp.problem_type] || exp.problem_type}</div>
+                              <div className="text-white text-sm font-bold">{typeTranslations[exp.problem_type] || exp.problem_type}</div>
                               <div className="text-[10px] text-slate-500">{exp.time_spent}с • {formatDate(exp.attempted_at)}</div>
                             </div>
                           </div>
