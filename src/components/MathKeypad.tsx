@@ -379,8 +379,13 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
              )}
           </div>
 
-          {/* ПРАВАЯ КОЛОНКА - ОПЕРАЦИИ */}
-          <div className="w-1/5 flex flex-col gap-1.5">
+          {/* ПРАВАЯ КОЛОНКА - ENTER И ОПЕРАЦИИ */}
+          <div className="w-1/4 flex flex-col gap-1.5">
+             {/* ENTER ПОД ПЕРЕКЛЮЧАТЕЛЕМ */}
+             <Key onClick={onSubmit} className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-900/50 py-3 border-2 border-emerald-400/30">
+               <CornerDownLeft className="w-6 h-6"/>
+             </Key>
+             
              <Key onClick={() => onCommand('insert', '\\frac{#@}{#?}')} className="bg-gradient-to-br from-orange-600 to-orange-700 text-white text-xl py-4 flex-1 shadow-lg">
                ÷
              </Key>
@@ -411,13 +416,9 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
            </Key>
            <Key 
              onClick={() => onCommand('insert', '\\,')} 
-             className="col-span-2 bg-slate-600 text-slate-300 border-b-4 border-slate-800 active:border-b-0 active:translate-y-[4px] py-3"
+             className="col-span-3 bg-slate-600 text-slate-300 border-b-4 border-slate-800 active:border-b-0 active:translate-y-[4px] py-3"
            >
              <Space className="w-5 h-5" />
-           </Key>
-           {/* ENTER ВНИЗУ СПРАВА */}
-           <Key onClick={onSubmit} className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-900/50 py-3 border-2 border-emerald-400/30">
-             <CornerDownLeft className="w-6 h-6"/>
            </Key>
         </div>
 
