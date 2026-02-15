@@ -305,7 +305,6 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
                      </Key>
                   </div>
 
- => onCommand('insert', '.')} className="bg-slate-800 text-white text-xl py-3">
                       ,
                     </Key>
                     <Key onClick={() => onCommand('insert', ';')} className="bg-slate-800 text-white text-xl py-3">
