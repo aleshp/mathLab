@@ -60,14 +60,24 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
     isLongPressTriggered.current = false;
   };
 
-  // Очистка при размонтировании
+  // === ОБРАБОТКА ENTER НА КЛАВИАТУРЕ ПК ===
   useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        onSubmit();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    
     return () => {
+      window.removeEventListener('keydown', handleKeyPress);
       if (longPressTimer.current) {
         clearTimeout(longPressTimer.current);
       }
     };
-  }, []);
+  }, [onSubmit]);
 
   // === LONG PRESS МЕНЮ ===
   const longPressMenus: { [key: string]: Array<{ label: string; cmd: string; arg: string }> } = {
@@ -218,8 +228,8 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
       {/* === ОСНОВНАЯ КЛАВИАТУРА === */}
       <div className="flex flex-col gap-1.5 select-none pb-1 touch-none">
         
-        {/* ВЕРХНЯЯ ПАНЕЛЬ - ТЕПЕРЬ С ПЕРЕКЛЮЧАТЕЛЕМ */}
-        <div className="grid grid-cols-5 gap-1.5">
+        {/* ВЕРХНЯЯ ПАНЕЛЬ */}
+        <div className="grid grid-cols-4 gap-1.5">
            <Key onClick={() => onCommand('perform', 'moveToPreviousChar')} className="bg-slate-800 py-2 text-slate-400">
              <ArrowLeft className="w-5 h-5"/>
            </Key>
@@ -229,12 +239,9 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
            <Key onClick={onDelete} className="bg-red-500/20 text-red-400 py-2">
              <Delete className="w-5 h-5"/>
            </Key>
-           <Key onClick={onClear} className="bg-slate-800 text-slate-500 text-[10px] uppercase py-2">
+           {/* CLR теперь очень заметный */}
+           <Key onClick={onClear} className="bg-gradient-to-br from-orange-600 to-red-600 text-white font-extrabold text-xs uppercase py-2 shadow-lg shadow-orange-900/40 border-2 border-orange-400/30">
              CLR
-           </Key>
-           {/* ПЕРЕКЛЮЧАТЕЛЬ ВСЕГДА ЗДЕСЬ */}
-           <Key onClick={toggleTab} className="bg-purple-900/40 border border-purple-500/50 text-purple-300 text-xs py-2">
-             {getTabLabel()}
            </Key>
         </div>
 
@@ -361,8 +368,19 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
              )}
           </div>
 
-          {/* ПРАВАЯ КОЛОНКА */}
+          {/* ПРАВАЯ КОЛОНКА - ПЕРЕКЛЮЧАТЕЛЬ И ENTER ВВЕРХУ */}
           <div className="w-1/4 flex flex-col gap-1.5">
+             {/* ПЕРЕКЛЮЧАТЕЛЬ ВСЕГДА НАВЕРХУ */}
+             <Key onClick={toggleTab} className="bg-purple-900/40 border-2 border-purple-500/60 text-purple-200 font-extrabold text-xs py-2.5 shadow-lg">
+               {getTabLabel()}
+             </Key>
+             
+             {/* ENTER СРАЗУ ПОД НИМ */}
+             <Key onClick={onSubmit} className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-900/50 py-3 border-2 border-emerald-400/30">
+               <CornerDownLeft className="w-5 h-5"/>
+             </Key>
+             
+             {/* ОПЕРАЦИИ */}
              <Key onClick={() => onCommand('insert', '\\frac{#@}{#?}')} className="bg-gradient-to-br from-orange-600 to-orange-700 text-white text-lg py-3 flex-1 shadow-lg">
                ÷
              </Key>
@@ -393,12 +411,9 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
            </Key>
            <Key 
              onClick={() => onCommand('insert', '\\,')} 
-             className="col-span-2 bg-slate-600 text-slate-300 border-b-4 border-slate-800 active:border-b-0 active:translate-y-[4px] py-2"
+             className="col-span-3 bg-slate-600 text-slate-300 border-b-4 border-slate-800 active:border-b-0 active:translate-y-[4px] py-2"
            >
              <Space className="w-5 h-5" />
-           </Key>
-           <Key onClick={onSubmit} className="bg-emerald-600 text-white shadow-lg shadow-emerald-900/40 py-2">
-             <CornerDownLeft className="w-5 h-5"/>
            </Key>
         </div>
 
