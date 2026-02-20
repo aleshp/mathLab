@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next'; // Добавлен перевод
+import { useTranslation } from 'react-i18next';
 import { ArrowRight, Zap, Shield, Trophy, Mail, Check, CreditCard } from 'lucide-react';
 import Squares from './Squares';
 
@@ -11,6 +11,7 @@ type Props = {
 
 export function LandingPage({ onStartDemo, onLogin, onOpenLegal }: Props) {
   const { t } = useTranslation();
+  // ИСПРАВЛЕНО: Вернул переменные
   const = useState(false);
 
   const handleEmailClick = (e: React.MouseEvent) => {
@@ -73,7 +74,6 @@ export function LandingPage({ onStartDemo, onLogin, onOpenLegal }: Props) {
           </div>
         </div>
 
-        {/* ФУТЕР */}
         <div className="mt-12 mb-6 pt-6 border-t border-slate-800/60 w-full animate-in fade-in delay-700">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex flex-col md:flex-row items-center gap-4 text-slate-500 text-sm">
