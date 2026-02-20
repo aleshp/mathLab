@@ -54,7 +54,7 @@ export function PricingPage() {
       }
 
       paddle.Checkout.open({
-        items:,
+        items: [{ priceId: priceId, quantity: 1 }],
         customData: {
           userId: user.id,
           tier: priceId === PADDLE_PRICE_IDS.TEACHER ? 'teacher' : 'premium'
