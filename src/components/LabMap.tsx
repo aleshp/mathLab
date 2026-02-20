@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next'; // Перевод
+import { useTranslation } from 'react-i18next'; // Хук
 import { supabase, Sector } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -85,7 +85,7 @@ type LabMapProps = {
 };
 
 export function LabMap({ onSectorSelect }: LabMapProps) {
-  const { t, i18n } = useTranslation(); // Хук перевода
+  const { t, i18n } = useTranslation();
   const { user, profile } = useAuth();
   const [sectors, setSectors] = useState<Sector[]>([]);
 
@@ -142,9 +142,6 @@ export function LabMap({ onSectorSelect }: LabMapProps) {
             const Icon = iconMap[sector.icon] || Zap;
             const unlocked = isUnlocked(sector);
             
-            // Используем названия на выбранном языке, если они есть в БД
-            // (Это задел на будущее, когда ты переведешь БД)
-            // Но пока можно оставить как есть, так как названия в БД.
             const name = i18n.language === 'kk' && sector.name_kz ? sector.name_kz : sector.name;
             const description = i18n.language === 'kk' && sector.description_kz ? sector.description_kz : sector.description;
 
