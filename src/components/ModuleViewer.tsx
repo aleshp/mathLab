@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next'; // Перевод
 import { supabase, Module, Sector, UserProgress } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, BookOpen, Beaker, CheckCircle, Lock, PlayCircle } from 'lucide-react';
@@ -12,6 +13,7 @@ type ModuleViewerProps = {
 };
 
 export function ModuleViewer({ sector, onBack, onStartExperiment }: ModuleViewerProps) {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [modules, setModules] = useState<Module[]>([]);
   const [progress, setProgress] = useState<Map<string, UserProgress>>(new Map());
@@ -36,46 +38,51 @@ export function ModuleViewer({ sector, onBack, onStartExperiment }: ModuleViewer
 
   const getProgressPercentage = (moduleId: string) => progress.get(moduleId)?.completion_percentage ?? 0;
 
+  // Локализация названия сектора
+  const sectorName = i18n.language === 'kk' && sector.name_kz ? sector.name_kz : sector.name;
+  const sectorDesc = i18n.language === 'kk' && sector.description_kz ? sector.description_kz : sector.description;
+
   return (
     <div className="w-full h-full overflow-y-auto custom-scrollbar">
       <div className="max-w-4xl mx-auto p-4 md:p-8 pb-32">
         
-        {/* Кнопка Назад */}
         <button
           onClick={onBack}
           className="flex items-center gap-2 text-cyan-400 hover:text-white mb-8 transition-colors group px-4 py-2 rounded-full hover:bg-slate-800/50 w-fit"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-bold">К карте секторов</span>
+          <span className="font-bold">{t('modules.back_to_map')}</span>
         </button>
 
-        {/* Заголовок Сектора */}
         <div className="mb-10 bg-slate-900/60 backdrop-blur-xl border border-cyan-500/20 rounded-3xl p-8 relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
           
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-lg mb-4">
               <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-              <span className="text-cyan-400 font-mono text-xs font-bold uppercase tracking-wider">Сектор {sector.id}</span>
+              <span className="text-cyan-400 font-mono text-xs font-bold uppercase tracking-wider">{t('modules.sector')} {sector.id}</span>
             </div>
-            <h1 className="text-3xl md:text-5xl font-black text-white mb-4">{sector.name}</h1>
-            <p className="text-slate-300 text-lg leading-relaxed max-w-2xl">{sector.description}</p>
+            <h1 className="text-3xl md:text-5xl font-black text-white mb-4">{sectorName}</h1>
+            <p className="text-slate-300 text-lg leading-relaxed max-w-2xl">{sectorDesc}</p>
             
             {!user && (
               <div className="mt-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-200 text-sm flex items-center gap-3">
                 <Lock className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                <span>Вы в демо-режиме. Вам открыт только первый модуль для ознакомления.</span>
+                <span>{t('modules.demo_lock')}</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Список Модулей */}
         <div className="space-y-4">
           {modules.map((module, index) => {
             const percentage = getProgressPercentage(module.id);
             const isComplete = percentage === 100;
             const isLocked = !user && index > 0;
+
+            // Локализация модуля
+            const modName = i18n.language === 'kk' && module.name_kz ? module.name_kz : module.name;
+            const modTheory = i18n.language === 'kk' && module.theory_content_kz ? module.theory_content_kz : module.theory_content;
 
             return (
               <div
@@ -85,7 +92,6 @@ export function ModuleViewer({ sector, onBack, onStartExperiment }: ModuleViewer
                   ${isLocked ? 'opacity-70 grayscale' : 'hover:scale-[1.01]'}
                 `}
               >
-                {/* Градиентная рамка при наведении (только если открыто) */}
                 {!isLocked && (
                   <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/30 to-blue-500/0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 )}
@@ -96,7 +102,6 @@ export function ModuleViewer({ sector, onBack, onStartExperiment }: ModuleViewer
                 `}>
                   <div className="flex flex-col md:flex-row md:items-start gap-6">
                     
-                    {/* Иконка номера */}
                     <div className={`
                       flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold border
                       ${isComplete 
@@ -112,23 +117,21 @@ export function ModuleViewer({ sector, onBack, onStartExperiment }: ModuleViewer
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className={`text-xl font-bold truncate ${isLocked ? 'text-slate-500' : 'text-white'}`}>
-                          {module.name}
+                          {modName}
                         </h3>
                         {isLocked && <Lock className="w-5 h-5 text-slate-600" />}
                       </div>
 
                       <div className="text-slate-400 text-sm leading-relaxed mb-6">
-                        <Latex>{module.theory_content}</Latex>
+                        <Latex>{modTheory}</Latex>
                       </div>
 
-                      {/* Футер карточки */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-700/50">
                         
-                        {/* Прогресс */}
                         {user ? (
                            <div className="flex-1 max-w-xs">
                              <div className="flex justify-between text-xs font-mono text-slate-500 mb-1">
-                               <span>ПРОГРЕСС</span>
+                               <span>{t('modules.progress')}</span>
                                <span className={percentage === 100 ? 'text-emerald-400' : 'text-cyan-400'}>{percentage}%</span>
                              </div>
                              <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -139,10 +142,9 @@ export function ModuleViewer({ sector, onBack, onStartExperiment }: ModuleViewer
                              </div>
                            </div>
                         ) : (
-                           <div className="text-xs text-slate-600 font-mono">ПРОГРЕСС НЕ СОХРАНЯЕТСЯ</div>
+                           <div className="text-xs text-slate-600 font-mono">{t('modules.no_save')}</div>
                         )}
 
-                        {/* Кнопка */}
                         <button
                           onClick={() => !isLocked && onStartExperiment(module)}
                           disabled={isLocked}
@@ -155,11 +157,11 @@ export function ModuleViewer({ sector, onBack, onStartExperiment }: ModuleViewer
                           `}
                         >
                           {isLocked ? (
-                            'Заблокировано'
+                            t('modules.locked')
                           ) : (
                             <>
                               <PlayCircle className="w-4 h-4" />
-                              {percentage > 0 ? 'Продолжить' : 'Начать'}
+                              {percentage > 0 ? t('modules.continue') : t('modules.start')}
                             </>
                           )}
                         </button>
@@ -177,7 +179,7 @@ export function ModuleViewer({ sector, onBack, onStartExperiment }: ModuleViewer
             <div className="inline-block p-4 bg-slate-800 rounded-full mb-4">
               <BookOpen className="w-12 h-12 text-slate-600" />
             </div>
-            <p className="text-slate-500 font-medium">Данные сектора загружаются...</p>
+            <p className="text-slate-500 font-medium">{t('modules.loading')}</p>
           </div>
         )}
       </div>
