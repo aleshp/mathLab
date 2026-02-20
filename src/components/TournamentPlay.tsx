@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next'; // Перевод
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import Latex from 'react-latex-next';
-import { Loader, Trophy, XCircle, Timer, Flag, AlertTriangle, WifiOff } from 'lucide-react';
+import { Loader, Trophy, XCircle, Timer, Flag, AlertTriangle, WifiOff, Zap } from 'lucide-react';
 import { MathKeypad } from './MathKeypad';
 import { MathInput } from './MathInput';
 import { checkAnswer } from '../lib/mathUtils';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { grantXp } from '../lib/xpSystem';
 
 type Props = {
   duelId: string;
@@ -14,7 +16,8 @@ type Props = {
 };
 
 export function TournamentPlay({ duelId, onFinished }: Props) {
-  const { user } = useAuth();
+  const { t, i18n } = useTranslation();
+  const { user, profile, refreshProfile } = useAuth();
  
   const [loading, setLoading] = useState(true);
   const [opponentName, setOpponentName] = useState<string>('Соперник');
@@ -35,8 +38,8 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
  
   const [showSurrenderModal, setShowSurrenderModal] = useState(false);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
+  const [xpGained, setXpGained] = useState<number | null>(null);
 
-  // === ОБРАБОТЧИКИ КЛАВИАТУРЫ ===
   const handleKeypadCommand = (cmd: string, arg?: string) => {
     if (!mfRef.current) return;
     const scrollY = window.scrollY;
@@ -68,7 +71,6 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
     requestAnimationFrame(() => window.scrollTo(0, scrollY));
   };
 
-  // === 1. ИНИЦИАЛИЗАЦИЯ ===
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
     async function initMatch() {
@@ -102,7 +104,7 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
         const { data: oppProfile } = await supabase.from('profiles').select('username').eq('id', oppId).single();
         if (oppProfile) setOpponentName(oppProfile.username);
       } else {
-        setOpponentName("Ожидание...");
+        setOpponentName(t('tournaments.waiting_player'));
       }
 
       const myProg = isP1 ? duel.player1_progress : duel.player2_progress;
@@ -138,7 +140,6 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
     };
   }, [duelId, user, onFinished]);
 
-  // === 2. HEARTBEAT ===
   useEffect(() => {
     let interval: any;
     if (matchStatus === 'active' && duelId && !loading && user) {
@@ -163,7 +164,6 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
     return () => clearInterval(interval);
   }, [matchStatus, duelId, loading, user]);
 
-  // === 3. ОТПРАВКА ОТВЕТА ===
   const submitResult = useCallback(async (isCorrect: boolean) => {
     if (!user || !duelId) return;
     setFeedback(isCorrect ? 'correct' : 'wrong');
@@ -199,7 +199,6 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
     }, 1000);
   }, [duelId, user, myScore, currentProbIndex, problems.length]);
 
-  // === 4. ТАЙМЕР ===
   const handleTimeout = useCallback(() => {
     if (feedback) return;
     submitResult(false);
@@ -231,7 +230,6 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
     }
   }, [loading, matchStatus]);
 
-  // === 5. ОБРАБОТЧИКИ ===
   const handleAnswer = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (feedback || !userAnswer || userAnswer.trim() === '') return;
@@ -254,9 +252,18 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
     setProblems(sorted);
   }
 
+  // === ВЫДАЧА ОПЫТА В КОНЦЕ ТУРНИРНОГО БОЯ ===
+  useEffect(() => {
+    if (matchStatus === 'finished' && winnerId === user?.id && !xpGained) {
+      grantXp(user.id, profile?.is_premium || false, 50).then(res => {
+        if (res) setXpGained(res.gained);
+      });
+    }
+  }, [matchStatus, winnerId]);
+
+
   if (loading) return <div className="flex h-full items-center justify-center"><Loader className="animate-spin text-cyan-400 w-10 h-10"/></div>;
 
-  // === ЭКРАН ФИНИША ===
   if (matchStatus === 'finished' || currentProbIndex >= problems.length) {
     const isWinner = winnerId === user!.id;
     return (
@@ -265,18 +272,26 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
           {isWinner ? (
             <>
               <Trophy className="w-24 h-24 text-yellow-400 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]" />
-              <h1 className="text-4xl font-black text-yellow-400 mb-4">ПОБЕДА!</h1>
+              <h1 className="text-4xl font-black text-yellow-400 mb-4">{t('pvp.win')}</h1>
+              
+              {xpGained && (
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-full text-amber-400 font-bold mb-4 animate-pulse">
+                   <Zap className="w-4 h-4 fill-current" />
+                   +{xpGained} XP
+                </div>
+              )}
+
               {opponentDisconnected ? (
-                 <p className="text-emerald-300 mb-8">Соперник отключился.</p>
+                 <p className="text-emerald-300 mb-8">{t('pvp.opponent_resigned')}</p>
               ) : (
-                 <p className="text-slate-300 mb-8">Вы проходите в следующий раунд.</p>
+                 <p className="text-slate-300 mb-8">{t('pvp.pass_round')}</p>
               )}
             </>
           ) : (
             <>
               <XCircle className="w-24 h-24 text-red-500 mx-auto mb-6" />
-              <h1 className="text-4xl font-black text-red-500 mb-4">ВЫБЫВАНИЕ</h1>
-              <p className="text-slate-300 mb-8">Хорошая игра. Тренируйтесь в лаборатории!</p>
+              <h1 className="text-4xl font-black text-red-500 mb-4">{t('pvp.loss')}</h1>
+              <p className="text-slate-300 mb-8">{t('pvp.good_game')}</p>
             </>
           )}
          
@@ -284,7 +299,7 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
             {myScore} : {oppScore}
           </div>
           <button onClick={onFinished} className="w-full px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-colors">
-            Вернуться к сетке
+            {t('tournaments.bracket_title')}
           </button>
         </div>
       </div>
@@ -292,8 +307,8 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
   }
 
   const currentProb = problems[currentProbIndex];
+  const questionText = i18n.language === 'kk' && currentProb.question_kz ? currentProb.question_kz : currentProb.question;
   
-  // ============ НОВЫЙ STICKY LAYOUT (КАК В PVP) ============
   return (
     <div className="flex flex-col h-[100dvh] bg-slate-900 overflow-hidden">
      
@@ -302,12 +317,12 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
           <div className="bg-slate-900 border border-red-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <div className="flex flex-col items-center text-center mb-6">
               <AlertTriangle className="w-8 h-8 text-red-500 mb-4" />
-              <h3 className="text-xl font-bold text-white mb-2">Сдаться?</h3>
-              <p className="text-slate-400 text-sm">Вам будет засчитано поражение.</p>
+              <h3 className="text-xl font-bold text-white mb-2">{t('pvp.surrender_title')}</h3>
+              <p className="text-slate-400 text-sm">{t('pvp.surrender_text')}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setShowSurrenderModal(false)} className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold">Отмена</button>
-              <button onClick={confirmSurrender} className="px-4 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold">Сдаться</button>
+              <button onClick={() => setShowSurrenderModal(false)} className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold">{t('pvp.cancel')}</button>
+              <button onClick={confirmSurrender} className="px-4 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold">{t('pvp.btn_surrender')}</button>
             </div>
           </div>
         </div>
@@ -316,21 +331,18 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
       {opponentDisconnected && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-4 py-2 rounded-full flex items-center gap-2 animate-bounce z-50 shadow-lg">
             <WifiOff className="w-4 h-4" />
-            <span className="text-xs">Соперник теряет соединение...</span>
+            <span className="text-xs">{t('pvp.opponent_lost')}</span>
           </div>
       )}
 
-      {/* ========== STICKY ВЕРХНЯЯ ЧАСТЬ ========== */}
       <div className="flex-shrink-0 bg-slate-900 border-b border-slate-800 shadow-lg z-10">
-        
-        {/* ТАБЛО */}
         <div className="flex items-center justify-between px-3 py-2 bg-slate-800/80 border-b border-slate-700">
           <button onClick={() => setShowSurrenderModal(true)} className="p-1.5 text-red-500/50 hover:text-red-500 hover:bg-red-500/10 rounded-lg">
             <Flag className="w-4 h-4" />
           </button>
           
           <div className="text-right">
-            <div className="text-cyan-400 text-[10px] font-bold uppercase">ВЫ</div>
+            <div className="text-cyan-400 text-[10px] font-bold uppercase">{t('pvp.you')}</div>
             <div className="text-xl font-black text-white leading-none">{myScore}</div>
           </div>
           
@@ -348,7 +360,6 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
           </div>
         </div>
 
-        {/* ПРОГРЕССБАРЫ */}
         <div className="space-y-1 px-3 py-2 bg-slate-900">
            <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
              <div className="h-full bg-cyan-500 transition-all duration-300" style={{ width: `${(currentProbIndex / (problems.length || 10)) * 100}%` }} />
@@ -357,39 +368,41 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
              <div className="h-full bg-red-500 transition-all duration-300" style={{ width: `${(oppProgress / (problems.length || 10)) * 100}%` }} />
            </div>
         </div>
+      </div>
 
-        {/* ========== STICKY ЗАДАНИЕ ========== */}
+      <div className="flex-1 flex flex-col items-center justify-center p-4 bg-slate-900 overflow-y-auto">
         {currentProb ? (
-           <div className="px-3 py-3 bg-gradient-to-b from-slate-900 to-slate-900/95">
-              <div className="bg-slate-800/60 backdrop-blur-sm border border-cyan-500/20 rounded-xl p-3 shadow-lg">
-                <div className="text-base md:text-lg font-bold text-white leading-snug text-center">
-                  <Latex>{currentProb.question}</Latex>
+           <div className="w-full max-w-lg">
+              <div className="bg-slate-800/50 backdrop-blur-sm border border-cyan-500/20 rounded-2xl p-6 shadow-xl text-center min-h-[150px] flex flex-col items-center justify-center">
+                <div className="text-2xl md:text-3xl font-bold text-white leading-relaxed tracking-wide">
+                  <Latex>{`$${questionText}$`}</Latex>
+                </div>
+                
+                <div className="mt-4 text-xs text-slate-500 font-mono uppercase tracking-widest">
+                  {t('pvp.solve_hint')}
                 </div>
               </div>
            </div>
         ) : (
-           <div className="flex items-center justify-center py-4">
-             <div className="text-center animate-pulse text-white text-sm">
-               <Loader className="w-5 h-5 mx-auto mb-1 animate-spin" />
-               Загрузка...
-             </div>
+           <div className="text-white text-sm animate-pulse flex items-center gap-2">
+             <Loader className="w-5 h-5 mx-auto mb-1 animate-spin" />
+             {t('pvp.loading_task')}
            </div>
         )}
       </div>
 
-      {/* ========== НИЖНЯЯ ЧАСТЬ (КЛАВИАТУРА) ========== */}
-      <div className="flex-shrink-0 bg-slate-900 border-t border-slate-800 shadow-2xl z-20">
+      <div className="flex-shrink-0 bg-slate-900 border-t border-slate-800 shadow-2xl z-20 pb-safe">
         {feedback ? (
-          <div className={`p-4 flex items-center justify-center gap-4 animate-in zoom-in duration-300 min-h-[280px] ${feedback === 'correct' ? 'bg-emerald-900/20' : 'bg-red-900/20'}`}>
+          <div className={`p-8 flex items-center justify-center gap-4 animate-in zoom-in duration-300 min-h-[320px] ${feedback === 'correct' ? 'bg-emerald-900/20' : 'bg-red-900/20'}`}>
               <div className="text-center">
                 <div className={`text-3xl font-black mb-2 ${feedback === 'correct' ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {feedback === 'correct' ? 'ВЕРНО!' : 'МИМО!'}
+                  {feedback === 'correct' ? t('pvp.win') : t('pvp.loss')}
                 </div>
               </div>
           </div>
         ) : (
-          <div className="p-2 pb-safe">
-             <div className="mb-1.5 px-1">
+          <div className="p-2">
+             <div className="mb-2 px-1">
                 <MathInput
                    value={userAnswer}
                    onChange={setUserAnswer}
