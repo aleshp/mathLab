@@ -131,7 +131,9 @@ const resources = {
         match_score: "Счет матча",
         btn_menu: "В меню",
         calib_recorded: "Калибровочный матч записан.",
-        result_recorded: "Результат учтен в калибровке."
+        result_recorded: "Результат учтен в калибровке.",
+        status: "Ваш статус",
+        calibration: "Калибровка",
       },
       pricing: {
         title: "Тарифы",
@@ -362,7 +364,9 @@ const resources = {
         match_score: "Матч есебі",
         btn_menu: "Мәзірге",
         calib_recorded: "Калибрлеу матчы жазылды.",
-        result_recorded: "Нәтиже калибрлеуде ескерілді."
+        result_recorded: "Нәтиже калибрлеуде ескерілді.",
+        status: "Сіздің мәртебеңіз",
+        calibration: "Калибрлеу",
       },
     pricing: {
         title: "Тарифтер",
