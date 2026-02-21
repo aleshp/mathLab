@@ -143,9 +143,8 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
   // === Admin: Force Win ===
   const handleAdminForceWin = async () => {
     if (!duelId || !user) return;
-    // Finish duel on server with current user as winner
     await supabase.rpc('finish_duel', { duel_uuid: duelId, finisher_uuid: user.id });
-    endGame(user.id, 99);
+    endGame(isBotMatch ? 'me' : user.id, 99);
   };
 
   // === Initial Load / Reconnect ===
