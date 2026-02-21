@@ -143,6 +143,11 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
   // === Admin: Force Win ===
   const handleAdminForceWin = async () => {
     if (!duelId || !user) return;
+  
+    // Ставим себе максимум очков чтобы finish_duel точно определил нас победителем
+    const myUpdateData = await getMyUpdateData(problems.length, problems.length);
+    await supabase.from('duels').update(myUpdateData).eq('id', duelId);
+  
     await supabase.rpc('finish_duel', { duel_uuid: duelId, finisher_uuid: user.id });
     endGame(isBotMatch ? 'me' : user.id, 99);
   };
