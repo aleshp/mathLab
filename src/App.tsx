@@ -267,7 +267,8 @@ function MainApp() {
           variant="circle"
           pixelSize={12}
           color="#B19EEF"
-          patternScale={3}
+          patternScale={6
+          }
           patternDensity={1.2}
           pixelSizeJitter={0.5}
           enableRipples={false}
