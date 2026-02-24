@@ -7,7 +7,7 @@ import { BecomeTeacherModal } from './BecomeTeacherModal';
 import { getPaddleInstance } from '../lib/paddle';
 
 const PADDLE_PRICE_IDS = {
-  PREMIUM: 'pri_01khs2jy2vbmjj09q91p38nkbf', 
+  PREMIUM: 'pri_01khs53cszmhn5qykdx9xhrnye', 
   TEACHER: 'pri_01khs2jq904f4sxeggrd55ynr3' 
 };
 
