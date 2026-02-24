@@ -265,20 +265,20 @@ function MainApp() {
       <div className="absolute inset-0 z-0">
         <PixelBlast
           variant="circle"
-          pixelSize={6}
+          pixelSize={12}
           color="#B19EEF"
           patternScale={3}
           patternDensity={1.2}
           pixelSizeJitter={0.5}
-          enableRipples
+          enableRipples={false}
           rippleSpeed={0.4}
           rippleThickness={0.12}
           rippleIntensityScale={1.5}
-          liquid
+          liquid={false} 
           liquidStrength={0.12}
           liquidRadius={1.2}
           liquidWobbleSpeed={5}
-          speed={0.6}
+          speed={0.3}
           edgeFade={0.25}
           transparent
         />
