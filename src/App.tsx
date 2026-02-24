@@ -267,18 +267,11 @@ function MainApp() {
           variant="circle"
           pixelSize={12}
           color="#B19EEF"
-          patternScale={6
-          }
+          patternScale={6}
           patternDensity={1.2}
           pixelSizeJitter={0.5}
           enableRipples={false}
-          rippleSpeed={0.4}
-          rippleThickness={0.12}
-          rippleIntensityScale={1.5}
           liquid={false} 
-          liquidStrength={0.12}
-          liquidRadius={1.2}
-          liquidWobbleSpeed={5}
           speed={0.3}
           edgeFade={0.25}
           transparent
