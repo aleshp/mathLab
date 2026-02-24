@@ -1,482 +1,538 @@
 import { evaluate } from 'mathjs';
 
-// === КОНСТАНТЫ ДЛЯ АЛГЕБРЫ ===
-const ALGEBRA_SCOPE = {
+// ============================================================
+// SCOPE ДЛЯ АЛГЕБРАИЧЕСКИХ ВЫЧИСЛЕНИЙ
+// ============================================================
+const ALGEBRA_SCOPE: Record<string, any> = {
   x: 3, y: 7, z: 11, t: 13,
   a: 17, b: 19, c: 23, d: 29,
   m: 31, n: 37, k: 41, p: 43, q: 47,
   u: 53, v: 59, S: 61, h: 67, r: 71,
-  e: 2.718281828, pi: Math.PI,
-  
-  // === КОМБИНАТОРИКА ===
+  e: Math.E,
+  pi: Math.PI,
+
   combinations: (n: number, k: number): number => {
     if (k > n || k < 0 || n < 0) return 0;
     if (k === 0 || k === n) return 1;
     k = Math.min(k, n - k);
     let result = 1;
-    for (let i = 0; i < k; i++) {
-      result *= (n - i) / (i + 1);
-    }
+    for (let i = 0; i < k; i++) result *= (n - i) / (i + 1);
     return Math.round(result);
   },
-  
+
   permutations: (n: number, k: number): number => {
     if (k > n || k < 0 || n < 0) return 0;
     let result = 1;
-    for (let i = 0; i < k; i++) {
-      result *= (n - i);
-    }
+    for (let i = 0; i < k; i++) result *= (n - i);
     return result;
-  }
+  },
 };
 
-// === ПЕРИОДИЧЕСКИЕ ДРОБИ ===
-const PERIODIC_FRACTIONS: { [key: string]: number } = {
-  // 1/3, 2/3
-  '0.3': 1/3,
-  '0.33': 1/3,
-  '0.333': 1/3,
-  '0.6': 2/3,
-  '0.66': 2/3,
-  '0.666': 2/3,
-  
-  // 1/6, 5/6
-  '0.16': 1/6,
-  '0.166': 1/6,
-  '0.83': 5/6,
-  '0.833': 5/6,
-  
-  // 1/7, 2/7, ..., 6/7
-  '0.142': 1/7,
-  '0.1428': 1/7,
-  '0.285': 2/7,
-  '0.2857': 2/7,
-  '0.428': 3/7,
-  '0.4285': 3/7,
-  '0.571': 4/7,
-  '0.5714': 4/7,
-  '0.714': 5/7,
-  '0.7142': 5/7,
-  '0.857': 6/7,
-  '0.8571': 6/7,
-  
-  // 1/9, 2/9, ..., 8/9
-  '0.1': 1/9,
-  '0.11': 1/9,
-  '0.111': 1/9,
-  '0.2': 2/9,
-  '0.22': 2/9,
-  '0.222': 2/9,
-  '0.4': 4/9,
-  '0.44': 4/9,
-  '0.444': 4/9,
-  '0.5': 5/9,
-  '0.55': 5/9,
-  '0.555': 5/9,
-  '0.7': 7/9,
-  '0.77': 7/9,
-  '0.777': 7/9,
-  '0.8': 8/9,
-  '0.88': 8/9,
-  '0.888': 8/9,
+// ============================================================
+// ПЕРИОДИЧЕСКИЕ ДРОБИ
+// ============================================================
+const PERIODIC_FRACTIONS: Record<string, number> = {
+  '0.3': 1/3, '0.33': 1/3, '0.333': 1/3,
+  '0.6': 2/3, '0.66': 2/3, '0.666': 2/3,
+  '0.16': 1/6, '0.166': 1/6,
+  '0.83': 5/6, '0.833': 5/6,
+  '0.142': 1/7, '0.1428': 1/7,
+  '0.285': 2/7, '0.2857': 2/7,
+  '0.428': 3/7, '0.4285': 3/7,
+  '0.571': 4/7, '0.5714': 4/7,
+  '0.714': 5/7, '0.7142': 5/7,
+  '0.857': 6/7, '0.8571': 6/7,
+  '0.1': 1/9, '0.11': 1/9, '0.111': 1/9,
+  '0.2': 2/9, '0.22': 2/9, '0.222': 2/9,
+  '0.4': 4/9, '0.44': 4/9, '0.444': 4/9,
+  '0.5': 5/9, '0.55': 5/9, '0.555': 5/9,
+  '0.7': 7/9, '0.77': 7/9, '0.777': 7/9,
+  '0.8': 8/9, '0.88': 8/9, '0.888': 8/9,
 };
 
-/**
- * Нормализация математического выражения для MathJS
- */
-function normalizeForCalculation(str: string): string {
+// ============================================================
+// СПИСОК ИЗВЕСТНЫХ ФУНКЦИЙ (все lowercase!)
+// ============================================================
+const KNOWN_FUNCS = new Set([
+  'sin', 'cos', 'tan', 'cot', 'sec', 'csc',
+  'asin', 'acos', 'atan', 'acot', 'asec', 'acsc',
+  'sinh', 'cosh', 'tanh', 'coth',
+  'asinh', 'acosh', 'atanh', 'acoth',
+  'sqrt', 'abs', 'log', 'log10', 'exp',
+  'nthroot', 'factorial', 'combinations', 'permutations',
+]);
+
+// ============================================================
+// НОРМАЛИЗАЦИЯ ДЛЯ ВЫЧИСЛЕНИЯ
+// ============================================================
+export function normalizeForCalculation(str: string): string {
   if (!str) return '';
   let s = str.trim();
 
-  // === 0. СПЕЦИАЛЬНЫЕ СЛУЧАИ ===
-  // Убираем "x =" или "y =" в начале
+  // === 0. СПЕЦСЛУЧАИ ===
   s = s.replace(/^[a-zA-Z]\s*=\s*/, '');
 
-  // Пустое множество
-  if (s.includes('\\emptyset') || s.includes('\\O') ||
-      /no\s*solution/i.test(s) || /нет\s*решений/i.test(s) ||
-      /корней\s*нет/i.test(s) || s === '∅') {
-    return 'NaN';
-  }
+  if (
+    /\\emptyset|\\O\b|∅/.test(s) ||
+    /no\s*solution/i.test(s) ||
+    /нет\s*решений/i.test(s) ||
+    /корней\s*нет/i.test(s)
+  ) return 'NaN';
 
-  // === 1. УБИРАЕМ LaTeX МУСОР ===
-  s = s.replace(/\\text\{[^}]*\}/g, '');
+  // === 1. \text{fn} → fn  (ДО удаления слешей!) ===
+  // Важно: сохраняем содержимое, иначе \text{tg} → '' → tg потеряется
+  s = s.replace(/\\text\{([^}]*)\}/g, '$1');
   s = s.replace(/\\mathrm\{([^}]*)\}/g, '$1');
   s = s.replace(/\\mathbf\{([^}]*)\}/g, '$1');
-  s = s.replace(/\\displaystyle/g, '');
-  s = s.replace(/\\,/g, '');
-  s = s.replace(/\\:/g, '');
-  s = s.replace(/\\;/g, '');
-  s = s.replace(/\\quad/g, '');
-  s = s.replace(/\\qquad/g, '');
 
-  // === 2. СТАНДАРТИЗАЦИЯ СИМВОЛОВ ===
-  // ЗАПЯТАЯ → ТОЧКА (только для десятичных дробей!)
+  // === 2. НЕРАВЕНСТВА — ДО удаления слешей! ===
+  s = s.replace(/\\leq|\\le(?![a-z])|≤/g, '<=');
+  s = s.replace(/\\geq|\\ge(?![a-z])|≥/g, '>=');
+  s = s.replace(/\\neq|≠/g, '!=');
+
+  // === 3. ФУНКЦИИ — заменяем ДО удаления слешей ===
+  // Порядок важен: arcsin раньше sin, arctg раньше tg
+  const funcReplacements: [RegExp, string][] = [
+    [/\\arcsin\b/g,  'asin'],
+    [/\\arccos\b/g,  'acos'],
+    [/\\arctan\b/g,  'atan'],
+    [/\\arctg\b/g,   'atan'],
+    [/\\arcctg\b/g,  'acot'],
+    [/\\arcsinh\b/g, 'asinh'],
+    [/\\arccosh\b/g, 'acosh'],
+    [/\\arctanh\b/g, 'atanh'],
+    [/\\arccoth\b/g, 'acoth'],
+    [/\\sin\b/g,     'sin'],
+    [/\\cos\b/g,     'cos'],
+    [/\\tan\b/g,     'tan'],
+    [/\\tg\b/g,      'tan'],
+    [/\\cot\b/g,     'cot'],
+    [/\\ctg\b/g,     'cot'],
+    [/\\sec\b/g,     'sec'],
+    [/\\csc\b/g,     'csc'],
+    [/\\sinh\b/g,    'sinh'],
+    [/\\cosh\b/g,    'cosh'],
+    [/\\tanh\b/g,    'tanh'],
+    [/\\coth\b/g,    'coth'],
+    [/\\log\b/g,     'log'],
+    [/\\ln\b/g,      'log'],
+    [/\\lg\b/g,      'log10'],
+    [/\\exp\b/g,     'exp'],
+    [/\\sqrt\b/g,    'sqrt'],
+    [/\\lim\b/g,     ''],
+  ];
+  for (const [rx, rep] of funcReplacements) {
+    s = s.replace(rx, rep);
+  }
+
+  // Без слешей (arcsin, tg, ctg, etc. в тексте ответа)
+  const wordFuncReplacements: [RegExp, string][] = [
+    [/\barcsin\b/gi,  'asin'],
+    [/\barccos\b/gi,  'acos'],
+    [/\barctan\b/gi,  'atan'],
+    [/\barctg\b/gi,   'atan'],
+    [/\barcctg\b/gi,  'acot'],
+    [/\barcsinh\b/gi, 'asinh'],
+    [/\barccosh\b/gi, 'acosh'],
+    [/\barctanh\b/gi, 'atanh'],
+    [/\barccoth\b/gi, 'acoth'],
+    [/\btg\b/gi,      'tan'],
+    [/\bctg\b/gi,     'cot'],
+    [/\bsh\b/gi,      'sinh'],
+    [/\bch\b/gi,      'cosh'],
+    [/\bth\b/gi,      'tanh'],
+    [/\blg\b/gi,      'log10'],
+    [/\bln\b/gi,      'log'],
+  ];
+  for (const [rx, rep] of wordFuncReplacements) {
+    s = s.replace(rx, rep);
+  }
+
+  // === 4. МУСОР LATEX ===
+  s = s.replace(/\\displaystyle/g, '');
+  s = s.replace(/\\,|\\:|\\;|\\quad|\\qquad/g, '');
+  s = s.replace(/\\left|\\right/g, '');
+
+  // === 5. СИМВОЛЫ ===
+  // Десятичная запятая
   s = s.replace(/\{,\}/g, '.');
-  // ВАЖНО: Запятая между числами = десятичная точка
   s = s.replace(/(\d),(\d)/g, '$1.$2');
-  
-  // Математические операторы
-  s = s.replace(/\\cdot/g, '*');
-  s = s.replace(/\\times/g, '*');
-  s = s.replace(/×/g, '*');
-  s = s.replace(/⋅/g, '*');
-  s = s.replace(/\\div/g, '/');
-  s = s.replace(/÷/g, '/');
-  
-  // Все виды минусов → обычный минус
-  s = s.replace(/−/g, '-');
-  s = s.replace(/–/g, '-');
-  s = s.replace(/—/g, '-');
-  
-  // Двоеточие как деление (только если это не интервал)
-  s = s.replace(/(\d+):(\d+)/g, (match, a, b) => {
-    if (parseInt(a) < 100 && parseInt(b) < 100) return `${a}/${b}`;
-    return match;
-  });
+
+  // Операторы
+  s = s.replace(/\\cdot|\\times|×|⋅/g, '*');
+  s = s.replace(/\\div|÷/g, '/');
+  s = s.replace(/[−–—]/g, '-');
+
+  // Двоеточие как деление
+  s = s.replace(/(\d+):(\d+)/g, (m, a, b) =>
+    parseInt(a) < 100 && parseInt(b) < 100 ? `${a}/${b}` : m
+  );
 
   // Проценты
   s = s.replace(/\\%/g, '/100');
   s = s.replace(/([0-9.]+)%/g, '($1/100)');
 
-  // Градусы
-  s = s.replace(/\^\{\\circ\}/g, ' deg');
-  s = s.replace(/\\circ/g, ' deg');
+  // Градусы — ПЕРЕД удалением слешей
+  s = s.replace(/\^\{\\circ\}|\\circ/g, ' deg');
   s = s.replace(/°/g, ' deg');
 
   // Бесконечность и π
-  s = s.replace(/\\infty/g, 'Infinity');
-  s = s.replace(/∞/g, 'Infinity');
+  s = s.replace(/\\infty|∞/g, 'Infinity');
   s = s.replace(/\\pi\b/g, 'pi');
   s = s.replace(/π/g, 'pi');
 
   // Константа e
-  s = s.replace(/\\mathrm\{e\}/g, 'e');
-  s = s.replace(/\\e\b/g, 'e');
+  s = s.replace(/\\mathrm\{e\}|\\e\b/g, 'e');
 
-  // === 3. ПЛЮС-МИНУС ===
+  // === 6. ПЛЮС-МИНУС ===
   s = s.replace(/\\pm/g, '±');
   s = s.replace(/\\mp/g, '∓');
 
-  // === 4. УБИРАЕМ СЛЕШИ LaTeX ===
-  s = s.replace(/\\left/g, '');
-  s = s.replace(/\\right/g, '');
-
-  // === 5. МОДУЛЬ (АБС) ===
+  // === 7. МОДУЛЬ ===
   s = s.replace(/\|([^|]+)\|/g, 'abs($1)');
 
-  // === 6. ПЕРЕИМЕНОВАНИЕ ФУНКЦИЙ ===
-  const functionMap: { [key: string]: string } = {
-    // Обратные тригонометрические
-    'arctg': 'atan',
-    'arcctg': 'acot',
-    'arcsin': 'asin',
-    'arccos': 'acos',
-    'arctan': 'atan',
-    'arccot': 'acot',
-    'arcsec': 'asec',
-    'arccsc': 'acsc',
-    
-    // Тригонометрия (кириллица)
-    'tg': 'tan',
-    'ctg': 'cot',
-    'тг': 'tan',
-    'ктг': 'cot',
-    
-    // Гиперболические
-    'sh': 'sinh',
-    'ch': 'cosh',
-    'th': 'tanh',
-    'cth': 'coth',
-    'arcsinh': 'asinh',
-    'arccosh': 'acosh',
-    'arctanh': 'atanh',
-    'arccoth': 'acoth',
-    
-    // Логарифмы
-    'lg': 'log10',
-    'ln': 'log'
-  };
-
-  // Убираем слеши перед функциями
-  s = s.replace(/\\(sin|cos|tan|cot|sec|csc|sinh|cosh|tanh|coth|arcsin|arccos|arctan|arccot|asin|acos|atan|acot|asinh|acosh|atanh|acoth|log|ln|lg|exp|sqrt)/g, '$1');
-
-  // Применяем замены
-  for (const [oldFunc, newFunc] of Object.entries(functionMap)) {
-    const regex = new RegExp(`\\b${oldFunc}\\b`, 'gi');
-    s = s.replace(regex, newFunc);
-  }
-
-  // === 7. ТРИГОНОМЕТРИЧЕСКИЕ СТЕПЕНИ ===
+  // === 8. ТРИГОНОМЕТРИЧЕСКИЕ СТЕПЕНИ ===
   // sin^2(x) → (sin(x))^2
-  const trigFuncs = 'sin|cos|tan|cot|sec|csc|asin|acos|atan|acot|asinh|acosh|atanh|acoth|sinh|cosh|tanh|coth|log|log10';
-  const trigPowRegex = new RegExp(`(${trigFuncs})\\^\\{?(\\d+)\\}?\\s*(\\([^)]+\\)|[a-z0-9]+)`, 'gi');
-  s = s.replace(trigPowRegex, '($1($3))^$2');
+  // sin^2 x  → (sin(x))^2
+  const trigList = 'sin|cos|tan|cot|sec|csc|asin|acos|atan|acot|asinh|acosh|atanh|acoth|sinh|cosh|tanh|coth|log|log10';
+  // Со скобками: sin^{2}(x)
+  s = s.replace(
+    new RegExp(`(${trigList})\\^\\{?(\\d+)\\}?\\s*(\\([^)]+\\))`, 'gi'),
+    '($1$3)^$2'
+  );
+  // С переменной: sin^{2}\\alpha или sin^2 x → нужно поставить скобки вокруг арг
+  s = s.replace(
+    new RegExp(`(${trigList})\\^\\{?(\\d+)\\}?\\s*([a-z])(?!\\()`, 'gi'),
+    '($1($3))^$2'
+  );
 
-  // === 8. СМЕШАННЫЕ ЧИСЛА ===
-  // 1 1/2 → 1+1/2
-  s = s.replace(/(\d)\s+(\d+\/\d+)/g, '$1+$2');
+  // === 9. СМЕШАННЫЕ ЧИСЛА LaTeX: 15\frac{73}{144} ===
+  // Делаем ДО раскрытия frac
+  s = s.replace(/(\d)\s*\\?frac\{([^}]+)\}\{([^}]+)\}/g, '($1+($2)/($3))');
+  // Обычный вид: 15 73/144 (с пробелом)
+  s = s.replace(/(\d)\s+(\d+)\/(\d+)/g, '($1+$2/$3)');
 
-  // === 9. ДРОБИ ===
-  let prevS = '';
-  let iterations = 0;
-  while (prevS !== s && iterations < 10) {
-    prevS = s;
+  // === 10. ДРОБИ \frac{a}{b} ===
+  let prev = '';
+  let iter = 0;
+  while (prev !== s && iter < 10) {
+    prev = s;
     s = s.replace(/d?frac\{([^{}]+)\}\{([^{}]+)\}/g, '(($1)/($2))');
-    iterations++;
+    iter++;
   }
-  s = s.replace(/frac\{(.+?)\}\{(.+?)\}/g, '(($1)/($2))');
 
-  // === 10. КОРНИ ===
-  // n-ная степень
-  s = s.replace(/sqrt\[(.+?)\]\{(.+?)\}/g, 'nthRoot($2, $1)');
-  s = s.replace(/√\[(.+?)\]\{(.+?)\}/g, 'nthRoot($2, $1)');
-  
-  // Квадратный корень
-  s = s.replace(/sqrt\{(.+?)\}/g, 'sqrt($1)');
-  s = s.replace(/√\{(.+?)\}/g, 'sqrt($1)');
-  s = s.replace(/√(\d+\.?\d*)/g, 'sqrt($1)');
-  s = s.replace(/√([a-z])/g, 'sqrt($1)');
+  // === 11. КОРНИ ===
+  s = s.replace(/sqrt\[(.+?)\]\{(.+?)\}/g,  'nthRoot($2,$1)');
+  s = s.replace(/√\[(.+?)\]\{(.+?)\}/g,     'nthRoot($2,$1)');
+  s = s.replace(/sqrt\{([^}]+)\}/g,          'sqrt($1)');
+  s = s.replace(/√\{([^}]+)\}/g,             'sqrt($1)');
+  s = s.replace(/√(\d+\.?\d*)/g,             'sqrt($1)');
+  s = s.replace(/√([a-z])/g,                 'sqrt($1)');
 
-  // === 11. ЛОГАРИФМЫ ===
-  // С основанием
-  s = s.replace(/log_\{(.+?)\}\((.+?)\)/g, 'log($2, $1)');
-  s = s.replace(/log_\{(.+?)\}\{(.+?)\}/g, 'log($2, $1)');
-  s = s.replace(/log_\{(.+?)\}([a-z0-9]+)/g, 'log($2, $1)');
-  
-  // Без основания → log10
-  s = s.replace(/\blog\(/g, (match, offset) => {
-    let depth = 1;
-    let hasComma = false;
-    for (let i = offset + 4; i < s.length && depth > 0; i++) {
-      if (s[i] === '(') depth++;
-      if (s[i] === ')') depth--;
-      if (s[i] === ',' && depth === 1) hasComma = true;
-    }
-    return hasComma ? 'log(' : 'log10(';
-  });
+  // === 12. ЛОГАРИФМЫ С ОСНОВАНИЕМ ===
+  s = s.replace(/log_\{([^}]+)\}\(([^)]+)\)/g, 'log($2,$1)');
+  s = s.replace(/log_\{([^}]+)\}\{([^}]+)\}/g, 'log($2,$1)');
+  s = s.replace(/log_\{([^}]+)\}([a-z0-9]+)/g, 'log($2,$1)');
+  s = s.replace(/log_([0-9]+)\(([^)]+)\)/g,    'log($2,$1)');
 
-  // === 12. ФАКТОРИАЛЫ И КОМБИНАТОРИКА ===
-  // Факториалы
-  s = s.replace(/(\d+)!/g, 'factorial($1)');
-  s = s.replace(/([a-z])!/g, 'factorial($1)');
+  // log без основания → log10 (если нет запятой внутри)
+  s = s.replace(/\blog\(([^)]+)\)/g, (_, inner) =>
+    inner.includes(',') ? `log(${inner})` : `log10(${inner})`
+  );
+
+  // === 13. ФАКТОРИАЛЫ И КОМБИНАТОРИКА ===
   s = s.replace(/\(([^)]+)\)!/g, 'factorial(($1))');
-  
-  // Биномиальные коэффициенты
-  s = s.replace(/C_\{(\d+)\}\^\{(\d+)\}/g, 'combinations($1, $2)');
-  s = s.replace(/C_(\d+)\^(\d+)/g, 'combinations($1, $2)');
-  s = s.replace(/C\((\d+),\s*(\d+)\)/gi, 'combinations($1, $2)');
-  
-  // Размещения
-  s = s.replace(/A_\{(\d+)\}\^\{(\d+)\}/g, 'permutations($1, $2)');
-  s = s.replace(/A_(\d+)\^(\d+)/g, 'permutations($1, $2)');
-  s = s.replace(/A\((\d+),\s*(\d+)\)/gi, 'permutations($1, $2)');
+  s = s.replace(/(\d+)!/g,       'factorial($1)');
+  s = s.replace(/([a-z])!/g,     'factorial($1)');
 
-  // === 13. СТЕПЕНИ ===
-  s = s.replace(/\^\{(.+?)\}/g, '^($1)');
+  s = s.replace(/C_\{(\d+)\}\^\{(\d+)\}/g, 'combinations($1,$2)');
+  s = s.replace(/C_(\d+)\^(\d+)/g,         'combinations($1,$2)');
+  s = s.replace(/C\((\d+),\s*(\d+)\)/gi,   'combinations($1,$2)');
+
+  s = s.replace(/A_\{(\d+)\}\^\{(\d+)\}/g, 'permutations($1,$2)');
+  s = s.replace(/A_(\d+)\^(\d+)/g,         'permutations($1,$2)');
+  s = s.replace(/A\((\d+),\s*(\d+)\)/gi,   'permutations($1,$2)');
+
+  // === 14. СТЕПЕНИ ===
+  s = s.replace(/\^\{([^}]+)\}/g, '^($1)');
   s = s.replace(/\*\*/g, '^');
-  s = s.replace(/\^-(\d+)/g, '^(-$1)');
+  s = s.replace(/\^-(\d)/g, '^(-$1)');
 
-  // === 14. ЧИСТКА ===
+  // === 15. ЧИСТКА ОСТАВШЕГОСЯ LATEX ===
   s = s.replace(/[{}]/g, '');
   s = s.replace(/\\/g, '');
 
-  // === 15. LOWERCASE (с сохранением Infinity) ===
-  s = s.toLowerCase();
-  s = s.replace(/infinity/g, 'Infinity');
+  // === 16. LOWERCASE (Infinity сохраняем) ===
+  s = s.toLowerCase().replace(/infinity/g, 'Infinity');
 
-  // === 16. УБИРАЕМ ПРОБЕЛЫ ===
+  // === 17. ПРОБЕЛЫ ===
   s = s.replace(/\s+/g, ' ').trim();
-  s = s.replace(/\s*([+\-*/^()=])\s*/g, '$1');
+  s = s.replace(/\s*([+\-*/^()!=<>])\s*/g, '$1');
   s = s.replace(/(\d)\s+deg/g, '$1 deg');
 
-  // === 17. НЕЯВНОЕ УМНОЖЕНИЕ ===
-  const knownFuncs = ['sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'asin', 'acos', 'atan', 'acot',
-                      'asinh', 'acosh', 'atanh', 'acoth', 'sinh', 'cosh', 'tanh', 'coth',
-                      'sqrt', 'abs', 'log', 'log10', 'exp', 'nthroot', 'factorial', 
-                      'combinations', 'permutations'];
-  
-  // Число перед буквой (НЕ deg!)
-  s = s.replace(/(\d)(?=([a-z](?!deg)))/gi, '$1*');
+  // === 18. НЕЯВНОЕ УМНОЖЕНИЕ ===
+  // Число × буква (не deg)
+  s = s.replace(/(\d)(?=([a-zA-Z](?!eg\b)))/g, '$1*');
+  // Число × скобка
   s = s.replace(/(\d)(?=\()/g, '$1*');
-  
-  // Скобка перед буквой/скобкой
-  s = s.replace(/(\))(?=[a-z])/gi, '$1*');
-  s = s.replace(/(\))(?=\()/g, '$1*');
-  
-  // Буква перед скобкой (если не функция)
-  s = s.replace(/([a-z]+)(?=\()/gi, (match, word) => {
-    if (knownFuncs.includes(word.toLowerCase())) return word;
-    return `${word}*`;
+  // Закрывающая скобка × всё
+  s = s.replace(/\)(?=[a-zA-Z(])/g, ')*');
+
+  // Буква перед скобкой — если не функция, добавляем *
+  s = s.replace(/([a-z]+)(?=\()/gi, (match) => {
+    if (KNOWN_FUNCS.has(match.toLowerCase())) return match;
+    return match + '*';
   });
-  
-  // Последовательности переменных (xy → x*y)
-  s = s.replace(/[a-z]+/g, (word) => {
-    if (knownFuncs.includes(word.toLowerCase()) || ['pi', 'infinity', 'deg'].includes(word.toLowerCase())) {
-      return word;
-    }
-    
+
+  // Цепочки переменных: xy → x*y (только если каждая буква есть в scope)
+  s = s.replace(/[a-z]{2,}/gi, (word) => {
+    const lower = word.toLowerCase();
+    if (KNOWN_FUNCS.has(lower)) return word;
+    if (['pi', 'infinity', 'deg'].includes(lower)) return word;
+    // Пробуем разбить на известные переменные
     const chars = word.split('');
-    if (chars.length > 1 && chars.every(c => ALGEBRA_SCOPE.hasOwnProperty(c))) {
-      return chars.join('*');
-    }
-    
+    if (chars.every(c => c in ALGEBRA_SCOPE)) return chars.join('*');
     return word;
   });
 
   return s;
 }
 
-/**
- * Разворачивает ± в массив вариантов
- */
+// ============================================================
+// РАЗВЁРТКА ±
+// ============================================================
 function expandOptions(str: string): string[] {
   const parts = str.split(';');
-  let results: string[] = [];
+  const results: string[] = [];
 
   for (let part of parts) {
     part = part.trim();
     if (!part) continue;
 
-    part = part.replace(/\\pm/g, '±');
-    part = part.replace(/\+-/g, '±');
-    part = part.replace(/-\+/g, '∓');
-    part = part.replace(/\\mp/g, '∓');
+    part = part.replace(/\\pm/g, '±').replace(/\+-/g, '±').replace(/-\+/g, '∓').replace(/\\mp/g, '∓');
 
     if (part.includes('±')) {
       const idx = part.indexOf('±');
       const left = part.substring(0, idx);
       const right = part.substring(idx + 1);
-      const rStr = right.match(/[+\-*/^]/) ? `(${right})` : right;
-      results = results.concat(expandOptions(`${left}+${rStr}`));
-      results = results.concat(expandOptions(`${left}-${rStr}`));
+      results.push(...expandOptions(`${left}+${right}`));
+      results.push(...expandOptions(`${left}-${right}`));
       continue;
     }
-
     if (part.includes('∓')) {
       const idx = part.indexOf('∓');
       const left = part.substring(0, idx);
       const right = part.substring(idx + 1);
-      const rStr = right.match(/[+\-*/^]/) ? `(${right})` : right;
-      results = results.concat(expandOptions(`${left}-${rStr}`));
-      results = results.concat(expandOptions(`${left}+${rStr}`));
+      results.push(...expandOptions(`${left}-${right}`));
+      results.push(...expandOptions(`${left}+${right}`));
       continue;
     }
-
     results.push(part);
   }
   return results;
 }
 
-/**
- * Проверка интервала
- */
-function parseInterval(str: string): { isInterval: boolean; values?: number[] } {
-  const intervalRegex = /^[\[\(](.+?)[,;](.+?)[\]\)]$/;
-  const match = str.match(intervalRegex);
-  if (!match) return { isInterval: false };
-
-  try {
-    const v1 = parseFloat(match[1].trim());
-    const v2 = parseFloat(match[2].trim());
-    if (!isNaN(v1) && !isNaN(v2)) {
-      return { isInterval: true, values: [v1, v2].sort((a, b) => a - b) };
-    }
-  } catch (e) {
-    // не интервал
-  }
-  return { isInterval: false };
+// ============================================================
+// ОПРЕДЕЛЕНИЕ: это неравенство или интервал?
+// ============================================================
+function isInequalityOrInterval(s: string): boolean {
+  // Содержит знаки неравенства
+  if (/[≤≥]|\\le\b|\\ge\b|\\leq\b|\\geq\b|<=|>=/.test(s)) return true;
+  // Содержит бесконечность
+  if (/\\infty|∞|-inf|Infinity/.test(s)) return true;
+  // Интервал в скобках: (-12; 5) или [3; ∞)
+  // НО: (-3; 0); (0; 0) — это координаты точек, не интервал
+  const intervalPattern = /^[\[\(][^;,()]+[;,][^;,()]+[\]\)]$/;
+  const trimmed = s.trim();
+  if (intervalPattern.test(trimmed)) return true;
+  // Объединение интервалов: (-∞;-8) U (6;∞)
+  if (/[Uu∪]/.test(s) && /[\[\(]/.test(s)) return true;
+  return false;
 }
 
-/**
- * ГЛАВНАЯ ФУНКЦИЯ ПРОВЕРКИ ОТВЕТА
- */
+// ============================================================
+// НОРМАЛИЗАЦИЯ НЕРАВЕНСТВА ДЛЯ ТЕКСТОВОГО СРАВНЕНИЯ
+// ============================================================
+function normalizeInequality(s: string): string {
+  return s
+    .replace(/\\leq|\\le(?![a-z])|≤/g, '<=')
+    .replace(/\\geq|\\ge(?![a-z])|≥/g, '>=')
+    .replace(/\\infty|∞/g, 'inf')
+    .replace(/\+inf/g, 'inf')
+    .replace(/\\emptyset|∅/g, 'empty')
+    .replace(/\\/g, '')
+    .replace(/\s+/g, '')
+    .replace(/;/g, ',')
+    .toLowerCase()
+    .trim();
+}
+
+// ============================================================
+// ПАРСИНГ ИНТЕРВАЛА: (-∞; 6], (2; 5), [3; 7]
+// ============================================================
+interface ParsedInterval {
+  left: number;
+  right: number;
+  leftOpen: boolean;
+  rightOpen: boolean;
+}
+
+function parseInterval(s: string): ParsedInterval | null {
+  const norm = s
+    .replace(/\\infty|∞/g, 'Infinity')
+    .replace(/\+Infinity/g, 'Infinity')
+    .replace(/\\pi/g, String(Math.PI))
+    .replace(/\s/g, '');
+
+  const match = norm.match(/^([\[\(])(.*?)[,;](.*?)([\]\)])$/);
+  if (!match) return null;
+
+  const parseVal = (v: string) => {
+    if (v === '-Infinity' || v === '-inf') return -Infinity;
+    if (v === 'Infinity' || v === 'inf') return Infinity;
+    return parseFloat(v);
+  };
+
+  const left  = parseVal(match[2]);
+  const right = parseVal(match[3]);
+  if (isNaN(left) && isFinite(left)) return null;
+  if (isNaN(right) && isFinite(right)) return null;
+
+  return {
+    left,
+    right,
+    leftOpen:  match[1] === '(',
+    rightOpen: match[4] === ')',
+  };
+}
+
+// ============================================================
+// СРАВНЕНИЕ ИНТЕРВАЛОВ
+// ============================================================
+function intervalsEqual(a: ParsedInterval, b: ParsedInterval, eps = 0.001): boolean {
+  const cmpVal = (x: number, y: number) => {
+    if (!isFinite(x) || !isFinite(y)) return x === y;
+    return Math.abs(x - y) < eps;
+  };
+  return (
+    cmpVal(a.left, b.left) &&
+    cmpVal(a.right, b.right) &&
+    a.leftOpen === b.leftOpen &&
+    a.rightOpen === b.rightOpen
+  );
+}
+
+// ============================================================
+// ГЛАВНАЯ ФУНКЦИЯ ПРОВЕРКИ
+// ============================================================
 export function checkAnswer(userAnswer: string, dbAnswer: string): boolean {
-  if (!userAnswer) return false;
+  if (!userAnswer || !dbAnswer) return false;
+
+  const userTrim = userAnswer.trim();
+  const dbTrim   = dbAnswer.trim();
 
   try {
-    // === 1. ПРОВЕРКА ИНТЕРВАЛОВ ===
-    const userInterval = parseInterval(userAnswer);
-    const dbInterval = parseInterval(dbAnswer);
-    
-    if (userInterval.isInterval && dbInterval.isInterval && userInterval.values && dbInterval.values) {
-      return userInterval.values.every((v, i) => 
-        Math.abs(v - dbInterval.values![i]) < 0.001
-      );
+    // === 0. ПУСТОЕ МНОЖЕСТВО ===
+    const isEmpty = (s: string) =>
+      /\\emptyset|\\O\b|∅|нет\s*решений|no\s*solution|корней\s*нет/i.test(s) ||
+      s.trim() === '∅' || s.trim() === '\\emptyset';
+
+    if (isEmpty(userTrim) && isEmpty(dbTrim)) return true;
+    if (isEmpty(userTrim) || isEmpty(dbTrim))  return false;
+
+    // === 1. НЕРАВЕНСТВА И ИНТЕРВАЛЫ ===
+    if (isInequalityOrInterval(userTrim) || isInequalityOrInterval(dbTrim)) {
+      // 1a. Объединения: "(-∞;-8) U (6;∞)"
+      const splitUnion = (s: string) =>
+        s.split(/\s*[Uu∪]\s*/).map(p => p.trim()).filter(Boolean);
+
+      const uParts = splitUnion(userTrim);
+      const dParts = splitUnion(dbTrim);
+
+      if (uParts.length !== dParts.length) return false;
+
+      if (uParts.length > 1) {
+        return uParts.every((up, i) => {
+          const ui = parseInterval(up);
+          const di = parseInterval(dParts[i]);
+          if (ui && di) return intervalsEqual(ui, di);
+          return normalizeInequality(up) === normalizeInequality(dParts[i]);
+        });
+      }
+
+      // 1b. Одиночный интервал: "(-12; 5)", "[3; ∞)"
+      const uInt = parseInterval(userTrim);
+      const dInt = parseInterval(dbTrim);
+      if (uInt && dInt) return intervalsEqual(uInt, dInt);
+
+      // 1c. Простое неравенство: "x ≤ 6", "x \le 6"
+      return normalizeInequality(userTrim) === normalizeInequality(dbTrim);
     }
 
-    // === 2. РАЗВЕРТЫВАНИЕ ВАРИАНТОВ (±) ===
-    const userExprs = expandOptions(userAnswer);
-    const dbExprs = expandOptions(dbAnswer);
+    // === 2. НЕСКОЛЬКО ТОЧЕК/ОТВЕТОВ через ";" ===
+    const userExprs = expandOptions(userTrim);
+    const dbExprs   = expandOptions(dbTrim);
 
-    // === 3. ВЫЧИСЛЕНИЕ ЗНАЧЕНИЙ ===
+    // === 3. ВЫЧИСЛЕНИЕ ===
     const calculate = (expr: string): number => {
       try {
         const norm = normalizeForCalculation(expr);
-        if (norm === 'NaN') return NaN;
-        
-        // Проверяем, не периодическая ли дробь
+        if (norm === 'NaN' || norm === '') return NaN;
+
         const trimmed = norm.trim();
-        if (PERIODIC_FRACTIONS.hasOwnProperty(trimmed)) {
-          return PERIODIC_FRACTIONS[trimmed];
-        }
-        
+        if (PERIODIC_FRACTIONS[trimmed] !== undefined) return PERIODIC_FRACTIONS[trimmed];
+
         const res = evaluate(norm, ALGEBRA_SCOPE);
-        
         if (typeof res === 'number') return res;
-        if (typeof res === 'object' && res !== null) {
-          if ('re' in res) return (res as any).re; // Комплексное число
-        }
+        if (typeof res === 'boolean') return res ? 1 : 0;
+        if (typeof res === 'object' && res !== null && 're' in res) return (res as any).re;
         return NaN;
-      } catch (e) {
-        console.warn('mathUtils calculation error:', expr, e);
+      } catch {
         return NaN;
       }
     };
 
     const userValues = userExprs.map(calculate);
-    const dbValues = dbExprs.map(calculate);
+    const dbValues   = dbExprs.map(calculate);
 
-    // === 4. FALLBACK НА ТЕКСТОВОЕ СРАВНЕНИЕ ===
+    // Если хоть что-то не вычислилось — fallback
     if (userValues.some(isNaN) || dbValues.some(isNaN)) {
-      throw new Error("Calculation failed, fallback to text compare");
+      throw new Error('fallback');
     }
-
-    // === 5. СОРТИРОВКА И СРАВНЕНИЕ ===
-    userValues.sort((a, b) => a - b);
-    dbValues.sort((a, b) => a - b);
 
     if (userValues.length !== dbValues.length) return false;
 
-    // === 6. УМНОЕ СРАВНЕНИЕ С TOLERANCE ===
+    userValues.sort((a, b) => a - b);
+    dbValues.sort((a, b) => a - b);
+
     return userValues.every((uVal, i) => {
       const dVal = dbValues[i];
-      
-      // Infinity == Infinity
-      if (!isFinite(uVal) || !isFinite(dVal)) {
-        return uVal === dVal;
+      if (!isFinite(uVal) || !isFinite(dVal)) return uVal === dVal;
+
+      const isInt = (v: number) => Math.abs(v - Math.round(v)) < 1e-9;
+      if (isInt(uVal) && isInt(dVal)) {
+        return Math.round(uVal) === Math.round(dVal);
       }
 
-      const diff = Math.abs(uVal - dVal);
-      
-      // ДЛЯ ЦЕЛЫХ ЧИСЕЛ: Строгое сравнение
-      if (Math.abs(Math.round(uVal) - uVal) < 1e-9 && Math.abs(Math.round(dVal) - dVal) < 1e-9) {
-        return Math.abs(Math.round(uVal) - Math.round(dVal)) === 0;
-      }
-      
-      // ДЛЯ ДРОБЕЙ: Адаптивная погрешность
-      // 0.1% от значения, но минимум 0.001
       const tolerance = Math.max(0.001, Math.abs(dVal * 0.001));
-      return diff <= tolerance;
+      return Math.abs(uVal - dVal) <= tolerance;
     });
 
-  } catch (e) {
-    // === FALLBACK: ТЕКСТОВОЕ СРАВНЕНИЕ ===
-    console.warn('mathUtils fallback to text compare:', { userAnswer, dbAnswer, error: e });
-    
-    const clean = (s: string) => normalizeForCalculation(s).replace(/\s/g, '');
-    const userSorted = expandOptions(userAnswer).map(clean).sort().join(';');
-    const dbSorted = expandOptions(dbAnswer).map(clean).sort().join(';');
+  } catch {
+    // === FALLBACK: текстовое сравнение ===
+    const clean = (s: string) => {
+      // Для неравенств
+      if (isInequalityOrInterval(s)) return normalizeInequality(s);
+      // Для обычных выражений
+      try {
+        return normalizeForCalculation(s).replace(/\s/g, '');
+      } catch {
+        return s.toLowerCase().replace(/\s/g, '');
+      }
+    };
+
+    const userSorted = expandOptions(userTrim).map(clean).sort().join(';');
+    const dbSorted   = expandOptions(dbTrim).map(clean).sort().join(';');
     return userSorted === dbSorted;
   }
 }
