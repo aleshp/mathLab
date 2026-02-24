@@ -87,14 +87,10 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
 
   // === Bot Setup ===
   const myMMR = profile?.mmr ?? BASE_MMR;
-  let botDifficulty: 'easy' | 'medium' | 'hard' = 'medium';
-  if (myMMR < 800) botDifficulty = 'easy';
-  if (myMMR > 1400) botDifficulty = 'hard';
-
   const botOpponent = useBotOpponent({
     isEnabled: isBotMatch && status === 'battle',
     duelId: duelId,
-    difficulty: botDifficulty,
+    playerMMR: myMMR, // Передаем твой MMR, хук сам решит, как играть
     maxQuestions: problems.length || 10,
     initialScore: isBotMatch ? oppScore : 0,
     initialProgress: isBotMatch ? oppProgress : 0,
