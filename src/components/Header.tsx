@@ -9,10 +9,10 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 
 // --- СЧЕТЧИК ОНЛАЙНА ---
 function FloatingOnlineCounter() {
-  const [count, setCount] = useState(124);
+  const [count, setCount] = useState(58);
   useEffect(() => {
     const interval = setInterval(() => {
-      setCount(p => Math.max(80, p + Math.floor(Math.random() * 7) - 3));
+      setCount(p => Math.max(80, p + Math.floor(Math.random() * 7) - 20));
     }, 5000);
     return () => clearInterval(interval);
   }, []);
