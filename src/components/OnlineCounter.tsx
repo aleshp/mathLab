@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { Users } from 'lucide-react';
 
 export function OnlineCounter() {
-  const [count, setCount] = useState(124);
+  const [count, setCount] = useState(58);
 
   useEffect(() => {
     const interval = setInterval(() => {
       // Имитация активности: +/- 3 игрока
-      const change = Math.floor(Math.random() * 7) - 3; 
+      const change = Math.floor(Math.random() * 7) - 20; 
       setCount(prev => Math.max(80, prev + change));
     }, 5000);
     return () => clearInterval(interval);
