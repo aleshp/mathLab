@@ -7,7 +7,7 @@ import { getRank, getLevelProgress } from '../lib/gameLogic';
 import { NotificationsModal } from './NotificationsModal';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
-// --- СЧЕТЧИК ОНЛАЙНА (Внизу слева) ---
+// --- СЧЕТЧИК ОНЛАЙНА ---
 function FloatingOnlineCounter() {
   const [count, setCount] = useState(124);
   useEffect(() => {
@@ -78,11 +78,11 @@ export function Header({
       <FloatingOnlineCounter />
 
       <header className="relative border-b border-cyan-500/20 bg-slate-900/80 backdrop-blur-md z-50">
-        <div className="max-w-7xl mx-auto px-3 md:px-8 py-2 md:py-3 flex items-center justify-between gap-2 overflow-x-hidden">
+        <div className="max-w-7xl mx-auto px-3 md:px-8 py-2 md:py-3 flex items-center justify-between gap-2 overflow-x-auto scrollbar-hide">
           
-          {/* === ЛОГОТИП === */}
+          {/* === ЛОГОТИП (ТЕПЕРЬ ВИДЕН ВСЕГДА) === */}
           <button onClick={onBackToMap} className="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-opacity shrink-0">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl overflow-hidden shadow-lg border border-cyan-500/30 bg-slate-800 flex items-center justify-center">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl overflow-hidden shadow-lg border border-cyan-500/30 bg-slate-800 flex items-center justify-center shrink-0">
                <img 
                  src="/logo.png" 
                  alt="Logo" 
@@ -90,9 +90,9 @@ export function Header({
                  onError={(e) => { e.currentTarget.style.display='none'; }}
                />
             </div>
-            {/* Текст скрываем только на ОЧЕНЬ узких экранах, на обычных телефонах оставляем */}
-            <div className="hidden xs:block text-left">
-              <h1 className="text-base md:text-xl font-bold text-white leading-tight">MathLab</h1>
+            {/* Убрал все hidden, теперь текст есть всегда */}
+            <div className="text-left flex flex-col justify-center min-w-0">
+              <h1 className="text-sm md:text-xl font-bold text-white leading-tight">MathLab</h1>
               <p className="text-cyan-400/60 text-[9px] md:text-xs font-mono">{t('header.subtitle')}</p>
             </div>
           </button>
@@ -132,9 +132,9 @@ export function Header({
                     <Trophy className="w-4 h-4 md:w-5 md:h-5" />
                   </button>
 
-                  {/* === ПРОФИЛЬ (НИК ВЕРНУЛСЯ) === */}
-                  <button onClick={onShowDashboard} className="flex items-center gap-1.5 md:gap-2 pl-2 border-l border-slate-700/50 ml-1">
-                    <div className="flex flex-col items-end hidden sm:flex">
+                  {/* === ПРОФИЛЬ === */}
+                  <button onClick={onShowDashboard} className="flex items-center gap-1.5 md:gap-2 pl-2 border-l border-slate-700/50 ml-1 min-w-0">
+                    <div className="flex flex-col items-end">
                       <div className="flex items-center gap-1">
                         <span className={`text-[9px] md:text-[10px] font-bold uppercase ${currentRank?.color}`}>
                           {currentRank?.title.split(' ')[0]}
@@ -142,16 +142,15 @@ export function Header({
                         {profile?.is_premium && profile.role !== 'teacher' && <Zap className="w-2.5 h-2.5 text-amber-400 fill-current" />}
                         {profile?.role === 'teacher' && <GraduationCap className="w-2.5 h-2.5 text-cyan-400" />}
                       </div>
-                      <span className="text-white font-medium text-xs md:text-sm leading-none max-w-[80px] truncate">
+                      <span className="text-white font-medium text-xs md:text-sm leading-none max-w-[60px] md:max-w-[100px] truncate">
                         {profile?.username}
                       </span>
                     </div>
 
-                    <div className="relative">
+                    <div className="relative shrink-0">
                        <div className="p-1.5 md:p-2 bg-slate-800 rounded-lg border border-slate-700">
                            <User className="w-4 h-4 md:w-5 md:h-5 text-slate-400" />
                        </div>
-                       {/* Прогресс-бар полоской снизу от аватарки */}
                        <div className="absolute -bottom-1 left-0 w-full h-1 bg-slate-800 rounded-full overflow-hidden">
                            <div className="h-full bg-cyan-400" style={{ width: `${progressPercent}%` }} />
                        </div>
