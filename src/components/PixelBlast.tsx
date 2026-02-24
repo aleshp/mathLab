@@ -439,6 +439,7 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
       });
       renderer.domElement.style.width = '100%';
       renderer.domElement.style.height = '100%';
+      // === ОПТИМИЗАЦИЯ 1: Фиксируем pixelRatio ===
       renderer.setPixelRatio(1);
       container.appendChild(renderer.domElement);
       if (transparent) renderer.setClearAlpha(0);
@@ -477,18 +478,33 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
       const quad = new THREE.Mesh(quadGeom, material);
       scene.add(quad);
       const clock = new THREE.Clock();
+
+      // === ОПТИМИЗАЦИЯ 2: Debounced SetSize ===
+      let resizeTimeout: any;
       const setSize = () => {
+        if (!container) return;
         const w = container.clientWidth || 1;
         const h = container.clientHeight || 1;
+        
+        // Избегаем лишних вызовов, если размер не изменился
+        if (renderer.domElement.width === w && renderer.domElement.height === h) return;
+
         renderer.setSize(w, h, false);
-        uniforms.uResolution.value.set(renderer.domElement.width, renderer.domElement.height);
+        uniforms.uResolution.value.set(w, h);
         if (threeRef.current?.composer)
-          threeRef.current.composer.setSize(renderer.domElement.width, renderer.domElement.height);
+          threeRef.current.composer.setSize(w, h);
         uniforms.uPixelSize.value = pixelSize * renderer.getPixelRatio();
       };
       setSize();
-      const ro = new ResizeObserver(setSize);
+
+      const ro = new ResizeObserver(() => {
+         if (resizeTimeout) clearTimeout(resizeTimeout);
+         resizeTimeout = setTimeout(() => {
+            setSize();
+         }, 200); // 200ms debounce
+      });
       ro.observe(container);
+
       const randomFloat = (): number => {
         if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
           const u32 = new Uint32Array(1);
@@ -616,6 +632,12 @@ const PixelBlast: React.FC<PixelBlastProps> = ({
         touch,
         liquidEffect
       };
+      
+      // Cleanup function to clear timeout on unmount/reinit
+      return () => {
+          if (resizeTimeout) clearTimeout(resizeTimeout);
+      };
+
     } else {
       const t = threeRef.current!;
       t.uniforms.uShapeType.value = SHAPE_MAP[variant] ?? 0;
