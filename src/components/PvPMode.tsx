@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useTranslation } from 'react-i18next'; // Перевод
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import Latex from 'react-latex-next';
@@ -93,17 +93,16 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     initialScore: isBotMatch ? oppScore : 0,
     initialProgress: isBotMatch ? oppProgress : 0,
     onProgressUpdate: async (score, progress) => {
-      // ИСПРАВЛЕНИЕ: Если игра УЖЕ окончена (мы выиграли первыми), бот должен замолчать
-      if (status === 'finished') return; 
+      if (status === 'finished') return;
 
       setOppScore(score);
       setOppProgress(progress);
-      
+
       if (duelId) {
         await supabase.from('duels').update({ player2_score: score, player2_progress: progress }).eq('id', duelId);
       }
       if (progress >= (problems.length || 10)) {
-         handleBotWin(score);
+        handleBotWin(score);
       }
     }
   });
@@ -134,22 +133,22 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     } else if (myScore < finalBotScore) {
       endGame('opponent', -25);
     } else {
-      endGame('draw', 0); // Исправил ничью
+      endGame('draw', 0);
     }
   };
 
   // === Admin: Force Win ===
   const handleAdminForceWin = async () => {
     if (!duelId || !user) return;
-  
+
     const myUpdateData = await getMyUpdateData(problems.length, problems.length);
     await supabase.from('duels').update(myUpdateData).eq('id', duelId);
     await supabase.from('duels').update({ status: 'finished' }).eq('id', duelId);
     await supabase.rpc('finish_duel', { duel_uuid: duelId, finisher_uuid: user.id });
-  
+
     const newMMR = (profile?.mmr ?? BASE_MMR) + 25;
     await supabase.from('profiles').update({ mmr: newMMR }).eq('id', user.id);
-  
+
     endGame(isBotMatch ? 'me' : user.id, 25);
   };
 
@@ -282,7 +281,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     setMyScore(newScore);
     const newProgress = currentProbIndex + 1;
 
-    // Save mistake
     if (!isCorrect && user && problems[currentProbIndex]) {
       supabase.from('user_errors').insert({
         user_id: user.id, problem_id: problems[currentProbIndex].id, module_id: PVP_MODULE_ID,
@@ -297,13 +295,10 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
 
       await supabase.from('duels').update(updateData).eq('id', duelId);
 
-      // ИСПРАВЛЕНИЕ: Если МЫ закончили первыми
       if (newProgress >= problems.length) {
-        
-        // Явно ставим finished
         await supabase.from('duels').update({ status: 'finished' }).eq('id', duelId);
         await supabase.rpc('finish_duel', { duel_uuid: duelId, finisher_uuid: user!.id });
-        
+
         if (isBotMatch) {
           if (newScore > oppScore) endGame('me', 25);
           else if (newScore < oppScore) endGame('opponent', -25);
@@ -353,7 +348,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
 
   useEffect(() => setTimeLeft(60), [currentProbIndex]);
 
-  // Keypad Handlers
   const keypadProps = {
     onCommand: (cmd: string, arg?: string) => {
       if (cmd === 'insert') mfRef.current?.executeCommand(['insert', arg]);
@@ -372,17 +366,20 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
 
     let isWin = false;
     if (winnerId === 'draw') {
-       setWinner('draw');
+      setWinner('draw');
     } else {
-       isWin = isBotMatch ? winnerId === 'me' : winnerId === user!.id;
-       setWinner(isWin ? 'me' : 'opponent');
+      isWin = isBotMatch ? winnerId === 'me' : winnerId === user!.id;
+      setWinner(isWin ? 'me' : 'opponent');
     }
-    
-    // Хардкод для бота (на всякий случай, если RPC не сработало как надо)
-    if (isBotMatch && winnerId !== 'draw') {
-        setMmrChange(25);
-    } else {
-        setMmrChange(Math.abs(eloChange));
+
+    // Корректный расчёт изменения MMR со знаком
+    const change = winnerId === 'draw' ? 0 : isBotMatch ? (isWin ? 25 : -25) : Math.abs(eloChange) * (isWin ? 1 : -1);
+    setMmrChange(Math.abs(change));
+
+    // Для бот-матчей явно пишем MMR в БД (RPC с BOT_UUID этого не делает)
+    if (isBotMatch && user && winnerId !== 'draw') {
+      const newMMR = Math.max(0, (profile?.mmr ?? BASE_MMR) + change);
+      await supabase.from('profiles').update({ mmr: newMMR }).eq('id', user.id);
     }
 
     const oldMMR = profile?.mmr ?? BASE_MMR;
@@ -401,8 +398,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       } catch (e) { console.error(e); }
     }
 
-    // ИСПРАВЛЕНИЕ: Мы удалили grantXp, поэтому XP в PvP больше не дается
-
     await refreshProfile();
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
   }
@@ -416,16 +411,13 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     }
   };
 
-  // ИСПРАВЛЕНИЕ ЗАВИСШЕЙ ПЛАШКИ: Функция для выхода
   const handleExitToMenu = async () => {
     if (duelId) {
-       // Еще раз контрольный выстрел в базу, чтобы убрать плашку
-       await supabase.from('duels').update({ status: 'finished' }).eq('id', duelId);
+      await supabase.from('duels').update({ status: 'finished' }).eq('id', duelId);
     }
     onBack();
   };
 
-  // Helpers
   async function loadProblems(ids: string[]) {
     if (!ids?.length) return;
     const { data } = await supabase.from('problems').select('*').in('id', ids);
@@ -541,7 +533,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     return (
       <div className="flex flex-col h-[100dvh] bg-slate-900 overflow-hidden">
 
-        {/* Modals & Alerts */}
         {showSurrenderModal && (
           <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-slate-900 border border-red-500/30 rounded-2xl p-6 max-w-sm w-full">
@@ -564,9 +555,8 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
           </div>
         )}
 
-        {/* --- STICKY TOP: SCOREBOARD --- */}
+        {/* STICKY TOP: SCOREBOARD */}
         <div className="flex-shrink-0 bg-slate-900 border-b border-slate-800 shadow-lg z-10">
-
           <div className="flex items-center justify-between px-3 py-2 bg-slate-800/80 border-b border-slate-700">
 
             <div className="flex items-center gap-1">
@@ -617,7 +607,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
           </div>
         </div>
 
-        {/* --- MIDDLE: TASK --- */}
+        {/* MIDDLE: TASK */}
         <div className="flex-1 flex flex-col items-center justify-center p-4 bg-slate-900 overflow-y-auto">
           {currentProb ? (
             <div className="w-full max-w-lg">
@@ -638,7 +628,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
           )}
         </div>
 
-        {/* --- BOTTOM: INPUT & KEYPAD --- */}
+        {/* BOTTOM: INPUT & KEYPAD */}
         <div className="flex-shrink-0 bg-slate-900 border-t border-slate-800 shadow-2xl z-20 pb-safe">
           {feedback ? (
             <div className={`p-8 flex flex-col items-center justify-center h-[320px] animate-in zoom-in duration-200 ${feedback === 'correct' ? 'bg-emerald-900/20' : 'bg-red-900/20'}`}>
@@ -671,52 +661,58 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     const isCalibrating = profile?.is_calibrating;
 
     return (
-      <div className="flex items-center justify-center h-full p-4 animate-in zoom-in duration-300">
-        <div className="text-center p-8 md:p-12 bg-slate-800 rounded-3xl border-2 border-slate-600 shadow-2xl max-w-lg w-full">
-          {isWin ? (
-            <>
-              <Trophy className="w-20 h-20 text-yellow-400 mx-auto mb-4 drop-shadow-lg" />
-              <h1 className="text-4xl font-black text-yellow-400 mb-2">{t('pvp.win')}</h1>
-              {opponentDisconnected && !isBotMatch ? (
-                <p className="text-emerald-300 mb-6 text-sm">{t('pvp.opponent_resigned')}</p>
-              ) : isCalibrating ? (
-                <p className="text-slate-300 font-mono mb-6">{t('pvp.calib_recorded')}</p>
-              ) : (
-                <p className="text-emerald-400 font-bold text-lg mb-6 animate-pulse">+ {mmrChange} MP</p>
-              )}
-            </>
-          ) : isDraw ? (
-            <>
-              <Flag className="w-20 h-20 text-slate-400 mx-auto mb-4" />
-              <h1 className="text-4xl font-black text-slate-300 mb-2">{t('pvp.draw')}</h1>
-              <p className="text-slate-500 mb-6">0 MP</p>
-            </>
-          ) : (
-            <>
-              <XCircle className="w-20 h-20 text-red-500 mx-auto mb-4" />
-              <h1 className="text-4xl font-black text-red-500 mb-2">{t('pvp.loss')}</h1>
-              {isCalibrating ? (
-                <p className="text-slate-400 mb-6">{t('pvp.result_recorded')}</p>
-              ) : (
-                <p className="text-slate-400 mb-6">- {mmrChange} MP</p>
-              )}
-            </>
-          )}
+      <>
+        {showRevealModal && revealRank && revealNewMMR !== null && revealOldMMR !== null && (
+          <RankUpModal newRank={revealRank} oldMMR={revealOldMMR} newMMR={revealNewMMR} onClose={() => setShowRevealModal(false)} />
+        )}
 
-          <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 mb-6">
-            <div className="text-xs text-slate-500 mb-1 uppercase tracking-widest">{t('pvp.match_score')}</div>
-            <div className="flex items-center justify-center gap-4 text-3xl font-mono font-bold">
-              <span className={isWin ? 'text-yellow-400' : 'text-slate-500'}>{myScore}</span>
-              <span className="text-slate-600">:</span>
-              <span className={!isWin && !isDraw ? 'text-yellow-400' : 'text-slate-500'}>{oppScore}</span>
+        <div className="flex items-center justify-center h-full p-4 animate-in zoom-in duration-300">
+          <div className="text-center p-8 md:p-12 bg-slate-800 rounded-3xl border-2 border-slate-600 shadow-2xl max-w-lg w-full">
+            {isWin ? (
+              <>
+                <Trophy className="w-20 h-20 text-yellow-400 mx-auto mb-4 drop-shadow-lg" />
+                <h1 className="text-4xl font-black text-yellow-400 mb-2">{t('pvp.win')}</h1>
+                {opponentDisconnected && !isBotMatch ? (
+                  <p className="text-emerald-300 mb-6 text-sm">{t('pvp.opponent_resigned')}</p>
+                ) : isCalibrating ? (
+                  <p className="text-slate-300 font-mono mb-6">{t('pvp.calib_recorded')}</p>
+                ) : (
+                  <p className="text-emerald-400 font-bold text-lg mb-6 animate-pulse">+ {mmrChange} MP</p>
+                )}
+              </>
+            ) : isDraw ? (
+              <>
+                <Flag className="w-20 h-20 text-slate-400 mx-auto mb-4" />
+                <h1 className="text-4xl font-black text-slate-300 mb-2">{t('pvp.draw')}</h1>
+                <p className="text-slate-500 mb-6">0 MP</p>
+              </>
+            ) : (
+              <>
+                <XCircle className="w-20 h-20 text-red-500 mx-auto mb-4" />
+                <h1 className="text-4xl font-black text-red-500 mb-2">{t('pvp.loss')}</h1>
+                {isCalibrating ? (
+                  <p className="text-slate-400 mb-6">{t('pvp.result_recorded')}</p>
+                ) : (
+                  <p className="text-slate-400 mb-6">- {mmrChange} MP</p>
+                )}
+              </>
+            )}
+
+            <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 mb-6">
+              <div className="text-xs text-slate-500 mb-1 uppercase tracking-widest">{t('pvp.match_score')}</div>
+              <div className="flex items-center justify-center gap-4 text-3xl font-mono font-bold">
+                <span className={isWin ? 'text-yellow-400' : 'text-slate-500'}>{myScore}</span>
+                <span className="text-slate-600">:</span>
+                <span className={!isWin && !isDraw ? 'text-yellow-400' : 'text-slate-500'}>{oppScore}</span>
+              </div>
             </div>
+
+            <button onClick={handleExitToMenu} className="w-full px-6 py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors">
+              {t('pvp.btn_menu')}
+            </button>
           </div>
-          
-          <button onClick={handleExitToMenu} className="w-full px-6 py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors">
-            {t('pvp.btn_menu')}
-          </button>
         </div>
-      </div>
+      </>
     );
   }
 
