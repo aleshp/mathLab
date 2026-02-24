@@ -144,3 +144,9 @@ math-field .ML__selected {
 .glow-animation {
   animation: glow-pulse 2s infinite ease-in-out;
 }
+
+.hardware-accelerated {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
