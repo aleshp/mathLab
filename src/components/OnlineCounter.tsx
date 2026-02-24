@@ -1,23 +1,22 @@
-import { Users } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Users } from 'lucide-react';
 
 export function OnlineCounter() {
-  // Начинаем с ~120 игроков
   const [count, setCount] = useState(124);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // Случайное изменение на -2..+3 каждые 5 сек
-      const change = Math.floor(Math.random() * 6) - 2;
+      // Имитация активности: +/- 3 игрока
+      const change = Math.floor(Math.random() * 7) - 3; 
       setCount(prev => Math.max(80, prev + change));
     }, 5000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/80 rounded-full border border-slate-700 text-xs font-mono text-emerald-400 animate-pulse">
-      <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-      <span>{count} online</span>
+    <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-800/80 rounded-lg border border-slate-700/50 text-[10px] md:text-xs font-mono text-emerald-400 animate-pulse transition-all">
+      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0" />
+      <span className="whitespace-nowrap font-bold">{count} online</span>
     </div>
   );
 }
