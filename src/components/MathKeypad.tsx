@@ -9,7 +9,7 @@ type MathKeypadProps = {
 };
 
 type MainTab = 'math' | 'abc';
-type SubTab = 'basic' | 'func' | 'trig' | 'calc';
+type SubTab = 'basic' | 'func' | 'trig';
 
 type KeyDef = {
   label: React.ReactNode | string;
@@ -20,11 +20,16 @@ type KeyDef = {
   menuOptions?: Array<{ label: string | React.ReactNode; cmd: string; arg: string }>;
 };
 
+// Компонент для отрисовки пустого пунктирного квадратика (как в Photomath)
+const D = () => (
+  <span className="inline-block w-[12px] h-[14px] border-[1.5px] border-dotted border-slate-400 rounded-[3px] mx-[2px] mb-[1px] align-middle opacity-80" />
+);
+
 export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypadProps) {
   const [mainTab, setMainTab] = useState<MainTab>('math');
-  const [subTab, setSubTab] = useState<SubTab>('basic');
+  const[subTab, setSubTab] = useState<SubTab>('basic');
   const [isShift, setIsShift] = useState(false);
-  const[longPressMenu, setLongPressMenu] = useState<{ options: any[]; keyId: string } | null>(null);
+  const [longPressMenu, setLongPressMenu] = useState<{ options: any[]; keyId: string } | null>(null);
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressTriggered = useRef(false);
@@ -121,9 +126,9 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
     </button>
   );
 
-  // === РАСКЛАДКИ КЛАВИАТУРЫ (PHOTOMATH STYLE БЕЗ КВАДРАТОВ) ===
+  // === РАСКЛАДКИ КЛАВИАТУРЫ ===
   const basicKeys: KeyDef[][] = [[
-      { label: '( )', cmd: 'insert', arg: '\\left(#?\\right)' },
+      { label: <div className="flex items-center">(<D/>)</div>, cmd: 'insert', arg: '\\left(#?\\right)' },
       { label: '>', cmd: 'insert', arg: '>', hasMenu: true, menuOptions:[{label:'<', cmd:'insert', arg:'<'}, {label:'≥', cmd:'insert', arg:'\\geq'}, {label:'≤', cmd:'insert', arg:'\\leq'}, {label:'≠', cmd:'insert', arg:'\\neq'}] },
       { label: '7', cmd: 'insert', arg: '7', className: 'bg-slate-700 text-white text-xl font-semibold' },
       { label: '8', cmd: 'insert', arg: '8', className: 'bg-slate-700 text-white text-xl font-semibold' },
@@ -132,20 +137,21 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
     ],[
       { 
         label: (
-          <div className="flex flex-col items-center justify-center text-[11px] leading-[1.1] font-serif italic text-slate-300">
-            <span className="border-b border-slate-400 px-1">x</span>
-            <span>y</span>
+          <div className="flex flex-col items-center justify-center">
+            <D/>
+            <div className="w-[16px] h-[1.5px] bg-white my-[2px] rounded-full"/>
+            <D/>
           </div>
         ), 
         cmd: 'insert', arg: '\\frac{#0}{#?}' 
       },
-      { label: '√x', cmd: 'insert', arg: '\\sqrt{#?}', hasMenu: true, menuOptions: [{label:'∛x', cmd:'insert', arg:'\\sqrt[3]{#?}'}, {label:'ⁿ√x', cmd:'insert', arg:'\\sqrt[#?]{#0}'}] },
+      { label: <div className="flex items-center">√<D/></div>, cmd: 'insert', arg: '\\sqrt{#?}', hasMenu: true, menuOptions:[{label:<div className="flex items-center">∛<D/></div>, cmd:'insert', arg:'\\sqrt[3]{#?}'}, {label:<div className="flex items-center"><span className="text-[10px] -mt-2 mr-[1px]">n</span>√<D/></div>, cmd:'insert', arg:'\\sqrt[#?]{#0}'}] },
       { label: '4', cmd: 'insert', arg: '4', className: 'bg-slate-700 text-white text-xl font-semibold' },
       { label: '5', cmd: 'insert', arg: '5', className: 'bg-slate-700 text-white text-xl font-semibold' },
       { label: '6', cmd: 'insert', arg: '6', className: 'bg-slate-700 text-white text-xl font-semibold' },
       { label: '×', cmd: 'insert', arg: '\\times', className: 'bg-slate-800 text-cyan-400 text-2xl' },
     ],[
-      { label: 'x²', cmd: 'insert', arg: '#0^{2}', hasMenu: true, menuOptions:[{label:'xⁿ', cmd:'insert', arg:'#0^{#?}'}, {label:'x⁻¹', cmd:'insert', arg:'#0^{-1}'}] },
+      { label: <div className="flex items-center"><D/>²</div>, cmd: 'insert', arg: '#0^{2}', hasMenu: true, menuOptions:[{label:<div className="flex items-center"><D/>ⁿ</div>, cmd:'insert', arg:'#0^{#?}'}, {label:<div className="flex items-center"><D/>⁻¹</div>, cmd:'insert', arg:'#0^{-1}'}] },
       { label: <span className="font-serif italic text-xl">x</span>, cmd: 'insert', arg: 'x' },
       { label: '1', cmd: 'insert', arg: '1', className: 'bg-slate-700 text-white text-xl font-semibold' },
       { label: '2', cmd: 'insert', arg: '2', className: 'bg-slate-700 text-white text-xl font-semibold' },
@@ -162,67 +168,50 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
   ];
 
   const funcKeys: KeyDef[][] =[[
-      { label: '|x|', cmd: 'insert', arg: '\\left|#?\\right|' },
+      { label: <div className="flex items-center">|<D/>|</div>, cmd: 'insert', arg: '\\left|#?\\right|' },
       { label: 'f(x)', cmd: 'insert', arg: 'f(x)' },
-      { label: 'log₁₀', cmd: 'insert', arg: '\\log_{10}(#?)' },
-      { label: 'Aₙᵏ', cmd: 'insert', arg: 'A_{#?}^{#0}' },
+      { label: <div className="flex items-center">log<sub className="text-[10px] mt-2">10</sub><D/></div>, cmd: 'insert', arg: '\\log_{10}(#?)' },
+      { label: <div className="flex items-center">ln<D/></div>, cmd: 'insert', arg: '\\ln(#?)' },
       { label: 'i', cmd: 'insert', arg: 'i', className: 'font-serif italic' },
-      { label: '[ ]', cmd: 'insert', arg: '\\begin{bmatrix} #? \\end{bmatrix}' },
+      { label: <div className="flex items-center">[<D/>]</div>, cmd: 'insert', arg: '\\begin{bmatrix} #? \\end{bmatrix}' },
     ],[
-      { label: 'y', cmd: 'insert', arg: 'y', className: 'italic font-serif' },
-      { label: 'f(a)', cmd: 'insert', arg: 'f(#?)' },
-      { label: 'log₂', cmd: 'insert', arg: '\\log_{2}(#?)' },
-      { label: 'Pₙ', cmd: 'insert', arg: 'P_{#?}' },
-      { label: 'z', cmd: 'insert', arg: 'z', className: 'italic font-serif' },
-      { label: '!', cmd: 'insert', arg: '!' },
-    ],[
+      { label: <D/>, cmd: 'insert', arg: '#?' },
+      { label: <div className="flex items-center">f(<D/>)</div>, cmd: 'insert', arg: 'f(#?)' },
+      { label: <div className="flex items-center">log<sub className="text-[10px] mt-2">2</sub><D/></div>, cmd: 'insert', arg: '\\log_{2}(#?)' },
       { label: 'e', cmd: 'insert', arg: 'e', className: 'italic font-serif' },
-      { label: 'f(x,y)', cmd: 'insert', arg: 'f(x,y)' },
-      { label: 'logₐ', cmd: 'insert', arg: '\\log_{#?}(#0)' },
-      { label: 'Cₙᵏ', cmd: 'insert', arg: 'C_{#?}^{#0}' },
-      { label: 'z̄', cmd: 'insert', arg: '\\bar{z}' },
-      { label: '...', cmd: 'insert', arg: '' },
+      { label: '!', cmd: 'insert', arg: '!' },
+      { label: <div className="flex items-center">||<D/>||</div>, cmd: 'insert', arg: '\\begin{vmatrix} #? \\end{vmatrix}' },
     ],[
+      { label: <div className="flex items-center"><D/>(<D/>)</div>, cmd: 'insert', arg: '#?(#0)' },
+      { label: 'f(x,y)', cmd: 'insert', arg: 'f(x,y)' },
+      { label: <div className="flex items-center">log<sub className="text-[10px] mt-2"><D/></sub><D/></div>, cmd: 'insert', arg: '\\log_{#?}(#0)' },
       { label: 'exp', cmd: 'insert', arg: '\\exp(#?)' },
-      { label: 'a(b)', cmd: 'insert', arg: '#?(#0)' },
-      { label: 'ln', cmd: 'insert', arg: '\\ln(#?)' },
-      { label: '(n k)', cmd: 'insert', arg: '\\binom{#?}{#0}' },
+      { label: 'z̄', cmd: 'insert', arg: '\\bar{z}' },
+      { label: '', cmd: '', arg: '' }, // Пустое место для выравнивания
+    ],[
+      { label: 'Cₙᵏ', cmd: 'insert', arg: 'C_{#?}^{#0}' },
+      { label: 'Pₙ', cmd: 'insert', arg: 'P_{#?}' },
+      { label: 'Aₙᵏ', cmd: 'insert', arg: 'A_{#?}^{#0}' },
+      { label: <div className="flex flex-col items-center text-[10px] leading-tight">(<span>n</span><span>k</span>)</div>, cmd: 'insert', arg: '\\binom{#?}{#0}' },
       { label: 'sign', cmd: 'insert', arg: '\\text{sign}(#?)' },
-      { label: '| A |', cmd: 'insert', arg: '\\begin{vmatrix} #? \\end{vmatrix}' },
+      { label: '', cmd: '', arg: '' }, // Пустое место
     ]
   ];
 
-  const trigKeys: KeyDef[][] = [['rad', 'sin', 'cos', 'tan', 'cot', 'sec', 'csc'].map(k => ({label: k, cmd: 'insert', arg: k === 'rad' ? '\\text{rad}' : `\\${k}(#?)`})),['°', 'arcsin', 'arccos', 'arctan', 'arccot', 'arcsec', 'arccsc'].map(k => ({label: k, cmd: 'insert', arg: k === '°' ? '^\\circ' : `\\${k}(#?)`})),['°\'\"', 'sinh', 'cosh', 'tanh', 'coth', 'sech', 'csch'].map(k => ({label: k, cmd: 'insert', arg: k === '°\'\"' ? '^\\circ \\, \' \\, \"' : `\\${k}(#?)`})),['', 'arsinh', 'arcosh', 'artanh', 'arcoth', 'arsech', 'arcsch'].map(k => ({label: k, cmd: 'insert', arg: k === '' ? '' : `\\text{${k}}(#?)`})),
-  ];
-
-  const calcKeys: KeyDef[][] = [[
-      { label: 'lim', cmd: 'insert', arg: '\\lim_{#? \\to #0}' },
-      { label: 'd/dx', cmd: 'insert', arg: '\\frac{d}{dx}' },
-      { label: '∫ dx', cmd: 'insert', arg: '\\int #? \\, dx' },
-      { label: 'dy/dx', cmd: 'insert', arg: '\\frac{dy}{dx}' },
-      { label: 'aₙ', cmd: 'insert', arg: 'a_n' },
-      { label: '∞', cmd: 'insert', arg: '\\infty' },
+  const trigKeys: KeyDef[][] = [['sin', 'cos', 'tan', 'cot', 'sec', 'csc'].map(k => ({label: k, cmd: 'insert', arg: `\\${k}(#?)`})),['arcsin', 'arccos', 'arctan', 'arccot', 'arcsec', 'arccsc'].map(k => ({label: k, cmd: 'insert', arg: `\\${k}(#?)`})),[
+      { label: 'rad', cmd: 'insert', arg: '\\text{rad}' },
+      { label: '°', cmd: 'insert', arg: '^\\circ' },
+      { label: '', cmd: '', arg: '' },
+      { label: '', cmd: '', arg: '' },
+      { label: '', cmd: '', arg: '' },
+      { label: '', cmd: '', arg: '' },
     ],[
-      { label: 'lim₊', cmd: 'insert', arg: '\\lim_{#? \\to #0^+}' },
-      { label: 'd/da', cmd: 'insert', arg: '\\frac{d}{d#?}' },
-      { label: '∫ₐᵇ', cmd: 'insert', arg: '\\int_{#?}^{#0}' },
-      { label: 'dx', cmd: 'insert', arg: 'dx' },
-      { label: 'aₙ₊₁', cmd: 'insert', arg: 'a_{n+1}' },
-      { label: '∑', cmd: 'insert', arg: '\\sum_{#?}^{#0}' },
-    ],[
-      { label: 'lim₋', cmd: 'insert', arg: '\\lim_{#? \\to #0^-}' },
-      { label: 'd²/dx²', cmd: 'insert', arg: '\\frac{d^2}{dx^2}' },
-      { label: '∬', cmd: 'insert', arg: '\\iint #? \\, dx \\, dy' },
-      { label: 'dy', cmd: 'insert', arg: 'dy' },
-      { label: 'aₖ', cmd: 'insert', arg: 'a_{#?}' },
-      { label: '∏', cmd: 'insert', arg: '\\prod_{#?}^{#0}' },
-    ],[
-      { label: '...', cmd: 'insert', arg: '' },
-      { label: '...', cmd: 'insert', arg: '' },
-      { label: '...', cmd: 'insert', arg: '' },
-      { label: 'y\'', cmd: 'insert', arg: 'y\'' },
-      { label: 'Δ', cmd: 'insert', arg: '\\Delta' },
-      { label: '∇', cmd: 'insert', arg: '\\nabla' },
+      { label: '', cmd: '', arg: '' },
+      { label: '', cmd: '', arg: '' },
+      { label: '', cmd: '', arg: '' },
+      { label: '', cmd: '', arg: '' },
+      { label: '', cmd: '', arg: '' },
+      { label: '', cmd: '', arg: '' },
     ]
   ];
 
@@ -230,20 +219,24 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
     ['z','x','c','v','b','n','m']
   ];
 
-  const renderGrid = (grid: KeyDef[][], cols: number) => (
+  const renderGrid = (grid: KeyDef[][]) => (
     <div className="flex-1 flex flex-col gap-1.5 p-1.5">
       {grid.map((row, rIdx) => (
-        <div key={rIdx} className={`grid gap-1.5 flex-1 ${cols === 7 ? 'grid-cols-7' : 'grid-cols-6'}`}>
+        <div key={rIdx} className="grid gap-1.5 flex-1 grid-cols-6">
           {row.map((k, cIdx) => (
-            <Key
-              key={cIdx}
-              id={`${rIdx}-${cIdx}`}
-              label={k.label}
-              onClick={() => k.cmd && k.arg !== undefined && onCommand(k.cmd, k.arg)}
-              className={`bg-slate-800 text-slate-200 text-sm md:text-base ${k.className || ''}`}
-              hasMenu={k.hasMenu}
-              menuOptions={k.menuOptions}
-            />
+            k.cmd ? (
+              <Key
+                key={cIdx}
+                id={`${rIdx}-${cIdx}`}
+                label={k.label}
+                onClick={() => k.cmd && k.arg !== undefined && onCommand(k.cmd, k.arg)}
+                className={`bg-slate-800 text-slate-200 text-sm md:text-base ${k.className || ''}`}
+                hasMenu={k.hasMenu}
+                menuOptions={k.menuOptions}
+              />
+            ) : (
+              <div key={cIdx} className="flex-1" /> // Пустое место для выравнивания сетки
+            )
           ))}
         </div>
       ))}
@@ -329,8 +322,7 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
             {[
               { id: 'basic', label: '+ - × ÷' },
               { id: 'func', label: 'f(x) e log ln' },
-              { id: 'trig', label: 'sin cos tan cot' },
-              { id: 'calc', label: 'lim dx ∫ Σ ∞' }
+              { id: 'trig', label: 'sin cos tan cot' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -345,10 +337,9 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
           </div>
 
           {/* DYNAMIC GRIDS */}
-          {subTab === 'basic' && renderGrid(basicKeys, 6)}
-          {subTab === 'func' && renderGrid(funcKeys, 6)}
-          {subTab === 'trig' && renderGrid(trigKeys, 7)}
-          {subTab === 'calc' && renderGrid(calcKeys, 6)}
+          {subTab === 'basic' && renderGrid(basicKeys)}
+          {subTab === 'func' && renderGrid(funcKeys)}
+          {subTab === 'trig' && renderGrid(trigKeys)}
         </div>
       ) : (
         /* QWERTY KEYBOARD */
