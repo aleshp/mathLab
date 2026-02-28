@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { BecomeTeacherModal } from './BecomeTeacherModal';
 
-// Добавляем новый проп onOpenLegal
+// Типы пропсов
 type DashboardProps = {
   onClose: () => void;
   onOpenLegal: (type: 'privacy' | 'terms' | 'refund') => void;
@@ -27,12 +27,14 @@ type RecentExperiment = {
   attempted_at: string;
 };
 
+// Цвета для редкости достижений
 const rarityColors = {
   common: 'from-slate-400 to-slate-500',
   rare: 'from-blue-400 to-purple-500',
   legendary: 'from-amber-400 to-orange-500'
 };
 
+// Перевод типов задач
 const typeTranslations: Record<string, string> = {
   input: 'Ввод значения',
   choice: 'Тестирование',
@@ -48,14 +50,16 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
   const { t } = useTranslation();
   const { profile, signOut, refreshProfile } = useAuth();
   
-  // Добавляем стейт для переключения экранов внутри Дашборда
+  // Состояния интерфейса
   const [currentView, setCurrentView] = useState<'profile' | 'faq'>('profile');
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
+  // Данные пользователя
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
   const [recentExperiments, setRecentExperiments] = useState<RecentExperiment[]>([]);
-  const [showTeacherModal, setShowTeacherModal] = useState(false);
   
+  // Статус учителя
+  const [showTeacherModal, setShowTeacherModal] = useState(false);
   const [teacherRequestStatus, setTeacherRequestStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none');
   const [loadingRequest, setLoadingRequest] = useState(false);
 
@@ -66,9 +70,15 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
     
     if (!profile) return;
     
+    // Подписка на изменение статуса заявки учителя в реальном времени
     const channel = supabase
       .channel('teacher-status-changes')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teacher_requests', filter: `user_id=eq.${profile.id}` },
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'teacher_requests', 
+        filter: `user_id=eq.${profile.id}` 
+      },
         (payload) => {
           setTeacherRequestStatus(payload.new.status);
           refreshProfile(); 
@@ -79,30 +89,59 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
     return () => { supabase.removeChannel(channel); };
   }, [profile?.id]);
 
-  // ... (функции loadAchievements, loadRecentExperiments, checkTeacherRequest, handleTeacherPaymentRedirect, handleSignOut, formatDate остаются без изменений)
   async function loadAchievements() {
     if (!profile) return;
-    const { data } = await supabase.from('user_achievements').select('earned_at, achievement:achievements(*)').eq('user_id', profile.id).order('earned_at', { ascending: false }).limit(6);
-    if (data) setAchievements(data.map(item => ({ achievement: item.achievement as unknown as Achievement, earned_at: item.earned_at })));
+    const { data } = await supabase
+      .from('user_achievements')
+      .select('earned_at, achievement:achievements(*)')
+      .eq('user_id', profile.id)
+      .order('earned_at', { ascending: false })
+      .limit(6);
+
+    if (data) {
+      setAchievements(data.map(item => ({ 
+        achievement: item.achievement as unknown as Achievement, 
+        earned_at: item.earned_at 
+      })));
+    }
   }
 
   async function loadRecentExperiments() {
     if (!profile) return;
-    const { data } = await supabase.from('experiments').select('problem_type, correct, time_spent, attempted_at').eq('user_id', profile.id).order('attempted_at', { ascending: false }).limit(10);
+    const { data } = await supabase
+      .from('experiments')
+      .select('problem_type, correct, time_spent, attempted_at')
+      .eq('user_id', profile.id)
+      .order('attempted_at', { ascending: false })
+      .limit(10);
+
     if (data) setRecentExperiments(data);
   }
 
   async function checkTeacherRequest() {
     if (!profile) return;
     setLoadingRequest(true);
-    const { data } = await supabase.from('teacher_requests').select('status').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    
+    const { data } = await supabase
+      .from('teacher_requests')
+      .select('status')
+      .eq('user_id', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
     if (data) setTeacherRequestStatus(data.status as any);
     else setTeacherRequestStatus('none');
+    
     setLoadingRequest(false);
   }
 
   const handleTeacherPaymentRedirect = () => { window.location.href = "/pricing"; };
-  async function handleSignOut() { onClose(); await signOut(); }
+  
+  async function handleSignOut() { 
+    onClose(); 
+    await signOut(); 
+  }
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -120,7 +159,7 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
   const roleInfo = getRoleDisplay();
   const RoleIcon = roleInfo.icon;
 
-  // Список вопросов для FAQ
+  // Список вопросов для FAQ (ID вопросов)
   const faqList = [1, 2, 3, 4, 5];
 
   return (
@@ -131,7 +170,10 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
         <div className="flex items-center justify-between mb-8 shrink-0">
           <div className="flex items-center gap-4">
             {currentView === 'faq' && (
-              <button onClick={() => setCurrentView('profile')} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors">
+              <button 
+                onClick={() => setCurrentView('profile')} 
+                className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors border border-slate-700"
+              >
                 <ChevronLeft className="w-6 h-6 text-white" />
               </button>
             )}
@@ -140,7 +182,10 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
               {currentView === 'profile' ? t('dashboard.title') : t('faq.title')}
             </h1>
           </div>
-          <button onClick={onClose} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors text-slate-400 hover:text-white">
+          <button 
+            onClick={onClose} 
+            className="p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors text-slate-400 hover:text-white border border-slate-700"
+          >
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -240,6 +285,8 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
 
               {/* ACHIEVEMENTS & HISTORY */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* ACHIEVEMENTS */}
                 <div>
                   <div className="flex items-center gap-2 mb-4 px-1">
                     <Trophy className="w-5 h-5 text-amber-400" />
@@ -262,6 +309,7 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
                   </div>
                 </div>
 
+                {/* HISTORY */}
                 <div>
                   <div className="flex items-center gap-2 mb-4 px-1">
                     <Clock className="w-5 h-5 text-cyan-400" />
