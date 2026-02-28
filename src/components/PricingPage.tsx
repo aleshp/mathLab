@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next'; // Перевод
-import { ArrowLeft, Check, Zap, GraduationCap, X, Lock, Loader, ShieldCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { ArrowLeft, Check, Zap, GraduationCap, X, Lock, Loader, ShieldCheck, Building2, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { BecomeTeacherModal } from './BecomeTeacherModal';
@@ -39,7 +39,7 @@ export function PricingPage() {
       setLoading(false);
     }
     checkStatus();
-  },);
+  }, [user]);
 
   const openCheckout = async (priceId: string) => {
     if (!user) return alert(t('pricing.alert_login'));
@@ -53,7 +53,7 @@ export function PricingPage() {
         return;
       }
 
-    paddle.Checkout.open({
+      paddle.Checkout.open({
         items: [{ priceId: priceId, quantity: 1 }],
         customData: {
           userId: user.id,
@@ -62,7 +62,7 @@ export function PricingPage() {
         settings: {
           displayMode: 'overlay',
           theme: 'dark',
-          locale: i18n.language === 'kk' ? 'en' : 'ru' // Paddle не поддерживает 'kk', используем 'en' как фоллбэк
+          locale: i18n.language === 'kk' ? 'en' : 'ru'
         }
       });
     } catch (error) {
@@ -79,12 +79,12 @@ export function PricingPage() {
       price: '$0',
       period: t('pricing.per_forever'),
       description: t('pricing.plan_cadet_desc'),
-      features: [
+      features:[
         t('pricing.feat_pvp'),
         t('pricing.feat_suricat'),
         t('pricing.feat_modules')
       ],
-      notIncluded: [
+      notIncluded:[
         t('pricing.feat_errors'),
         t('pricing.feat_xp'),
         t('pricing.feat_tournaments')
@@ -99,14 +99,14 @@ export function PricingPage() {
       price: '$7',
       period: t('pricing.per_month'),
       description: t('pricing.plan_premium_desc'),
-      features: [
+      features:[
         t('pricing.feat_all_free'),
         t('pricing.feat_errors'),
         t('pricing.feat_x2_xp'),
         t('pricing.feat_badge'),
         t('pricing.feat_priority')
       ],
-      notIncluded: [
+      notIncluded:[
         t('pricing.feat_tournaments'),
         t('pricing.feat_custom_tasks')
       ],
@@ -134,14 +134,14 @@ export function PricingPage() {
       price: '$9',
       period: t('pricing.per_month'),
       description: t('pricing.plan_teacher_desc'),
-      features: [
+      features:[
         t('pricing.feat_all_premium'),
         t('pricing.feat_closed_tour'),
         t('pricing.feat_site_tasks'),
         t('pricing.feat_analytics'),
         t('pricing.feat_teacher_status')
       ],
-      notIncluded: [],
+      notIncluded:[],
       color: 'cyan',
       icon: <GraduationCap className="w-4 h-4" />,
       highlight: false,
@@ -202,6 +202,7 @@ export function PricingPage() {
           </a>
         </div>
 
+        {/* ОСНОВНАЯ СЕТКА ТАРИФОВ */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
           {plans.map((plan) => (
             <div 
@@ -253,15 +254,64 @@ export function PricingPage() {
               {plan.action}
               
               {plan.name === 'Teacher' && requestStatus === 'none' && (
-                <p className="text- text-center mt-3 text-slate-500">{t('pricing.teacher_req_docs')}</p>
+                <p className="text- center mt-3 text-slate-500 text-xs">{t('pricing.teacher_req_docs')}</p>
               )}
               {plan.name === 'Teacher' && requestStatus === 'approved' && profile?.role !== 'teacher' && (
-                <p className="text- text-center mt-3 text-emerald-400 font-bold">{t('pricing.teacher_approved_pay')}</p>
+                <p className="text- center mt-3 text-emerald-400 font-bold text-xs">{t('pricing.teacher_approved_pay')}</p>
               )}
             </div>
           ))}
         </div>
 
+        {/* === БЛОК B2B / УЧЕБНЫМ ЦЕНТРАМ === */}
+        <div className="mb-16 bg-gradient-to-br from-purple-900/40 to-slate-800/80 border border-purple-500/30 rounded-3xl p-8 md:p-12 relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+          
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-8 relative z-10">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 text-purple-400 font-bold mb-3 uppercase tracking-wider text-sm">
+                <Building2 className="w-5 h-5" /> {t('pricing.plan_b2b_subtitle')}
+              </div>
+              <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
+                {t('pricing.plan_b2b_title')}
+              </h2>
+              <p className="text-slate-300 text-lg leading-relaxed mb-6 max-w-2xl">
+                {t('pricing.plan_b2b_desc')}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  t('pricing.feat_b2b_1'),
+                  t('pricing.feat_b2b_2'),
+                  t('pricing.feat_b2b_3'),
+                  t('pricing.feat_b2b_4')
+                ].map((feat, idx) => (
+                  <div key={idx} className="flex items-start gap-3">
+                    <div className="p-1.5 rounded-full bg-purple-500/20 shrink-0 mt-0.5">
+                      <Check className="w-3.5 h-3.5 text-purple-400" />
+                    </div>
+                    <span className="text-slate-200 text-sm font-medium">{feat}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="w-full lg:w-auto shrink-0 flex flex-col items-center">
+              <a 
+                href="mailto:support@mathlabpvp.org?subject=Заявка%20на%20корпоративную%20подписку%20MathLab"
+                className="w-full lg:w-auto px-10 py-5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-2xl shadow-lg shadow-purple-900/30 transition-all active:scale-95 flex items-center justify-center gap-3 text-lg group"
+              >
+                {t('pricing.btn_contact_sales')}
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </a>
+              <p className="text-slate-500 text-xs mt-4 text-center">
+                Отвечаем в течение рабочего дня
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* FOOTER */}
         <div className="border-t border-slate-800 pt-8 text-center text-xs text-slate-600">
           <div className="flex flex-wrap justify-center gap-6 mb-4 font-medium text-slate-500">
             <a href="/terms-and-conditions" className="hover:text-cyan-400 transition-colors">{t('auth.terms')}</a>
