@@ -261,13 +261,17 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
 
               {/* STATS GRID */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                
+                {/* УРОВЕНЬ ИГРОКА (XP) */}
                 <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-5 flex items-center gap-4">
                   <div className="p-3 bg-purple-500/20 rounded-xl text-purple-400"><Target className="w-6 h-6" /></div>
                   <div>
-                    <div className="text-xs text-slate-400 uppercase font-bold tracking-wider">{t('dashboard.level')}</div>
+                    <div className="text-xs text-slate-400 uppercase font-bold tracking-wider">Level (XP)</div>
                     <div className="text-2xl font-black text-white">{profile.clearance_level}</div>
                   </div>
                 </div>
+
+                {/* РЕШЕНО ЗАДАЧ */}
                 <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-5 flex items-center gap-4">
                   <div className="p-3 bg-emerald-500/20 rounded-xl text-emerald-400"><Zap className="w-6 h-6" /></div>
                   <div>
@@ -275,6 +279,8 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
                     <div className="text-2xl font-black text-white">{profile.total_experiments}</div>
                   </div>
                 </div>
+
+                {/* ТОЧНОСТЬ */}
                 <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-5 flex items-center gap-4">
                   <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400"><TrendingUp className="w-6 h-6" /></div>
                   <div>
