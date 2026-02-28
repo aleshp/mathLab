@@ -34,21 +34,19 @@ type View = 'map' | 'modules' | 'reactor' | 'pvp' | 'tournament_lobby' | 'analyz
 
 function MainApp() {
   const { user, loading, profile } = useAuth();
+  
+  // Навигация
   const [view, setView] = useState<View>('map');
   const [selectedSector, setSelectedSector] = useState<Sector | null>(null);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
-  
   const [trainingProblemIds, setTrainingProblemIds] = useState<string[] | null>(null);
   
+  // Состояния пользователя
   const [isGuest, setIsGuest] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  {showDashboard && (
-    <Dashboard 
-      onClose={() => setShowDashboard(false)} 
-      onOpenLegal={(type) => setShowLegal(type)} // <--- Добавляем этот проп
-    />
-  )};
+  // Модальные окна
+  const [showDashboard, setShowDashboard] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
@@ -60,9 +58,11 @@ function MainApp() {
   const [showLegal, setShowLegal] = useState<'privacy' | 'terms' | 'refund' | null>(null);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 
+  // Игровые сессии
   const [activeGameSession, setActiveGameSession] = useState<{ duelId: string, tournamentId?: string } | null>(null);
   const [activeTournamentId, setActiveTournamentId] = useState<string | null>(null);
 
+  // === ЛОГИКА ТУРНИРОВ ===
   async function joinTournament(code: string) {
     if (!user) return;
     const { data: tour } = await supabase
@@ -77,6 +77,7 @@ function MainApp() {
         .upsert({ tournament_id: tour.id, user_id: user.id });
       
       setShowJoinCode(false);
+      // Очищаем URL от параметра t
       window.history.replaceState({}, document.title, "/");
       setActiveTournamentId(tour.id);
       setView('tournament_lobby');
@@ -85,10 +86,12 @@ function MainApp() {
     }
   }
 
+  // === ПРОВЕРКА АКТИВНЫХ СЕССИЙ ===
   useEffect(() => {
     async function checkActiveSession() {
       if (!user) return;
       
+      // 1. Проверяем активные дуэли
       const { data: duel } = await supabase
         .from('duels')
         .select('id, tournament_id, status')
@@ -102,6 +105,7 @@ function MainApp() {
         setActiveGameSession(null);
       }
 
+      // 2. Если дуэли нет, проверяем активные турниры
       if (!duel) {
         const { data: part } = await supabase
           .from('tournament_participants')
@@ -118,6 +122,7 @@ function MainApp() {
     
     checkActiveSession();
     
+    // Подписка на изменения в дуэлях
     const channel = supabase
       .channel('global-game-check')
       .on(
@@ -154,12 +159,14 @@ function MainApp() {
     };
   }, [user]);
 
+  // Проверка URL параметров (для инвайт-ссылок)
   useEffect(() => {
     if (!user) return;
     const tCode = new URLSearchParams(window.location.search).get('t');
     if (tCode) joinTournament(tCode);
   }, [user]);
 
+  // Проверка прав учителя
   useEffect(() => {
     async function checkHosting() {
       if (!user) return;
@@ -177,6 +184,7 @@ function MainApp() {
     checkHosting();
   }, [user, profile]);
 
+  // Онбординг и настройка компаньона
   useEffect(() => {
     if (!profile) return;
     
@@ -198,6 +206,7 @@ function MainApp() {
     setShowOnboarding(false);
   }
 
+  // === НАВИГАЦИЯ ===
   function handleSectorSelect(sector: Sector) {
     setSelectedSector(sector);
     setView('modules');
@@ -236,6 +245,7 @@ function MainApp() {
     );
   }
 
+  // === ЛЭНДИНГ (ГОСТЬ) ===
   if (!user && !isGuest && !showAuthModal) {
     return (
       <>
@@ -249,6 +259,7 @@ function MainApp() {
     );
   }
 
+  // === АВТОРИЗАЦИЯ ===
   if (!user && showAuthModal) {
     return (
       <div className="relative">
@@ -264,9 +275,11 @@ function MainApp() {
     );
   }
 
+  // === ОСНОВНОЕ ПРИЛОЖЕНИЕ ===
   return (
     <div className="min-h-screen bg-slate-900 relative selection:bg-cyan-500/30">
       
+      {/* ФОН */}
       <div className="absolute inset-0 z-0">
         <PixelBlast
           variant="circle"
@@ -286,6 +299,7 @@ function MainApp() {
 
       <div className="relative z-10 h-full flex flex-col">
         
+        {/* ПЛАШКА РЕКОННЕКТА */}
         {activeGameSession && view !== 'pvp' && view !== 'tournament_lobby' && (
           <StickyReconnect
             duelId={activeGameSession.duelId}
@@ -306,6 +320,7 @@ function MainApp() {
           />
         )}
 
+        {/* ШАПКА */}
         <Header
           user={user}
           profile={profile}
@@ -318,6 +333,7 @@ function MainApp() {
           onShowAuth={() => setShowAuthModal(true)}
         />
 
+        {/* ОСНОВНОЙ КОНТЕНТ */}
         <main className="relative z-0 pb-24 md:pb-20 flex-1">
           {view === 'map' && (
             <>
@@ -408,7 +424,15 @@ function MainApp() {
           )}
           {showOnboarding && <Onboarding onComplete={finishOnboarding} />}
           {showLeaderboard && <Leaderboard onClose={() => setShowLeaderboard(false)} />}
-          {showDashboard && <Dashboard onClose={() => setShowDashboard(false)} />}
+          
+          {/* ОБНОВЛЕННЫЙ DASHBOARD */}
+          {showDashboard && (
+            <Dashboard 
+              onClose={() => setShowDashboard(false)} 
+              onOpenLegal={(type) => setShowLegal(type)}
+            />
+          )}
+          
           {showAdmin && <AdminGenerator onClose={() => setShowAdmin(false)} />}
           {showArchive && <VideoArchive onClose={() => setShowArchive(false)} />}
           {showTournamentAdmin && (
@@ -428,6 +452,10 @@ function MainApp() {
 
           <LevelUpManager />
 
+          {/* ЮРИДИЧЕСКАЯ МОДАЛКА */}
+          {showLegal && <LegalModal type={showLegal} onClose={() => setShowLegal(null)} />}
+
+          {/* КНОПКИ АДМИНА / УЧИТЕЛЯ */}
           {(profile?.role === 'admin' || profile?.role === 'teacher') && (
             <div className="fixed bottom-28 right-4 z-50 flex flex-col gap-3">
               <button
@@ -465,7 +493,6 @@ function MainApp() {
   );
 }
 
-// === ИЗМЕНЕННАЯ ФУНКЦИЯ APP ===
 function App() {
   const [path, setPath] = useState(window.location.pathname);
 
@@ -475,7 +502,6 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // ВАЖНО: AuthProvider теперь оборачивает ВСЁ, включая логику роутинга
   return (
     <AuthProvider>
       {(() => {
