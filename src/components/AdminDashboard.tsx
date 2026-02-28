@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { 
   X, Users, Megaphone, Search, Shield, GraduationCap, 
   Send, Check, XCircle, Download, Loader, Mail, 
-  School, Briefcase, User as UserIcon, FileText
+  School, Briefcase, User as UserIcon, FileText, Building2
 } from 'lucide-react';
 
 type Props = {
@@ -27,10 +27,11 @@ type TeacherRequest = {
 };
 
 export function AdminDashboard({ onClose }: Props) {
-  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'broadcast'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'b2b' | 'broadcast'>('users');
   
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [requests, setRequests] = useState<TeacherRequest[]>([]);
+  const [b2bRequests, setB2BRequests] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -41,15 +42,16 @@ export function AdminDashboard({ onClose }: Props) {
   const [processing, setProcessing] = useState(false);
 
   // Состояния для рассылки
-  const [msgTitle, setMsgTitle] = useState('');
+  const[msgTitle, setMsgTitle] = useState('');
   const [msgBody, setMsgBody] = useState('');
-  const [targetType, setTargetType] = useState('all');
+  const[targetType, setTargetType] = useState('all');
   const [targetUserId, setTargetUserId] = useState('');
-  const [sending, setSending] = useState(false);
+  const[sending, setSending] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'requests') fetchRequests();
+    if (activeTab === 'b2b') fetchB2B();
   }, [activeTab]);
 
   async function fetchUsers() {
@@ -77,6 +79,18 @@ export function AdminDashboard({ onClose }: Props) {
     if (error) console.error("Ошибка загрузки заявок:", error);
     if (data) setRequests(data as TeacherRequest[]);
     setLoading(false);
+  }
+
+  async function fetchB2B() {
+    setLoading(true);
+    const { data } = await supabase.from('b2b_requests').select('*').order('created_at', { ascending: false });
+    if (data) setB2BRequests(data);
+    setLoading(false);
+  }
+
+  async function updateB2BStatus(id: string, newStatus: string) {
+    await supabase.from('b2b_requests').update({ status: newStatus }).eq('id', id);
+    setB2BRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
   }
 
   async function updateUserRole(userId: string, newRole: string) {
@@ -111,15 +125,13 @@ export function AdminDashboard({ onClose }: Props) {
     
     setProcessing(true);
     try {
-      // А. Обновляем статус заявки в teacher_requests
+      // А. Обновляем статус заявки
       const { error: reqError } = await supabase
         .from('teacher_requests')
         .update({ status: actionType === 'approve' ? 'approved' : 'rejected' })
         .eq('id', selectedReq.id);
 
       if (reqError) throw reqError;
-
-      // ВАЖНО: Мы НЕ обновляем profiles.role здесь. Это происходит после оплаты.
 
       // Б. Отправляем уведомление
       await supabase.from('notifications').insert({
@@ -203,13 +215,16 @@ export function AdminDashboard({ onClose }: Props) {
           <button onClick={() => setActiveTab('requests')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold ${activeTab === 'requests' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-700'}`}>
             <GraduationCap className="w-5 h-5" /> Заявки ({requests.length})
           </button>
+          <button onClick={() => setActiveTab('b2b')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold ${activeTab === 'b2b' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-700'}`}>
+            <Building2 className="w-5 h-5" /> B2B Лиды
+          </button>
           <button onClick={() => setActiveTab('broadcast')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold ${activeTab === 'broadcast' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-700'}`}>
             <Megaphone className="w-5 h-5" /> Рассылка
           </button>
         </div>
 
         {/* КОНТЕНТ */}
-        <div className="flex-1 bg-slate-900 p-8 overflow-y-auto">
+        <div className="flex-1 bg-slate-900 p-8 overflow-y-auto custom-scrollbar">
           
           {/* === USERS TAB === */}
           {activeTab === 'users' && (
@@ -302,6 +317,57 @@ export function AdminDashboard({ onClose }: Props) {
             </div>
           )}
 
+          {/* === B2B TAB === */}
+          {activeTab === 'b2b' && (
+            <div className="max-w-5xl mx-auto">
+              {loading ? <div className="text-center py-10"><Loader className="w-8 h-8 animate-spin mx-auto text-slate-500"/></div> : 
+               b2bRequests.length === 0 ? <div className="text-center py-20 text-slate-500">Нет новых B2B заявок</div> : (
+                <div className="grid gap-4">
+                  {b2bRequests.map(req => (
+                    <div key={req.id} className="bg-slate-800 border border-slate-700 rounded-2xl p-6 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                           <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                             req.status === 'new' ? 'bg-emerald-500/20 text-emerald-400' :
+                             req.status === 'contacted' ? 'bg-amber-500/20 text-amber-400' :
+                             'bg-slate-700 text-slate-400'
+                           }`}>
+                             {req.status === 'new' ? 'Новый' : req.status === 'contacted' ? 'В работе' : 'Закрыт'}
+                           </span>
+                           <span className="text-slate-500 text-xs">{new Date(req.created_at).toLocaleString()}</span>
+                        </div>
+                        
+                        <h3 className="text-xl font-bold text-white mb-1">{req.organization}</h3>
+                        <div className="text-sm text-slate-300 mb-2">Контакт: <span className="text-purple-400 font-medium">{req.contact_name}</span> • {req.contact_info}</div>
+                        
+                        {req.comment && (
+                           <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-sm text-slate-400 italic">
+                             "{req.comment}"
+                           </div>
+                        )}
+                      </div>
+
+                      <div className="shrink-0 flex flex-col gap-2 min-w-[150px]">
+                         <select 
+                           value={req.status}
+                           onChange={(e) => updateB2BStatus(req.id, e.target.value)}
+                           className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-purple-500 outline-none"
+                         >
+                           <option value="new">🔴 Новый (New)</option>
+                           <option value="contacted">🟡 В работе (Contacted)</option>
+                           <option value="completed">🟢 Сделка закрыта</option>
+                           <option value="rejected">⚫️ Отказ</option>
+                         </select>
+                      </div>
+
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* === BROADCAST TAB === */}
           {activeTab === 'broadcast' && (
             <div className="max-w-2xl mx-auto bg-slate-800/50 border border-slate-700 rounded-2xl p-8">
@@ -322,7 +388,7 @@ export function AdminDashboard({ onClose }: Props) {
         </div>
       </div>
 
-      {/* === МОДАЛКА ПОДТВЕРЖДЕНИЯ === */}
+      {/* === МОДАЛКА ПОДТВЕРЖДЕНИЯ (УЧИТЕЛЯ) === */}
       {selectedReq && actionType && (
         <div className="fixed inset-0 z-[210] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-slate-800 border border-slate-600 w-full max-w-lg rounded-2xl p-6 shadow-2xl">
