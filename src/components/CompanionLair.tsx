@@ -197,6 +197,7 @@ export function CompanionLair({ onClose }: Props) {
                 />
               </div>
             </div>
+          </div>
 
           {/* КНОПКИ ДЕЙСТВИЙ */}
           <div className="grid grid-cols-2 gap-3">
