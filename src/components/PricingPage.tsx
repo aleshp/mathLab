@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { BecomeTeacherModal } from './BecomeTeacherModal';
 import { getPaddleInstance } from '../lib/paddle';
+import { B2BRequestModal } from './B2BRequestModal';
 
 const PADDLE_PRICE_IDS = {
   PREMIUM: 'pri_01khs53cszmhn5qykdx9xhrnye', 
@@ -19,6 +20,7 @@ export function PricingPage() {
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showB2BModal, setShowB2BModal] = useState(false);
 
   useEffect(() => {
     async function checkStatus() {
@@ -297,10 +299,13 @@ export function PricingPage() {
             </div>
 
             <div className="w-full lg:w-auto shrink-0 flex flex-col items-center">
-              <a 
-                href="mailto:support@mathlabpvp.org?subject=Заявка%20на%20корпоративную%20подписку%20MathLab"
+              <button 
+                onClick={() => setShowB2BModal(true)}
                 className="w-full lg:w-auto px-10 py-5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-2xl shadow-lg shadow-purple-900/30 transition-all active:scale-95 flex items-center justify-center gap-3 text-lg group"
               >
+                {t('pricing.btn_contact_sales')}
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
                 {t('pricing.btn_contact_sales')}
                 <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </a>
