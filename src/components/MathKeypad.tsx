@@ -17,7 +17,7 @@ type KeyDef = {
   arg?: string;
   className?: string;
   hasMenu?: boolean;
-  menuOptions?: Array<{ label: string; cmd: string; arg: string }>;
+  menuOptions?: Array<{ label: string | React.ReactNode; cmd: string; arg: string }>;
 };
 
 export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypadProps) {
@@ -121,23 +121,31 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
     </button>
   );
 
-  // === РАСКЛАДКИ КЛАВИАТУРЫ (PHOTOMATH STYLE) ===
+  // === РАСКЛАДКИ КЛАВИАТУРЫ (PHOTOMATH STYLE БЕЗ КВАДРАТОВ) ===
   const basicKeys: KeyDef[][] = [[
-      { label: '( ■ )', cmd: 'insert', arg: '\\left(#?\\right)' },
+      { label: '( )', cmd: 'insert', arg: '\\left(#?\\right)' },
       { label: '>', cmd: 'insert', arg: '>', hasMenu: true, menuOptions:[{label:'<', cmd:'insert', arg:'<'}, {label:'≥', cmd:'insert', arg:'\\geq'}, {label:'≤', cmd:'insert', arg:'\\leq'}, {label:'≠', cmd:'insert', arg:'\\neq'}] },
       { label: '7', cmd: 'insert', arg: '7', className: 'bg-slate-700 text-white text-xl font-semibold' },
       { label: '8', cmd: 'insert', arg: '8', className: 'bg-slate-700 text-white text-xl font-semibold' },
       { label: '9', cmd: 'insert', arg: '9', className: 'bg-slate-700 text-white text-xl font-semibold' },
       { label: '÷', cmd: 'insert', arg: '\\div', className: 'bg-slate-800 text-cyan-400 text-2xl' },
     ],[
-      { label: '■/■', cmd: 'insert', arg: '\\frac{#0}{#?}' },
-      { label: '√■', cmd: 'insert', arg: '\\sqrt{#?}', hasMenu: true, menuOptions: [{label:'∛■', cmd:'insert', arg:'\\sqrt[3]{#?}'}, {label:'ⁿ√■', cmd:'insert', arg:'\\sqrt[#?]{#0}'}] },
+      { 
+        label: (
+          <div className="flex flex-col items-center justify-center text-[11px] leading-[1.1] font-serif italic text-slate-300">
+            <span className="border-b border-slate-400 px-1">x</span>
+            <span>y</span>
+          </div>
+        ), 
+        cmd: 'insert', arg: '\\frac{#0}{#?}' 
+      },
+      { label: '√x', cmd: 'insert', arg: '\\sqrt{#?}', hasMenu: true, menuOptions: [{label:'∛x', cmd:'insert', arg:'\\sqrt[3]{#?}'}, {label:'ⁿ√x', cmd:'insert', arg:'\\sqrt[#?]{#0}'}] },
       { label: '4', cmd: 'insert', arg: '4', className: 'bg-slate-700 text-white text-xl font-semibold' },
       { label: '5', cmd: 'insert', arg: '5', className: 'bg-slate-700 text-white text-xl font-semibold' },
       { label: '6', cmd: 'insert', arg: '6', className: 'bg-slate-700 text-white text-xl font-semibold' },
       { label: '×', cmd: 'insert', arg: '\\times', className: 'bg-slate-800 text-cyan-400 text-2xl' },
     ],[
-      { label: '■²', cmd: 'insert', arg: '#0^{2}', hasMenu: true, menuOptions:[{label:'■ⁿ', cmd:'insert', arg:'#0^{#?}'}, {label:'■⁻¹', cmd:'insert', arg:'#0^{-1}'}] },
+      { label: 'x²', cmd: 'insert', arg: '#0^{2}', hasMenu: true, menuOptions:[{label:'xⁿ', cmd:'insert', arg:'#0^{#?}'}, {label:'x⁻¹', cmd:'insert', arg:'#0^{-1}'}] },
       { label: <span className="font-serif italic text-xl">x</span>, cmd: 'insert', arg: 'x' },
       { label: '1', cmd: 'insert', arg: '1', className: 'bg-slate-700 text-white text-xl font-semibold' },
       { label: '2', cmd: 'insert', arg: '2', className: 'bg-slate-700 text-white text-xl font-semibold' },
@@ -153,16 +161,16 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
     ]
   ];
 
-  const funcKeys: KeyDef[][] = [[
-      { label: '|■|', cmd: 'insert', arg: '\\left|#?\\right|' },
+  const funcKeys: KeyDef[][] =[[
+      { label: '|x|', cmd: 'insert', arg: '\\left|#?\\right|' },
       { label: 'f(x)', cmd: 'insert', arg: 'f(x)' },
       { label: 'log₁₀', cmd: 'insert', arg: '\\log_{10}(#?)' },
       { label: 'Aₙᵏ', cmd: 'insert', arg: 'A_{#?}^{#0}' },
-      { label: 'i', cmd: 'insert', arg: 'i' },
-      { label: '[ ■ ]', cmd: 'insert', arg: '\\begin{bmatrix} #? \\end{bmatrix}' },
+      { label: 'i', cmd: 'insert', arg: 'i', className: 'font-serif italic' },
+      { label: '[ ]', cmd: 'insert', arg: '\\begin{bmatrix} #? \\end{bmatrix}' },
     ],[
-      { label: '■', cmd: 'insert', arg: '#?' },
-      { label: 'f(■)', cmd: 'insert', arg: 'f(#?)' },
+      { label: 'y', cmd: 'insert', arg: 'y', className: 'italic font-serif' },
+      { label: 'f(a)', cmd: 'insert', arg: 'f(#?)' },
       { label: 'log₂', cmd: 'insert', arg: '\\log_{2}(#?)' },
       { label: 'Pₙ', cmd: 'insert', arg: 'P_{#?}' },
       { label: 'z', cmd: 'insert', arg: 'z', className: 'italic font-serif' },
@@ -170,35 +178,34 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
     ],[
       { label: 'e', cmd: 'insert', arg: 'e', className: 'italic font-serif' },
       { label: 'f(x,y)', cmd: 'insert', arg: 'f(x,y)' },
-      { label: 'log_■', cmd: 'insert', arg: '\\log_{#?}(#0)' },
+      { label: 'logₐ', cmd: 'insert', arg: '\\log_{#?}(#0)' },
       { label: 'Cₙᵏ', cmd: 'insert', arg: 'C_{#?}^{#0}' },
       { label: 'z̄', cmd: 'insert', arg: '\\bar{z}' },
       { label: '...', cmd: 'insert', arg: '' },
     ],[
       { label: 'exp', cmd: 'insert', arg: '\\exp(#?)' },
-      { label: '■(■)', cmd: 'insert', arg: '#?(#0)' },
+      { label: 'a(b)', cmd: 'insert', arg: '#?(#0)' },
       { label: 'ln', cmd: 'insert', arg: '\\ln(#?)' },
       { label: '(n k)', cmd: 'insert', arg: '\\binom{#?}{#0}' },
       { label: 'sign', cmd: 'insert', arg: '\\text{sign}(#?)' },
-      { label: '| ■ |', cmd: 'insert', arg: '\\begin{vmatrix} #? \\end{vmatrix}' },
+      { label: '| A |', cmd: 'insert', arg: '\\begin{vmatrix} #? \\end{vmatrix}' },
     ]
   ];
 
-  const trigKeys: KeyDef[][] = [
-    ['rad', 'sin', 'cos', 'tan', 'cot', 'sec', 'csc'].map(k => ({label: k, cmd: 'insert', arg: k === 'rad' ? '\\text{rad}' : `\\${k}(#?)`})),['°', 'arcsin', 'arccos', 'arctan', 'arccot', 'arcsec', 'arccsc'].map(k => ({label: k, cmd: 'insert', arg: k === '°' ? '^\\circ' : `\\${k}(#?)`})),['°\'\"', 'sinh', 'cosh', 'tanh', 'coth', 'sech', 'csch'].map(k => ({label: k, cmd: 'insert', arg: k === '°\'\"' ? '^\\circ \\, \' \\, \"' : `\\${k}(#?)`})),['', 'arsinh', 'arcosh', 'artanh', 'arcoth', 'arsech', 'arcsch'].map(k => ({label: k, cmd: 'insert', arg: k === '' ? '' : `\\text{${k}}(#?)`})),
+  const trigKeys: KeyDef[][] = [['rad', 'sin', 'cos', 'tan', 'cot', 'sec', 'csc'].map(k => ({label: k, cmd: 'insert', arg: k === 'rad' ? '\\text{rad}' : `\\${k}(#?)`})),['°', 'arcsin', 'arccos', 'arctan', 'arccot', 'arcsec', 'arccsc'].map(k => ({label: k, cmd: 'insert', arg: k === '°' ? '^\\circ' : `\\${k}(#?)`})),['°\'\"', 'sinh', 'cosh', 'tanh', 'coth', 'sech', 'csch'].map(k => ({label: k, cmd: 'insert', arg: k === '°\'\"' ? '^\\circ \\, \' \\, \"' : `\\${k}(#?)`})),['', 'arsinh', 'arcosh', 'artanh', 'arcoth', 'arsech', 'arcsch'].map(k => ({label: k, cmd: 'insert', arg: k === '' ? '' : `\\text{${k}}(#?)`})),
   ];
 
   const calcKeys: KeyDef[][] = [[
       { label: 'lim', cmd: 'insert', arg: '\\lim_{#? \\to #0}' },
       { label: 'd/dx', cmd: 'insert', arg: '\\frac{d}{dx}' },
-      { label: '∫', cmd: 'insert', arg: '\\int #? \\, dx' },
+      { label: '∫ dx', cmd: 'insert', arg: '\\int #? \\, dx' },
       { label: 'dy/dx', cmd: 'insert', arg: '\\frac{dy}{dx}' },
       { label: 'aₙ', cmd: 'insert', arg: 'a_n' },
       { label: '∞', cmd: 'insert', arg: '\\infty' },
     ],[
       { label: 'lim₊', cmd: 'insert', arg: '\\lim_{#? \\to #0^+}' },
-      { label: 'd/d■', cmd: 'insert', arg: '\\frac{d}{d#?}' },
-      { label: '∫_■^■', cmd: 'insert', arg: '\\int_{#?}^{#0}' },
+      { label: 'd/da', cmd: 'insert', arg: '\\frac{d}{d#?}' },
+      { label: '∫ₐᵇ', cmd: 'insert', arg: '\\int_{#?}^{#0}' },
       { label: 'dx', cmd: 'insert', arg: 'dx' },
       { label: 'aₙ₊₁', cmd: 'insert', arg: 'a_{n+1}' },
       { label: '∑', cmd: 'insert', arg: '\\sum_{#?}^{#0}' },
@@ -207,7 +214,7 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
       { label: 'd²/dx²', cmd: 'insert', arg: '\\frac{d^2}{dx^2}' },
       { label: '∬', cmd: 'insert', arg: '\\iint #? \\, dx \\, dy' },
       { label: 'dy', cmd: 'insert', arg: 'dy' },
-      { label: 'a_■', cmd: 'insert', arg: 'a_{#?}' },
+      { label: 'aₖ', cmd: 'insert', arg: 'a_{#?}' },
       { label: '∏', cmd: 'insert', arg: '\\prod_{#?}^{#0}' },
     ],[
       { label: '...', cmd: 'insert', arg: '' },
@@ -246,6 +253,12 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
   return (
     <div className="flex flex-col bg-slate-900 border-t border-slate-800 select-none touch-none pb-safe">
       
+      {/* СТИЛИ ДЛЯ СКРЫТИЯ СКРОЛЛБАРА */}
+      <style>{`
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+
       {/* LONG PRESS MENU POPOVER */}
       {longPressMenu && (
         <div 
@@ -269,7 +282,7 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
                     onCommand(option.cmd, option.arg);
                     setLongPressMenu(null);
                   }}
-                  className="bg-slate-700 hover:bg-slate-600 text-white py-4 px-3 rounded-xl font-bold text-sm transition-all active:scale-95"
+                  className="bg-slate-700 hover:bg-slate-600 text-white py-4 px-3 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center"
                 >
                   {option.label}
                 </button>
@@ -312,7 +325,7 @@ export function MathKeypad({ onCommand, onDelete, onClear, onSubmit }: MathKeypa
       {mainTab === 'math' ? (
         <div className="flex flex-col h-[280px] md:h-[320px]">
           {/* SUB-TABS (Pills) */}
-          <div className="flex gap-2 px-2 pt-2 pb-1 overflow-x-auto scrollbar-hide bg-slate-900">
+          <div className="flex gap-2 px-2 pt-2 pb-1 overflow-x-auto hide-scroll bg-slate-900" style={{ WebkitOverflowScrolling: 'touch' }}>
             {[
               { id: 'basic', label: '+ - × ÷' },
               { id: 'func', label: 'f(x) e log ln' },
