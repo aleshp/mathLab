@@ -5,11 +5,10 @@ import { supabase, Achievement } from '../lib/supabase';
 import {
   User, LogOut, Trophy, Target, TrendingUp, Award, Zap, Clock, CheckCircle2, 
   XCircle, X, Mail, ShieldCheck, GraduationCap, CreditCard, Loader, Shield, 
-  HelpCircle, ChevronDown, ChevronUp, ChevronLeft, FileText
+  HelpCircle, ChevronDown, ChevronUp, ChevronLeft, FileText, ArrowRight
 } from 'lucide-react';
 import { BecomeTeacherModal } from './BecomeTeacherModal';
 
-// Типы пропсов
 type DashboardProps = {
   onClose: () => void;
   onOpenLegal: (type: 'privacy' | 'terms' | 'refund') => void;
@@ -27,14 +26,12 @@ type RecentExperiment = {
   attempted_at: string;
 };
 
-// Цвета для редкости достижений
 const rarityColors = {
   common: 'from-slate-400 to-slate-500',
   rare: 'from-blue-400 to-purple-500',
   legendary: 'from-amber-400 to-orange-500'
 };
 
-// Перевод типов задач
 const typeTranslations: Record<string, string> = {
   input: 'Ввод значения',
   choice: 'Тестирование',
@@ -50,15 +47,12 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
   const { t } = useTranslation();
   const { profile, signOut, refreshProfile } = useAuth();
   
-  // Состояния интерфейса
   const [currentView, setCurrentView] = useState<'profile' | 'faq'>('profile');
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
-  // Данные пользователя
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
   const [recentExperiments, setRecentExperiments] = useState<RecentExperiment[]>([]);
   
-  // Статус учителя
   const [showTeacherModal, setShowTeacherModal] = useState(false);
   const [teacherRequestStatus, setTeacherRequestStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none');
   const [loadingRequest, setLoadingRequest] = useState(false);
@@ -70,7 +64,6 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
     
     if (!profile) return;
     
-    // Подписка на изменение статуса заявки учителя в реальном времени
     const channel = supabase
       .channel('teacher-status-changes')
       .on('postgres_changes', { 
@@ -159,8 +152,8 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
   const roleInfo = getRoleDisplay();
   const RoleIcon = roleInfo.icon;
 
-  // Список вопросов для FAQ (ID вопросов)
-  const faqList = [1, 2, 3, 4, 5];
+  // ОБНОВЛЕННЫЙ СПИСОК ВОПРОСОВ (10 шт)
+  const faqList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   return (
     <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[70] overflow-y-auto custom-scrollbar">
@@ -212,6 +205,8 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
                     <p className="text-slate-400 font-mono text-xs uppercase tracking-wider">ID: {profile.id.split('-')[0]}</p>
                   
                     <div className="flex flex-wrap gap-3 mt-6 justify-center md:justify-start">
+                      
+                      {/* КНОПКА ВЫХОДА */}
                       <button onClick={handleSignOut} className="px-4 py-2 bg-slate-800 hover:bg-red-500/20 text-slate-300 hover:text-red-400 border border-slate-700 hover:border-red-500/30 rounded-lg transition-all font-bold text-sm flex items-center gap-2">
                         <LogOut className="w-4 h-4" /> {t('dashboard.logout')}
                       </button>
@@ -221,6 +216,12 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
                         <HelpCircle className="w-4 h-4" /> FAQ
                       </button>
 
+                      {/* КНОПКА ТАРИФЫ (НОВАЯ) */}
+                      <a href="/pricing" className="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-lg transition-all font-bold text-sm flex items-center gap-2">
+                        <CreditCard className="w-4 h-4" /> {t('pricing.title')}
+                      </a>
+
+                      {/* УЧИТЕЛЬСКИЕ КНОПКИ */}
                       {profile.role !== 'teacher' && profile.role !== 'admin' && (
                         <>
                           {teacherRequestStatus === 'none' && (
@@ -357,9 +358,14 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
               
               <div className="bg-slate-800/50 p-6 rounded-2xl border border-dashed border-slate-700 text-center mt-8">
                 <p className="text-slate-400 mb-4">{t('dashboard.support')}</p>
-                <a href="mailto:support@mathlabpvp.org" className="inline-flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-white font-bold transition-all">
-                  <Mail className="w-4 h-4" /> support@mathlabpvp.org
-                </a>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <a href="mailto:support@mathlabpvp.org" className="inline-flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-white font-bold transition-all">
+                    <Mail className="w-4 h-4" /> support@mathlabpvp.org
+                  </a>
+                  <a href="/pricing" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:brightness-110 rounded-xl text-white font-bold transition-all shadow-lg shadow-orange-900/20">
+                    <Zap className="w-4 h-4 fill-current" /> {t('pricing.buy_access')} <ArrowRight className="w-4 h-4" />
+                  </a>
+                </div>
               </div>
             </div>
           ) : null}
