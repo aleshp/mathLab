@@ -80,7 +80,6 @@ export function normalizeForCalculation(str: string): string {
   ) return 'NaN';
 
   // === 1. \text{fn} → fn  (ДО удаления слешей!) ===
-  // Важно: сохраняем содержимое, иначе \text{tg} → '' → tg потеряется
   s = s.replace(/\\text\{([^}]*)\}/g, '$1');
   s = s.replace(/\\mathrm\{([^}]*)\}/g, '$1');
   s = s.replace(/\\mathbf\{([^}]*)\}/g, '$1');
@@ -91,7 +90,6 @@ export function normalizeForCalculation(str: string): string {
   s = s.replace(/\\neq|≠/g, '!=');
 
   // === 3. ФУНКЦИИ — заменяем ДО удаления слешей ===
-  // Порядок важен: arcsin раньше sin, arctg раньше tg
   const funcReplacements: [RegExp, string][] = [
     [/\\arcsin\b/g,  'asin'],
     [/\\arccos\b/g,  'acos'],
@@ -125,7 +123,6 @@ export function normalizeForCalculation(str: string): string {
     s = s.replace(rx, rep);
   }
 
-  // Без слешей (arcsin, tg, ctg, etc. в тексте ответа)
   const wordFuncReplacements: [RegExp, string][] = [
     [/\barcsin\b/gi,  'asin'],
     [/\barccos\b/gi,  'acos'],
@@ -154,34 +151,27 @@ export function normalizeForCalculation(str: string): string {
   s = s.replace(/\\left|\\right/g, '');
 
   // === 5. СИМВОЛЫ ===
-  // Десятичная запятая
   s = s.replace(/\{,\}/g, '.');
   s = s.replace(/(\d),(\d)/g, '$1.$2');
 
-  // Операторы
   s = s.replace(/\\cdot|\\times|×|⋅/g, '*');
   s = s.replace(/\\div|÷/g, '/');
   s = s.replace(/[−–—]/g, '-');
 
-  // Двоеточие как деление
   s = s.replace(/(\d+):(\d+)/g, (m, a, b) =>
     parseInt(a) < 100 && parseInt(b) < 100 ? `${a}/${b}` : m
   );
 
-  // Проценты
   s = s.replace(/\\%/g, '/100');
   s = s.replace(/([0-9.]+)%/g, '($1/100)');
 
-  // Градусы — ПЕРЕД удалением слешей
   s = s.replace(/\^\{\\circ\}|\\circ/g, ' deg');
   s = s.replace(/°/g, ' deg');
 
-  // Бесконечность и π
   s = s.replace(/\\infty|∞/g, 'Infinity');
   s = s.replace(/\\pi\b/g, 'pi');
   s = s.replace(/π/g, 'pi');
 
-  // Константа e
   s = s.replace(/\\mathrm\{e\}|\\e\b/g, 'e');
 
   // === 6. ПЛЮС-МИНУС ===
@@ -192,25 +182,21 @@ export function normalizeForCalculation(str: string): string {
   s = s.replace(/\|([^|]+)\|/g, 'abs($1)');
 
   // === 8. ТРИГОНОМЕТРИЧЕСКИЕ СТЕПЕНИ ===
-  // sin^2(x) → (sin(x))^2
-  // sin^2 x  → (sin(x))^2
   const trigList = 'sin|cos|tan|cot|sec|csc|asin|acos|atan|acot|asinh|acosh|atanh|acoth|sinh|cosh|tanh|coth|log|log10';
-  // Со скобками: sin^{2}(x)
   s = s.replace(
     new RegExp(`(${trigList})\\^\\{?(\\d+)\\}?\\s*(\\([^)]+\\))`, 'gi'),
     '($1$3)^$2'
   );
-  // С переменной: sin^{2}\\alpha или sin^2 x → нужно поставить скобки вокруг арг
   s = s.replace(
     new RegExp(`(${trigList})\\^\\{?(\\d+)\\}?\\s*([a-z])(?!\\()`, 'gi'),
     '($1($3))^$2'
   );
 
   // === 9. СМЕШАННЫЕ ЧИСЛА LaTeX: 15\frac{73}{144} ===
-  // Делаем ДО раскрытия frac
-  s = s.replace(/(\d)\s*\\?frac\{([^}]+)\}\{([^}]+)\}/g, '($1+($2)/($3))');
+  // ФИКС ИИ: (\d) → (\d+) — теперь работает с многозначными целыми (133 2/3)
+  s = s.replace(/(\d+)\s*\\?frac\{([^}]+)\}\{([^}]+)\}/g, '($1+($2)/($3))');
   // Обычный вид: 15 73/144 (с пробелом)
-  s = s.replace(/(\d)\s+(\d+)\/(\d+)/g, '($1+$2/$3)');
+  s = s.replace(/(\d+)\s+(\d+)\/(\d+)/g, '($1+$2/$3)');
 
   // === 10. ДРОБИ \frac{a}{b} ===
   let prev = '';
@@ -235,7 +221,6 @@ export function normalizeForCalculation(str: string): string {
   s = s.replace(/log_\{([^}]+)\}([a-z0-9]+)/g, 'log($2,$1)');
   s = s.replace(/log_([0-9]+)\(([^)]+)\)/g,    'log($2,$1)');
 
-  // log без основания → log10 (если нет запятой внутри)
   s = s.replace(/\blog\(([^)]+)\)/g, (_, inner) =>
     inner.includes(',') ? `log(${inner})` : `log10(${inner})`
   );
@@ -271,25 +256,19 @@ export function normalizeForCalculation(str: string): string {
   s = s.replace(/(\d)\s+deg/g, '$1 deg');
 
   // === 18. НЕЯВНОЕ УМНОЖЕНИЕ ===
-  // Число × буква (не deg)
   s = s.replace(/(\d)(?=([a-zA-Z](?!eg\b)))/g, '$1*');
-  // Число × скобка
   s = s.replace(/(\d)(?=\()/g, '$1*');
-  // Закрывающая скобка × всё
   s = s.replace(/\)(?=[a-zA-Z(])/g, ')*');
 
-  // Буква перед скобкой — если не функция, добавляем *
   s = s.replace(/([a-z]+)(?=\()/gi, (match) => {
     if (KNOWN_FUNCS.has(match.toLowerCase())) return match;
     return match + '*';
   });
 
-  // Цепочки переменных: xy → x*y (только если каждая буква есть в scope)
   s = s.replace(/[a-z]{2,}/gi, (word) => {
     const lower = word.toLowerCase();
     if (KNOWN_FUNCS.has(lower)) return word;
     if (['pi', 'infinity', 'deg'].includes(lower)) return word;
-    // Пробуем разбить на известные переменные
     const chars = word.split('');
     if (chars.every(c => c in ALGEBRA_SCOPE)) return chars.join('*');
     return word;
@@ -336,16 +315,11 @@ function expandOptions(str: string): string[] {
 // ОПРЕДЕЛЕНИЕ: это неравенство или интервал?
 // ============================================================
 function isInequalityOrInterval(s: string): boolean {
-  // Содержит знаки неравенства
   if (/[≤≥]|\\le\b|\\ge\b|\\leq\b|\\geq\b|<=|>=/.test(s)) return true;
-  // Содержит бесконечность
   if (/\\infty|∞|-inf|Infinity/.test(s)) return true;
-  // Интервал в скобках: (-12; 5) или [3; ∞)
-  // НО: (-3; 0); (0; 0) — это координаты точек, не интервал
   const intervalPattern = /^[\[\(][^;,()]+[;,][^;,()]+[\]\)]$/;
   const trimmed = s.trim();
   if (intervalPattern.test(trimmed)) return true;
-  // Объединение интервалов: (-∞;-8) U (6;∞)
   if (/[Uu∪]/.test(s) && /[\[\(]/.test(s)) return true;
   return false;
 }
@@ -442,7 +416,6 @@ export function checkAnswer(userAnswer: string, dbAnswer: string): boolean {
 
     // === 1. НЕРАВЕНСТВА И ИНТЕРВАЛЫ ===
     if (isInequalityOrInterval(userTrim) || isInequalityOrInterval(dbTrim)) {
-      // 1a. Объединения: "(-∞;-8) U (6;∞)"
       const splitUnion = (s: string) =>
         s.split(/\s*[Uu∪]\s*/).map(p => p.trim()).filter(Boolean);
 
@@ -460,12 +433,10 @@ export function checkAnswer(userAnswer: string, dbAnswer: string): boolean {
         });
       }
 
-      // 1b. Одиночный интервал: "(-12; 5)", "[3; ∞)"
       const uInt = parseInterval(userTrim);
       const dInt = parseInterval(dbTrim);
       if (uInt && dInt) return intervalsEqual(uInt, dInt);
 
-      // 1c. Простое неравенство: "x ≤ 6", "x \le 6"
       return normalizeInequality(userTrim) === normalizeInequality(dbTrim);
     }
 
@@ -495,7 +466,6 @@ export function checkAnswer(userAnswer: string, dbAnswer: string): boolean {
     const userValues = userExprs.map(calculate);
     const dbValues   = dbExprs.map(calculate);
 
-    // Если хоть что-то не вычислилось — fallback
     if (userValues.some(isNaN) || dbValues.some(isNaN)) {
       throw new Error('fallback');
     }
@@ -521,9 +491,7 @@ export function checkAnswer(userAnswer: string, dbAnswer: string): boolean {
   } catch {
     // === FALLBACK: текстовое сравнение ===
     const clean = (s: string) => {
-      // Для неравенств
       if (isInequalityOrInterval(s)) return normalizeInequality(s);
-      // Для обычных выражений
       try {
         return normalizeForCalculation(s).replace(/\s/g, '');
       } catch {
