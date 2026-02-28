@@ -19,8 +19,8 @@ export function PricingPage() {
   const [requestStatus, setRequestStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none');
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [showB2BModal, setShowB2BModal] = useState(false);
+  const[showVerificationModal, setShowVerificationModal] = useState(false);
+  const[showB2BModal, setShowB2BModal] = useState(false);
 
   useEffect(() => {
     async function checkStatus() {
@@ -256,10 +256,10 @@ export function PricingPage() {
               {plan.action}
               
               {plan.name === 'Teacher' && requestStatus === 'none' && (
-                <p className="text- center mt-3 text-slate-500 text-xs">{t('pricing.teacher_req_docs')}</p>
+                <p className="text-center mt-3 text-slate-500 text-xs">{t('pricing.teacher_req_docs')}</p>
               )}
               {plan.name === 'Teacher' && requestStatus === 'approved' && profile?.role !== 'teacher' && (
-                <p className="text- center mt-3 text-emerald-400 font-bold text-xs">{t('pricing.teacher_approved_pay')}</p>
+                <p className="text-center mt-3 text-emerald-400 font-bold text-xs">{t('pricing.teacher_approved_pay')}</p>
               )}
             </div>
           ))}
@@ -306,9 +306,6 @@ export function PricingPage() {
                 {t('pricing.btn_contact_sales')}
                 <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
-                {t('pricing.btn_contact_sales')}
-                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </a>
               <p className="text-slate-500 text-xs mt-4 text-center">
                 Отвечаем в течение рабочего дня
               </p>
@@ -340,6 +337,7 @@ export function PricingPage() {
           }
         }} />
       )}
+
       {showB2BModal && (
         <B2BRequestModal onClose={() => setShowB2BModal(false)} />
       )}
