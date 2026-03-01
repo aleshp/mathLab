@@ -62,7 +62,9 @@ export function CosmeticShop() {
       trackEvent(user.id, 'purchase_item', { 
         item_id: item.id, 
         item_name: item.name, 
-        price: item.price };
+        price: item.price 
+      });
+    }
     } else {
       alert("Ошибка покупки");
     }
