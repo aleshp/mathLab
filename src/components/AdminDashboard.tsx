@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase';
 import { 
   X, Users, Megaphone, Search, Shield, GraduationCap, 
   Send, Check, XCircle, Download, Loader, Mail, 
-  School, Briefcase, User as UserIcon, FileText, Building2
+  School, Briefcase, User as UserIcon, FileText, Building2,
+  BarChart3, Activity, PieChart, Calendar, TrendingUp
 } from 'lucide-react';
 
 type Props = {
@@ -27,13 +28,17 @@ type TeacherRequest = {
 };
 
 export function AdminDashboard({ onClose }: Props) {
-  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'b2b' | 'broadcast'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'b2b' | 'broadcast' | 'analytics'>('users');
   
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [requests, setRequests] = useState<TeacherRequest[]>([]);
   const [b2bRequests, setB2BRequests] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // CRM / Аналитика
+  const [stats, setStats] = useState<any>(null);
+  const [recentEvents, setRecentEvents] = useState<any[]>([]);
 
   // Состояния для МОДАЛКИ ОБРАБОТКИ ЗАЯВКИ
   const [selectedReq, setSelectedReq] = useState<TeacherRequest | null>(null);
@@ -52,6 +57,7 @@ export function AdminDashboard({ onClose }: Props) {
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'requests') fetchRequests();
     if (activeTab === 'b2b') fetchB2B();
+    if (activeTab === 'analytics') loadAnalytics();
   }, [activeTab]);
 
   async function fetchUsers() {
@@ -88,6 +94,23 @@ export function AdminDashboard({ onClose }: Props) {
     setLoading(false);
   }
 
+  async function loadAnalytics() {
+    setLoading(true);
+    // 1. Получаем общие цифры через SQL функцию
+    const { data: metrics } = await supabase.rpc('get_crm_stats');
+    if (metrics) setStats(metrics);
+
+    // 2. Получаем ленту событий
+    const { data: events } = await supabase
+      .from('analytics_events')
+      .select('event_type, created_at, user:profiles(username, role)')
+      .order('created_at', { ascending: false })
+      .limit(20);
+      
+    if (events) setRecentEvents(events);
+    setLoading(false);
+  }
+
   async function updateB2BStatus(id: string, newStatus: string) {
     await supabase.from('b2b_requests').update({ status: newStatus }).eq('id', id);
     setB2BRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
@@ -102,30 +125,27 @@ export function AdminDashboard({ onClose }: Props) {
     }
   }
 
-  // 1. Открытие модалки с шаблоном текста
+  // Открытие модалки с шаблоном текста
   const openActionModal = (req: TeacherRequest, type: 'approve' | 'reject') => {
     setSelectedReq(req);
     setActionType(type);
     
-    // Шаблоны сообщений
     if (type === 'approve') {
       setFeedbackMessage(
-        `Здравствуйте, ${req.full_name}!\n\nВаши документы успешно прошли проверку. Статус верификации подтвержден.\n\nЧтобы активировать функции Учителя (создание турниров, аналитика), пожалуйста, перейдите в раздел "Тарифы" и оплатите подписку Teacher.`
+        `Здравствуйте, ${req.full_name}!\n\nВаши документы успешно прошли проверку. Статус верификации подтвержден.\n\nЧтобы активировать функции Учителя, перейдите в раздел "Тарифы" и оплатите подписку Teacher.`
       );
     } else {
       setFeedbackMessage(
-        `Здравствуйте, ${req.full_name}.\n\nК сожалению, мы вынуждены отклонить вашу заявку. \nПричина: Документ не читаем или не соответствует требованиям.\n\nПожалуйста, подайте заявку повторно с корректными данными.`
+        `Здравствуйте, ${req.full_name}.\n\nК сожалению, мы вынуждены отклонить вашу заявку. \nПричина: Документ не читаем или не соответствует требованиям.\n\nПожалуйста, подайте заявку повторно.`
       );
     }
   };
 
-  // 2. Финальная обработка
   const confirmAction = async () => {
     if (!selectedReq || !actionType) return;
     
     setProcessing(true);
     try {
-      // А. Обновляем статус заявки
       const { error: reqError } = await supabase
         .from('teacher_requests')
         .update({ status: actionType === 'approve' ? 'approved' : 'rejected' })
@@ -133,7 +153,6 @@ export function AdminDashboard({ onClose }: Props) {
 
       if (reqError) throw reqError;
 
-      // Б. Отправляем уведомление
       await supabase.from('notifications').insert({
         user_id: selectedReq.user_id,
         title: actionType === 'approve' ? 'Документы проверены' : 'Заявка отклонена',
@@ -141,7 +160,6 @@ export function AdminDashboard({ onClose }: Props) {
         type: actionType === 'approve' ? 'success' : 'error'
       });
 
-      // В. Чистим UI
       setRequests(prev => prev.filter(r => r.id !== selectedReq.id));
       setSelectedReq(null);
       setActionType(null);
@@ -208,7 +226,7 @@ export function AdminDashboard({ onClose }: Props) {
       <div className="flex flex-1 overflow-hidden">
         
         {/* НАВИГАЦИЯ */}
-        <div className="w-64 bg-slate-800/50 border-r border-slate-700 p-4 flex flex-col gap-2 shrink-0">
+        <div className="w-64 bg-slate-800/50 border-r border-slate-700 p-4 flex flex-col gap-2 shrink-0 overflow-y-auto custom-scrollbar">
           <button onClick={() => setActiveTab('users')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold ${activeTab === 'users' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-700'}`}>
             <Users className="w-5 h-5" /> Пользователи
           </button>
@@ -217,6 +235,9 @@ export function AdminDashboard({ onClose }: Props) {
           </button>
           <button onClick={() => setActiveTab('b2b')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold ${activeTab === 'b2b' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-700'}`}>
             <Building2 className="w-5 h-5" /> B2B Лиды
+          </button>
+          <button onClick={() => setActiveTab('analytics')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold ${activeTab === 'analytics' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-700'}`}>
+            <BarChart3 className="w-5 h-5" /> CRM / Аналитика
           </button>
           <button onClick={() => setActiveTab('broadcast')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold ${activeTab === 'broadcast' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-700'}`}>
             <Megaphone className="w-5 h-5" /> Рассылка
@@ -354,8 +375,8 @@ export function AdminDashboard({ onClose }: Props) {
                            onChange={(e) => updateB2BStatus(req.id, e.target.value)}
                            className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-purple-500 outline-none"
                          >
-                           <option value="new">🔴 Новый (New)</option>
-                           <option value="contacted">🟡 В работе (Contacted)</option>
+                           <option value="new">🔴 Новый</option>
+                           <option value="contacted">🟡 В работе</option>
                            <option value="completed">🟢 Сделка закрыта</option>
                            <option value="rejected">⚫️ Отказ</option>
                          </select>
@@ -365,6 +386,121 @@ export function AdminDashboard({ onClose }: Props) {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* === ANALYTICS TAB === */}
+          {activeTab === 'analytics' && stats && (
+            <div className="max-w-6xl mx-auto space-y-6">
+              
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <Activity className="w-6 h-6 text-indigo-400" />
+                Оперативная сводка
+              </h2>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700">
+                  <div className="text-slate-400 text-xs font-bold uppercase mb-1">DAU (24ч)</div>
+                  <div className="text-3xl font-black text-white">{stats.dau}</div>
+                  <div className="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /> Активны сегодня
+                  </div>
+                </div>
+                <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700">
+                  <div className="text-slate-400 text-xs font-bold uppercase mb-1">MAU (30д)</div>
+                  <div className="text-3xl font-black text-white">{stats.mau}</div>
+                  <div className="text-xs text-slate-500 mt-1">Активны за месяц</div>
+                </div>
+                <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700">
+                  <div className="text-slate-400 text-xs font-bold uppercase mb-1">Конверсия</div>
+                  <div className="text-3xl font-black text-amber-400">{stats.conversion_rate}%</div>
+                  <div className="text-xs text-slate-500 mt-1">Free → Premium</div>
+                </div>
+                <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700">
+                  <div className="text-slate-400 text-xs font-bold uppercase mb-1">Retention (D1)</div>
+                  <div className="text-3xl font-black text-purple-400">{stats.retention_rate}%</div>
+                  <div className="text-xs text-slate-500 mt-1">Вернулись на след. день</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Лента событий */}
+                <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+                  <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-cyan-400" />
+                    Живая лента
+                  </h3>
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar">
+                    {recentEvents.map((ev, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${ev.event_type === 'purchase' ? 'bg-amber-400' : 'bg-blue-400'}`} />
+                          <div>
+                            <div className="text-sm font-bold text-white">
+                              {ev.user?.username || 'Гость'}
+                              <span className="text-slate-500 font-normal ml-2 text-xs">
+                                {ev.user?.role === 'admin' ? '(Admin)' : ev.user?.role === 'teacher' ? '(Teacher)' : ''}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-400 capitalize">{ev.event_type.replace('_', ' ')}</div>
+                          </div>
+                        </div>
+                        <div className="text-xs font-mono text-slate-500">
+                          {new Date(ev.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Инфографика */}
+                <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 flex flex-col justify-center">
+                  <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                    <PieChart className="w-5 h-5 text-pink-400" />
+                    Состав аудитории
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-xs text-slate-400 mb-1">
+                        <span>Всего пользователей</span>
+                        <span>{stats.total_users}</span>
+                      </div>
+                      <div className="w-full bg-slate-900 rounded-full h-3">
+                        <div className="bg-slate-600 h-3 rounded-full" style={{width: '100%'}}></div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs text-slate-400 mb-1">
+                        <span className="text-amber-400 font-bold">Premium & Teachers</span>
+                        <span>{stats.premium_users}</span>
+                      </div>
+                      <div className="w-full bg-slate-900 rounded-full h-3">
+                        <div 
+                          className="bg-gradient-to-r from-amber-500 to-orange-500 h-3 rounded-full transition-all duration-1000" 
+                          style={{width: `${(stats.premium_users / (stats.total_users || 1)) * 100}%`}}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <TrendingUp className="w-5 h-5 text-indigo-400 mt-0.5" />
+                      <div>
+                        <div className="text-sm font-bold text-white">Совет CRM</div>
+                        <p className="text-xs text-slate-400 mt-1">
+                          У вас хороший показатель DAU/MAU ({Math.round((stats.dau / (stats.mau || 1)) * 100)}%). 
+                          Это значит, что пользователи возвращаются часто.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
             </div>
           )}
 
