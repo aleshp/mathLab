@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Lock, Check, ShoppingBag, Coins, Crown } from 'lucide-react';
+import { trackEvent } from '../lib/analytics';
 
 type Cosmetic = {
   id: string;
