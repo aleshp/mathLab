@@ -35,6 +35,7 @@ export function AdminDashboard({ onClose }: Props) {
   const [b2bRequests, setB2BRequests] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
 
   // CRM / Аналитика
   const [stats, setStats] = useState<any>(null);
