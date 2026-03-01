@@ -120,19 +120,33 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
      
       channel = supabase
         .channel(`t-duel-${duel.id}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'duels', filter: `id=eq.${duel.id}` },
-        (payload) => {
-          const newData = payload.new;
-          const newOppScore = isP1 ? newData.player2_score : newData.player1_score;
-          const newOppProg = isP1 ? newData.player2_progress : newData.player1_progress;
-          setOppScore(newOppScore);
-          setOppProgress(newOppProg);
-          if (newData.status === 'finished') {
-            setMatchStatus('finished');
-            setWinnerId(newData.winner_id);
+        .on('postgres_changes', { ... }) // уже есть
+        .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+          // Соперник вышел — запускаем таймер
+          const oppLeft = leftPresences.find((p: any) => p.user_id !== user.id);
+          if (oppLeft) {
+            disconnectTimerRef.current = setTimeout(async () => {
+              setOpponentDisconnected(true);
+              await supabase.rpc('claim_timeout_win', { 
+                duel_uuid: duelId, 
+                claimant_uuid: user.id 
+              });
+            }, 120_000); // 2 минуты
           }
         })
-        .subscribe();
+        .on('presence', { event: 'join' }, ({ newPresences }) => {
+          // Соперник вернулся — отменяем таймер
+          const oppBack = newPresences.find((p: any) => p.user_id !== user.id);
+          if (oppBack && disconnectTimerRef.current) {
+            clearTimeout(disconnectTimerRef.current);
+            disconnectTimerRef.current = null;
+          }
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await channel.track({ user_id: user.id });
+          }
+        });
     }
     initMatch();
     return () => {
