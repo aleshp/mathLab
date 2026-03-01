@@ -64,7 +64,6 @@ export function CosmeticShop() {
         item_name: item.name, 
         price: item.price 
       });
-    }
     } else {
       alert("Ошибка покупки");
     }
