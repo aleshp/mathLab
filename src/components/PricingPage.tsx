@@ -26,6 +26,7 @@ export function PricingPage() {
     async function checkStatus() {
       if (!user) {
         setLoading(false);
+        trackEvent(user.id, 'view_pricing');
         return;
       }
       
