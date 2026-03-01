@@ -1,66 +1,69 @@
-// supabase/functions/paddle-webhook/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// Секретный ключ вебхука из Paddle Dashboard (Notifications -> Webhooks)
-const PADDLE_WEBHOOK_SECRET = Deno.env.get('PADDLE_WEBHOOK_SECRET')!;
+// Секретные ключи из настроек Supabase
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 serve(async (req) => {
-  // 1. Проверяем метод (Paddle шлет POST)
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
 
   try {
-    // 2. Получаем тело и подпись (в продакшене обязательно проверяй подпись!)
-    // Для простоты здесь мы доверяем body, но лучше использовать paddle-node-sdk для верификации
     const body = await req.json();
     const eventType = body.event_type;
     
-    console.log(`Received event: ${eventType}`);
+    console.log(`Received Paddle event: ${eventType}`);
 
-    // 3. Обрабатываем успешную оплату
-    if (eventType === 'transaction.completed') {
-      const customData = body.data.custom_data;
+    // === 1. ПОДПИСКА ОПЛАЧЕНА ИЛИ ПРОДЛЕНА ===
+    if (eventType === 'transaction.completed' || eventType === 'subscription.activated' || eventType === 'subscription.updated') {
+      const customData = body.data.custom_data || body.data.customData;
       const userId = customData?.userId;
       const tier = customData?.tier;
 
-      if (!userId) {
-        console.error('No userId in custom_data');
-        return new Response('No userId', { status: 400 });
+      if (userId) {
+        let updateData = {};
+        if (tier === 'teacher') {
+          updateData = { role: 'teacher', is_premium: true }; 
+        } else if (tier === 'premium') {
+          updateData = { is_premium: true };
+        }
+
+        await supabase.from('profiles').update(updateData).eq('id', userId);
+        
+        await supabase.from('notifications').insert({
+          user_id: userId,
+          title: 'Подписка активна!',
+          message: `Ваш статус ${tier === 'teacher' ? 'Учитель' : 'Premium'} успешно активирован/продлен.`,
+          type: 'success'
+        });
       }
+    }
 
-      console.log(`Processing payment for user: ${userId}, tier: ${tier}`);
+    // === 2. ПОДПИСКА ИСТЕКЛА, ОТМЕНЕНА ИЛИ НЕ ПРОШЛА ОПЛАТА ===
+    if (eventType === 'subscription.canceled' || eventType === 'subscription.expired' || eventType === 'subscription.past_due') {
+      const customData = body.data.custom_data || body.data.customData;
+      const userId = customData?.userId;
 
-      let updateData = {};
-      if (tier === 'teacher') {
-        updateData = { role: 'teacher', is_premium: true }; // Учитель тоже премиум
-      } else if (tier === 'premium') {
-        updateData = { is_premium: true };
+      if (userId) {
+        // Забираем премиум и откатываем роль учителя до обычного студента
+        const updateData = { 
+          is_premium: false,
+          role: 'student' // Если он был учителем, он снова становится учеником (но его заявка approved сохраняется)
+        };
+
+        await supabase.from('profiles').update(updateData).eq('id', userId);
+        
+        await supabase.from('notifications').insert({
+          user_id: userId,
+          title: 'Подписка остановлена',
+          message: 'Срок действия вашей подписки истек, либо платеж не прошел. Базовый доступ сохранен.',
+          type: 'warning'
+        });
       }
-
-      // Обновляем профиль в базе с правами админа (Service Role)
-      const { error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', userId);
-
-      if (error) {
-        console.error('Database update failed:', error);
-        return new Response('DB Error', { status: 500 });
-      }
-      
-      // Можно отправить уведомление пользователю в таблицу notifications
-      await supabase.from('notifications').insert({
-        user_id: userId,
-        title: 'Оплата успешна!',
-        message: `Поздравляем! Ваш статус ${tier === 'teacher' ? 'Учитель' : 'Premium'} активирован.`,
-        type: 'success'
-      });
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -69,7 +72,7 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("Webhook Error:", err);
     return new Response(JSON.stringify({ error: err.message }), { status: 400 });
   }
 })
