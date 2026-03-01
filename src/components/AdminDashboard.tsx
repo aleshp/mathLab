@@ -65,7 +65,6 @@ export function AdminDashboard({ onClose }: Props) {
     if (activeTab === 'analytics') {
       loadAnalytics();
 
-      // Подписываемся на новые события в реальном времени
       channel = supabase
         .channel('admin-analytics-feed')
         .on(
@@ -78,11 +77,7 @@ export function AdminDashboard({ onClose }: Props) {
               .eq('id', payload.new.user_id)
               .single();
             
-            const newEvent = {
-              ...payload.new,
-              user: userData
-            };
-
+            const newEvent = { ...payload.new, user: userData };
             setRecentEvents(prev => [newEvent, ...prev].slice(0, 20));
             setStats((prev: any) => ({ ...prev, dau: (prev?.dau || 0) + 1 }));
           }
@@ -92,26 +87,29 @@ export function AdminDashboard({ onClose }: Props) {
       // === ПОДПИСКА НА ОНЛАЙН (Presence) ===
       presenceChannel = supabase.channel('online-users')
         .on('presence', { event: 'sync' }, () => {
-          console.log('🔄 sync сработал');
           const state = presenceChannel.presenceState();
-          console.log('📊 presenceState:', state);
-          
           const users: any[] = [];
           for (const key in state) {
             if (state[key]?.[0]) users.push(state[key][0]);
           }
           setOnlineUsers(users);
         })
-        .on('presence', { event: 'join' }, ({ newPresences }) => {
-          console.log('✅ join:', newPresences);
+        .on('presence', { event: 'join' }, () => {
+          const state = presenceChannel.presenceState();
+          const users: any[] = [];
+          for (const key in state) {
+            if (state[key]?.[0]) users.push(state[key][0]);
+          }
+          setOnlineUsers(users);
         })
         .subscribe(async (status) => {
-          console.log('📡 статус канала:', status);
           if (status === 'SUBSCRIBED') {
-            await presenceChannel.track({ admin: true });
-            // читаем сразу после подписки
             const state = presenceChannel.presenceState();
-            console.log('📊 state после подписки:', state);
+            const users: any[] = [];
+            for (const key in state) {
+              if (state[key]?.[0]) users.push(state[key][0]);
+            }
+            setOnlineUsers(users);
           }
         });
     }
@@ -137,10 +135,7 @@ export function AdminDashboard({ onClose }: Props) {
     setLoading(true);
     const { data, error } = await supabase
       .from('teacher_requests')
-      .select(`
-        *,
-        user:profiles(username)
-      `)
+      .select(`*, user:profiles(username)`)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
 
@@ -188,7 +183,6 @@ export function AdminDashboard({ onClose }: Props) {
   const openActionModal = (req: TeacherRequest, type: 'approve' | 'reject') => {
     setSelectedReq(req);
     setActionType(type);
-    
     if (type === 'approve') {
       setFeedbackMessage(
         `Здравствуйте, ${req.full_name}!\n\nВаши документы успешно прошли проверку. Статус верификации подтвержден.\n\nЧтобы активировать функции Учителя, перейдите в раздел "Тарифы" и оплатите подписку Teacher.`
@@ -202,7 +196,6 @@ export function AdminDashboard({ onClose }: Props) {
 
   const confirmAction = async () => {
     if (!selectedReq || !actionType) return;
-    
     setProcessing(true);
     try {
       const { error: reqError } = await supabase
@@ -223,9 +216,7 @@ export function AdminDashboard({ onClose }: Props) {
       setSelectedReq(null);
       setActionType(null);
       alert('Обработано успешно!');
-
     } catch (e: any) {
-      console.error(e);
       alert('Ошибка: ' + e.message);
     } finally {
       setProcessing(false);
@@ -405,7 +396,6 @@ export function AdminDashboard({ onClose }: Props) {
                 <div className="grid gap-4">
                   {b2bRequests.map(req => (
                     <div key={req.id} className="bg-slate-800 border border-slate-700 rounded-2xl p-6 flex flex-col md:flex-row justify-between md:items-center gap-4">
-                      
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
@@ -417,17 +407,14 @@ export function AdminDashboard({ onClose }: Props) {
                            </span>
                            <span className="text-slate-500 text-xs">{new Date(req.created_at).toLocaleString()}</span>
                         </div>
-                        
                         <h3 className="text-xl font-bold text-white mb-1">{req.organization}</h3>
                         <div className="text-sm text-slate-300 mb-2">Контакт: <span className="text-purple-400 font-medium">{req.contact_name}</span> • {req.contact_info}</div>
-                        
                         {req.comment && (
                            <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-700 text-sm text-slate-400 italic">
                              "{req.comment}"
                            </div>
                         )}
                       </div>
-
                       <div className="shrink-0 flex flex-col gap-2 min-w-[150px]">
                          <select 
                            value={req.status}
@@ -440,7 +427,6 @@ export function AdminDashboard({ onClose }: Props) {
                            <option value="rejected">⚫️ Отказ</option>
                          </select>
                       </div>
-
                     </div>
                   ))}
                 </div>
@@ -482,11 +468,13 @@ export function AdminDashboard({ onClose }: Props) {
                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /> Активны сегодня
                   </div>
                 </div>
+
                 <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700">
                   <div className="text-slate-400 text-xs font-bold uppercase mb-1">MAU (30д)</div>
                   <div className="text-3xl font-black text-white">{stats.mau}</div>
                   <div className="text-xs text-slate-500 mt-1">Активны за месяц</div>
                 </div>
+
                 <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700">
                   <div className="text-slate-400 text-xs font-bold uppercase mb-1">Конверсия</div>
                   <div className="text-3xl font-black text-amber-400">{stats.conversion_rate}%</div>
@@ -494,7 +482,6 @@ export function AdminDashboard({ onClose }: Props) {
                 </div>
               </div>
 
-              {/* Retention отдельно под сеткой из 4 */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700">
                   <div className="text-slate-400 text-xs font-bold uppercase mb-1">Retention (D1)</div>
@@ -540,7 +527,6 @@ export function AdminDashboard({ onClose }: Props) {
                     <PieChart className="w-5 h-5 text-pink-400" />
                     Состав аудитории
                   </h3>
-                  
                   <div className="space-y-4">
                     <div>
                       <div className="flex justify-between text-xs text-slate-400 mb-1">
@@ -551,7 +537,6 @@ export function AdminDashboard({ onClose }: Props) {
                         <div className="bg-slate-600 h-3 rounded-full" style={{width: '100%'}}></div>
                       </div>
                     </div>
-
                     <div>
                       <div className="flex justify-between text-xs text-slate-400 mb-1">
                         <span className="text-amber-400 font-bold">Premium & Teachers</span>
@@ -565,7 +550,6 @@ export function AdminDashboard({ onClose }: Props) {
                       </div>
                     </div>
                   </div>
-
                   <div className="mt-8 p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-xl">
                     <div className="flex items-start gap-3">
                       <TrendingUp className="w-5 h-5 text-indigo-400 mt-0.5" />
@@ -578,7 +562,6 @@ export function AdminDashboard({ onClose }: Props) {
                       </div>
                     </div>
                   </div>
-
                 </div>
               </div>
             </div>
@@ -614,7 +597,6 @@ export function AdminDashboard({ onClose }: Props) {
               </h3>
               <button onClick={() => { setSelectedReq(null); setActionType(null); }} className="text-slate-400 hover:text-white"><X className="w-6 h-6"/></button>
             </div>
-            
             <div className="mb-4">
               <label className="block text-slate-400 text-sm font-bold mb-2">Сообщение пользователю</label>
               <textarea 
@@ -623,7 +605,6 @@ export function AdminDashboard({ onClose }: Props) {
                 className="w-full h-40 bg-slate-900 border border-slate-600 rounded-xl p-4 text-white focus:border-cyan-500 outline-none leading-relaxed resize-none"
               />
             </div>
-
             <div className="flex gap-3 justify-end">
               <button onClick={() => { setSelectedReq(null); setActionType(null); }} className="px-4 py-2 text-slate-400 hover:text-white font-bold">Отмена</button>
               <button 
