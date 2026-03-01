@@ -54,10 +54,43 @@ export function AdminDashboard({ onClose }: Props) {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (activeTab === 'users') fetchUsers();
-    if (activeTab === 'requests') fetchRequests();
-    if (activeTab === 'b2b') fetchB2B();
-    if (activeTab === 'analytics') loadAnalytics();
+    let channel: any;
+
+    if (activeTab === 'analytics') {
+      loadAnalytics();
+
+      // Подписываемся на новые события в реальном времени
+      channel = supabase
+        .channel('admin-analytics-feed')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'analytics_events' },
+          async (payload) => {
+            // Когда кто-то заходит, подгружаем его имя
+            const { data: userData } = await supabase
+              .from('profiles')
+              .select('username, role')
+              .eq('id', payload.new.user_id)
+              .single();
+            
+            const newEvent = {
+              ...payload.new,
+              user: userData
+            };
+
+            // Добавляем новое событие вверх списка
+            setRecentEvents(prev => [newEvent, ...prev].slice(0, 20));
+            
+            // Обновляем счетчик DAU "на лету" (просто +1 визуально)
+            setStats((prev: any) => ({ ...prev, dau: (prev?.dau || 0) + 1 }));
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [activeTab]);
 
   async function fetchUsers() {
