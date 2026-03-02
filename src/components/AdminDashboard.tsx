@@ -162,7 +162,7 @@ export function AdminDashboard({ onClose }: Props) {
       .order('created_at', { ascending: false })
       .limit(20);
       
-    if (events) setRecentEvents(events);
+    if (events) setRecentEvents(events.filter((e: any) => e.user?.username !== 'Admin'));
     setLoading(false);
   }
 
