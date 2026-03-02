@@ -76,7 +76,7 @@ export function AdminDashboard({ onClose }: Props) {
               .select('username, role')
               .eq('id', payload.new.user_id)
               .single();
-            
+            if (userData?.username === 'Admin') return; // <-- сюда
             const newEvent = { ...payload.new, user: userData };
             setRecentEvents(prev => [newEvent, ...prev].slice(0, 20));
             setStats((prev: any) => ({ ...prev, dau: (prev?.dau || 0) + 1 }));
