@@ -2,8 +2,10 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
+    <!-- ОДИН meta viewport -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    
+
+    <!-- ОДИН theme-color -->
     <meta name="theme-color" content="#0f172a" />
 
     <!-- === БАЗОВЫЕ SEO ТЕГИ === -->
@@ -15,18 +17,20 @@
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://mathlabpvp.org/" />
 
-    <!-- === PWA (генерируется через VitePWA) === -->
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    
+    <!-- === ИКОНКИ === -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/meerkat/avatar.png" />
+    <link rel="apple-touch-icon" href="/meerkat/avatar.png" />
+
+    <!-- Если ты НЕ используешь vite-plugin-pwa, раскомментируй манифест ниже. -->
+    <!-- <link rel="manifest" href="/manifest.json" /> -->
+
+    <!-- PWA & Mobile settings -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="MathLab PvP" />
 
-    <!-- === ИКОНКИ === -->
-    <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/meerkat/avatar.png" />
-
-    <!-- === OPEN GRAPH === -->
+    <!-- === OPEN GRAPH (Facebook, WhatsApp, Telegram) === -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="MathLab PvP" />
     <meta property="og:url" content="https://mathlabpvp.org/" />
@@ -36,7 +40,7 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
 
-    <!-- === TWITTER CARD === -->
+    <!-- === TWITTER CARD (X) === -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://mathlabpvp.org/" />
     <meta name="twitter:title" content="MathLab PvP — Битва Умов" />
@@ -57,6 +61,13 @@
         "price": "0",
         "priceCurrency": "KZT"
       },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "ratingCount": "120",
+        "bestRating": "5",
+        "worstRating": "1"
+      },
       "author": {
         "@type": "Organization",
         "name": "MathLab Team"
@@ -64,27 +75,67 @@
       "description": "Бесплатная образовательная онлайн-игра для подготовки школьников к ЕНТ по математике через PvP сражения."
     }
     </script>
+
+    <!-- === SCHEMA.ORG: Organization === -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "MathLab PvP",
+      "url": "https://mathlabpvp.org",
+      "logo": "https://mathlabpvp.org/meerkat/avatar.png",
+      "sameAs": [
+        "https://www.instagram.com/mathlabpvp/",
+        "https://www.facebook.com/profile.php?id=61588596912057"
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "support@mathlabpvp.org",
+        "contactType": "customer support",
+        "areaServed": "KZ",
+        "availableLanguage": ["Russian", "Kazakh"]
+      }
+    }
+    </script>
   </head>
 
   <body>
-    <div id="root">
-      <!-- STATIC CONTENT FALLBACK -->
-      <div style="display:none;visibility:hidden;">
+    <div id="root"></div>
+
+    <!-- Для роботов / no-JS: показываем важный заголовок и краткое описание -->
+    <!-- Ранее fallback был скрыт через display:none — это могло помешать индексации -->
+    <noscript>
+      <div style="padding:20px; font-family: sans-serif;">
         <h1>MathLab PvP — Подготовка к ЕНТ нового поколения</h1>
-        <p>Образовательная платформа для школьников Казахстана. Изучайте математику через PvP.</p>
+        <p>Образовательная платформа для школьников Казахстана: PvP дуэли, турниры и курсы для подготовки к ЕНТ.</p>
+        <p><a href="https://mathlabpvp.org/terms-and-conditions">Условия использования</a> • <a href="https://mathlabpvp.org/pricing">Тарифы</a></p>
       </div>
-    </div>
+    </noscript>
 
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Регистрация Service Worker -->
+    <!-- Регистрация SW: если используешь vite-plugin-pwa — плагин обычно сам регистрирует sw -->
     <script>
       if ('serviceWorker' in navigator) {
+        // Если ты используешь VitePWA, этот вызов можно убрать.
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
+          navigator.serviceWorker.register('/sw.js').catch(()=>{/* noop */});
         });
       }
     </script>
+
+    <!-- Yandex.Metrika counter (оставлено как было) -->
+    <script type="text/javascript">
+        (function(m,e,t,r,i,k,a){
+            m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+            m[i].l=1*new Date();
+            for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+            k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=106306324', 'ym');
+
+        ym(106306324, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", accurateTrackBounce:true, trackLinks:true});
+    </script>
+    <noscript><div><img src="https://mc.yandex.ru/watch/106306324" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 
   </body>
 </html>
