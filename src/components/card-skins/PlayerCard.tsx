@@ -35,7 +35,7 @@ export function PlayerCard({ isOpponent, name, mmr, rank, winRate, skin = 'defau
       className={`
         w-full max-w-sm md:w-80 h-auto md:h-[450px]
         bg-slate-900 rounded-3xl border-2 ${borderColor} ${shadowColor} shadow-2xl
-        transition-[transform,opacity] duration-500 ease-out ${transformClass} ${premiumGlow}
+        transition-[transform,opacity] duration-500 ease-out will-change-transform ${transformClass} ${premiumGlow}
         flex flex-col items-center p-6 relative overflow-hidden
       `}
     >
