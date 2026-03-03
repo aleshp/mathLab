@@ -17,10 +17,14 @@ type Cosmetic = {
 
 // Визуальные метаданные скинов (описания, цвета, иконки)
 const SKIN_META: Record<string, { desc: string; accent: string }> = {
-  default:  { desc: 'Классический стиль',   accent: 'from-slate-700 to-slate-800'  },
-  electric: { desc: 'Электрические молнии', accent: 'from-cyan-900 to-slate-900'   },
-  fire:     { desc: 'Пылающая мощь',        accent: 'from-orange-900 to-slate-900' },
-  gold:     { desc: 'Легендарный статус',   accent: 'from-yellow-900 to-slate-900' },
+  default:  { desc: 'Классический стиль',      accent: 'from-slate-700 to-slate-800'   },
+  electric: { desc: 'Электрические молнии',    accent: 'from-cyan-900 to-slate-900'    },
+  fire:     { desc: 'Пылающая мощь',           accent: 'from-orange-900 to-slate-900'  },
+  gold:     { desc: 'Легендарный статус',      accent: 'from-yellow-900 to-slate-900'  },
+  ice:      { desc: 'Кристальный холод',       accent: 'from-sky-900 to-slate-900'     },
+  shadow:   { desc: 'Тьма поглощает всё',      accent: 'from-violet-950 to-slate-900'  },
+  neon:     { desc: 'Матричный импульс',       accent: 'from-green-950 to-slate-900'   },
+  plasma:   { desc: 'Нестабильная энергия',    accent: 'from-fuchsia-950 to-slate-900' },
 };
 
 const SKIN_BORDER: Record<string, string> = {
@@ -28,6 +32,10 @@ const SKIN_BORDER: Record<string, string> = {
   electric: 'border-cyan-500/60',
   fire:     'border-orange-500/60',
   gold:     'border-yellow-400/60',
+  ice:      'border-sky-300/60',
+  shadow:   'border-violet-500/60',
+  neon:     'border-green-400/60',
+  plasma:   'border-fuchsia-400/60',
 };
 
 const SKIN_GLOW: Record<string, string> = {
@@ -35,6 +43,10 @@ const SKIN_GLOW: Record<string, string> = {
   electric: 'shadow-[0_0_20px_rgba(6,182,212,0.3)]',
   fire:     'shadow-[0_0_20px_rgba(249,115,22,0.35)]',
   gold:     'shadow-[0_0_25px_rgba(250,204,21,0.4)]',
+  ice:      'shadow-[0_0_22px_rgba(125,211,252,0.35)]',
+  shadow:   'shadow-[0_0_22px_rgba(139,92,246,0.4)]',
+  neon:     'shadow-[0_0_20px_rgba(74,222,128,0.35)]',
+  plasma:   'shadow-[0_0_28px_rgba(232,121,249,0.45)]',
 };
 
 const SKIN_BADGE: Record<string, string> = {
@@ -42,6 +54,10 @@ const SKIN_BADGE: Record<string, string> = {
   electric: 'bg-cyan-500/20 text-cyan-300',
   fire:     'bg-orange-500/20 text-orange-300',
   gold:     'bg-yellow-500/20 text-yellow-300',
+  ice:      'bg-sky-400/20 text-sky-200',
+  shadow:   'bg-violet-500/20 text-violet-300',
+  neon:     'bg-green-500/20 text-green-300',
+  plasma:   'bg-fuchsia-500/20 text-fuchsia-300',
 };
 
 export function CardSkinShop({ onClose }: { onClose: () => void }) {
