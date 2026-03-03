@@ -34,7 +34,7 @@ export function PlayerCard({
   const sideGradL   = isOpponent ? '#7f1d1d' : '#164e63';
 
   // Конфиг скинов
-  const SKINS: Record<string, { border: string; glow: string; badge: string; label: string; labelText: string; color: string; colorDim: string }> = {
+  const SKINS: Record<string, { border: string; glow: string; badge: string; label: string; labelText: string; color: string; colorDim: string; topBar?: string }> = {
     electric: {
       border:    'border-cyan-400',
       glow:      '0 0 40px rgba(6,182,212,0.5), 0 0 80px rgba(6,182,212,0.15), inset 0 0 40px rgba(6,182,212,0.04)',
@@ -61,6 +61,45 @@ export function PlayerCard({
       labelText: '👑 GOLD',
       color:     '#facc15',
       colorDim:  '#422006',
+    },
+    ice: {
+      border:    'border-sky-300',
+      glow:      '0 0 40px rgba(125,211,252,0.45), 0 0 80px rgba(186,230,253,0.15), inset 0 0 40px rgba(125,211,252,0.05)',
+      badge:     'bg-sky-400/15 text-sky-200 border border-sky-400/30',
+      label:     'text-sky-300',
+      labelText: '❄️ ICE',
+      color:     '#7dd3fc',
+      colorDim:  '#082f49',
+      topBar:    'linear-gradient(90deg, #082f49, #7dd3fc, #e0f2fe, #7dd3fc, #082f49)',
+    },
+    shadow: {
+      border:    'border-violet-500',
+      glow:      '0 0 45px rgba(139,92,246,0.5), 0 0 90px rgba(109,40,217,0.2), inset 0 0 40px rgba(139,92,246,0.05)',
+      badge:     'bg-violet-500/15 text-violet-300 border border-violet-500/30',
+      label:     'text-violet-400',
+      labelText: '🌑 SHADOW',
+      color:     '#8b5cf6',
+      colorDim:  '#2e1065',
+    },
+    neon: {
+      border:    'border-green-400',
+      glow:      '0 0 40px rgba(74,222,128,0.5), 0 0 80px rgba(74,222,128,0.15), inset 0 0 40px rgba(74,222,128,0.05)',
+      badge:     'bg-green-500/15 text-green-300 border border-green-500/30',
+      label:     'text-green-400',
+      labelText: '💚 NEON',
+      color:     '#4ade80',
+      colorDim:  '#052e16',
+      topBar:    'linear-gradient(90deg, #052e16, #4ade80, #86efac, #4ade80, #052e16)',
+    },
+    plasma: {
+      border:    'border-fuchsia-400',
+      glow:      '0 0 50px rgba(232,121,249,0.5), 0 0 100px rgba(167,139,250,0.2), inset 0 0 40px rgba(232,121,249,0.06)',
+      badge:     'bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30',
+      label:     'text-fuchsia-400',
+      labelText: '🔮 PLASMA',
+      color:     '#e879f9',
+      colorDim:  '#4a044e',
+      topBar:    'linear-gradient(90deg, #4a044e, #a855f7, #e879f9, #818cf8, #e879f9, #a855f7, #4a044e)',
     },
   };
 
@@ -104,7 +143,7 @@ export function PlayerCard({
         {/* Верхняя акцент-полоса */}
         <div
           className="h-[3px] w-full flex-shrink-0"
-          style={{ background: `linear-gradient(90deg, ${gradLeft}, ${accentColor}, ${gradLeft})` }}
+          style={{ background: (isPremium && sk!.topBar) ? sk!.topBar : `linear-gradient(90deg, ${gradLeft}, ${accentColor}, ${gradLeft})` }}
         />
 
         {/* Внутренний атмосферный фон */}
