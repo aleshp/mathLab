@@ -34,7 +34,7 @@ function SkinDefault({ isOpponent, children }: { isOpponent: boolean; children: 
   const c = isOpponent ? '#ef4444' : '#22d3ee';
   const bg = isOpponent ? '#1a0505' : '#001a1f';
   return (
-    <div className="relative w-[280px] rounded-2xl overflow-hidden flex flex-col"
+    <div className="relative w-[280px] min-h-[380px] rounded-2xl overflow-hidden flex flex-col"
       style={{ border: `2px solid ${c}`, boxShadow: `0 0 30px ${c}33`, background: '#0a0f1a' }}>
       <div style={{ height: 3, background: `linear-gradient(90deg, transparent, ${c}, transparent)`, flexShrink: 0 }} />
       <div className="absolute inset-0 pointer-events-none"
@@ -50,7 +50,7 @@ function SkinElectric({ isOpponent, children }: { isOpponent: boolean; children:
   // Срезанные верхние углы — электрощит
   const clip = 'polygon(18px 0%, calc(100% - 18px) 0%, 100% 18px, 100% 100%, 0% 100%, 0% 18px)';
   return (
-    <div className="relative w-[280px] flex flex-col"
+    <div className="relative w-[280px] min-h-[380px] flex flex-col"
       style={{ clipPath: clip, background: '#050d14', boxShadow: `0 0 40px ${c}55, 0 0 80px ${c}15` }}>
       {/* Рамка */}
       <div className="absolute inset-0 pointer-events-none" style={{ clipPath: clip, border: `2px solid ${c}` }} />
@@ -79,7 +79,7 @@ function SkinFire({ isOpponent, children }: { isOpponent: boolean; children: Rea
   // Языки пламени снизу
   const clip = 'polygon(0% 0%, 100% 0%, 100% 86%, 92% 100%, 82% 86%, 72% 100%, 62% 86%, 52% 100%, 42% 86%, 32% 100%, 22% 86%, 12% 100%, 0% 86%)';
   return (
-    <div className="relative w-[280px] flex flex-col"
+    <div className="relative w-[280px] min-h-[380px] flex flex-col"
       style={{ clipPath: clip, background: '#0d0500', boxShadow: `0 0 50px ${top}55, 0 0 100px ${bot}30` }}>
       {/* Искры-точки */}
       {[{t:'15%',l:'8%'},{t:'28%',l:'87%'},{t:'55%',l:'6%'},{t:'42%',l:'91%'},{t:'70%',l:'82%'}].map((e, i) => (
@@ -99,7 +99,7 @@ function SkinGold({ isOpponent, children }: { isOpponent: boolean; children: Rea
   const c = '#facc15';
   const dim = '#92400e';
   return (
-    <div className="relative w-[280px] rounded-sm flex flex-col overflow-hidden"
+    <div className="relative w-[280px] min-h-[380px] rounded-sm flex flex-col overflow-hidden"
       style={{ border: `2px solid ${c}`, boxShadow: `0 0 60px ${c}55, 0 0 120px ${c}20`, background: '#0a0700' }}>
       {/* Угловые квадратные засечки */}
       {['top-[6px] left-[6px]', 'top-[6px] right-[6px]', 'bottom-[6px] left-[6px]', 'bottom-[6px] right-[6px]'].map((p, i) => (
@@ -126,7 +126,7 @@ function SkinIce({ isOpponent, children }: { isOpponent: boolean; children: Reac
   // Срезаны все 4 угла — кристалл
   const clip = 'polygon(22px 0%, calc(100% - 22px) 0%, 100% 22px, 100% calc(100% - 22px), calc(100% - 22px) 100%, 22px 100%, 0% calc(100% - 22px), 0% 22px)';
   return (
-    <div className="relative w-[280px] flex flex-col"
+    <div className="relative w-[280px] min-h-[380px] flex flex-col"
       style={{ clipPath: clip, background: '#020d14', boxShadow: `0 0 40px ${c}45, 0 0 80px ${c}15` }}>
       <div className="absolute inset-0 pointer-events-none" style={{ clipPath: clip, border: `2px solid ${c}80` }} />
       {/* Кристальные трещины SVG */}
@@ -153,7 +153,7 @@ function SkinShadow({ isOpponent, children }: { isOpponent: boolean; children: R
   // Острый V-вырез снизу
   const clip = 'polygon(0% 0%, 100% 0%, 100% calc(100% - 22px), 50% 100%, 0% calc(100% - 22px))';
   return (
-    <div className="relative w-[280px] flex flex-col"
+    <div className="relative w-[280px] min-h-[380px] flex flex-col"
       style={{ clipPath: clip, background: '#06000f', boxShadow: `0 0 45px ${c}50, 0 0 90px ${dark}40` }}>
       <div className="absolute inset-0 pointer-events-none" style={{ clipPath: clip, border: `2px solid ${c}70` }} />
       {/* Мистические орбы */}
@@ -173,7 +173,7 @@ function SkinNeon({ isOpponent, children }: { isOpponent: boolean; children: Rea
   const c = '#4ade80';
   const dim = '#052e16';
   return (
-    <div className="relative w-[280px] flex flex-col overflow-hidden"
+    <div className="relative w-[280px] min-h-[380px] flex flex-col overflow-hidden"
       style={{ background: '#020b05', border: `1px solid ${c}60`, boxShadow: `0 0 40px ${c}50, 0 0 80px ${c}15` }}>
       {/* Двойная внутренняя рамка */}
       <div className="absolute inset-[4px] pointer-events-none" style={{ border: `1px solid ${c}30` }} />
@@ -201,7 +201,7 @@ function SkinPlasma({ isOpponent, children }: { isOpponent: boolean; children: R
   // Волнистые боковые края
   const clip = 'polygon(0% 0%, 100% 0%, 100% 12%, 96% 22%, 100% 34%, 96% 48%, 100% 62%, 96% 74%, 100% 86%, 100% 100%, 0% 100%, 4% 86%, 0% 74%, 4% 60%, 0% 46%, 4% 32%, 0% 20%)';
   return (
-    <div className="relative w-[290px] flex flex-col"
+    <div className="relative w-[290px] min-h-[380px] flex flex-col"
       style={{ clipPath: clip, background: '#0a0014', boxShadow: `0 0 50px ${c1}50, 0 0 100px ${c2}20` }}>
       <div className="absolute inset-0 pointer-events-none" style={{ clipPath: clip, border: `2px solid ${c3}80` }} />
       {/* Плазменные кривые */}
@@ -272,7 +272,7 @@ export function PlayerCard({
   return (
     <div className={`transition-[transform,opacity] duration-500 ease-out will-change-transform ${motionClass} select-none`}>
       <Wrapper isOpponent={isOpponent}>
-        <div className="relative z-10 flex flex-col items-center px-5 pt-4 pb-5 gap-3">
+        <div className="relative z-10 flex flex-col items-center px-5 pt-5 pb-6 gap-4">
 
           {/* Бейдж + скин-лейбл */}
           <div className="flex items-center justify-between w-full">
