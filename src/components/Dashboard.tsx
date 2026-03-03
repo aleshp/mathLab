@@ -222,6 +222,13 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
                         <CreditCard className="w-4 h-4" /> {t('pricing.title')}
                       </a>
 
+                      <button 
+                        onClick={() => setShowCardShop(true)} 
+                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg transition-all font-bold text-sm flex items-center gap-2"
+                      >
+                        <Palette className="w-4 h-4" /> Стиль карточки
+                      </button>
+
                       {/* УЧИТЕЛЬСКИЕ КНОПКИ */}
                       {profile.role !== 'teacher' && profile.role !== 'admin' && (
                         <>
