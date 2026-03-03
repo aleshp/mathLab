@@ -262,7 +262,10 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     searchTimeoutRef.current = setTimeout(async () => {
       supabase.removeChannel(channel);
       const fakeBotMMR = myMMR + Math.floor(Math.random() * 100 - 50);
+      const resolvedBotName = getDeterministicBotName(newDuel.id);
       setOpponentMMR(fakeBotMMR);
+      setOpponentName(resolvedBotName);
+      setBotName(resolvedBotName);
       await supabase.from('duels').update({
         status: 'active', player2_id: BOT_UUID, player2_mmr: fakeBotMMR
       }).eq('id', newDuel.id);
