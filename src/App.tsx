@@ -500,6 +500,39 @@ function MainApp() {
         </main>
       </div>
 
+      {/* === ПРАВЫЙ ФЛОАТИНГ: КНОПКИ АДМИНА / УЧИТЕЛЯ === */}
+      {(profile?.role === 'admin' || profile?.role === 'teacher') && (
+        <div className="fixed bottom-28 right-4 z-50 flex flex-col gap-3">
+          <button
+            onClick={() => setShowTournamentAdmin(true)}
+            className="p-3 bg-amber-500/20 border border-amber-500/50 rounded-full text-amber-400 hover:bg-amber-500 hover:text-black transition-all shadow-lg backdrop-blur-sm"
+            title="Турниры"
+          >
+            <Crown className="w-6 h-6" />
+          </button>
+
+          {profile?.role === 'admin' && (
+            <>
+              <button
+                onClick={() => setShowAdmin(true)}
+                className="p-3 bg-slate-800/90 border border-cyan-500/30 rounded-full text-cyan-400 shadow-lg backdrop-blur-sm hover:bg-cyan-500 hover:text-black transition-all"
+                title="Генератор задач"
+              >
+                <Settings className="w-6 h-6" />
+              </button>
+
+              <button
+                onClick={() => setShowAdminDashboard(true)}
+                className="p-3 bg-red-600/20 border border-red-500/50 rounded-full text-red-400 shadow-lg backdrop-blur-sm hover:bg-red-600 hover:text-white transition-all"
+                title="Админ-центр"
+              >
+                <Shield className="w-6 h-6" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Modals and overlays */}
       {user && (
         <Suspense fallback={null}>
