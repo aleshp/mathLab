@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, Achievement } from '../lib/supabase';
+import { CardSkinShop } from './CardSkinShop';
 import {
   User, LogOut, Trophy, Target, TrendingUp, Award, Zap, Clock, CheckCircle2, 
   XCircle, X, Mail, ShieldCheck, GraduationCap, CreditCard, Loader, Shield, 
-  HelpCircle, ChevronDown, ChevronUp, ChevronLeft, FileText, ArrowRight
+  HelpCircle, ChevronDown, ChevronUp, ChevronLeft, FileText, ArrowRight, Palette
 } from 'lucide-react';
 import { BecomeTeacherModal } from './BecomeTeacherModal';
 
@@ -54,6 +55,7 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
   const [recentExperiments, setRecentExperiments] = useState<RecentExperiment[]>([]);
   
   const [showTeacherModal, setShowTeacherModal] = useState(false);
+  const [showCardShop, setShowCardShop] = useState(false);
   const [teacherRequestStatus, setTeacherRequestStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none');
   const [loadingRequest, setLoadingRequest] = useState(false);
 
