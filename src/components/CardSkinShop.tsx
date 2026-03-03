@@ -141,17 +141,20 @@ export function CardSkinShop({ onClose }: { onClose: () => void }) {
         <div className="w-full md:w-[55%] flex flex-col h-full">
 
           {/* Шапка */}
-          <div className="px-6 py-5 border-b border-slate-800/80 flex items-center justify-between gap-4 flex-shrink-0">
-            <div>
-              <h2 className="text-xl font-black text-white uppercase tracking-wider flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-400" />
-                Скины карточки
-              </h2>
-              <p className="text-[11px] text-slate-500 mt-0.5">Выделись в каждом матче</p>
+          <div className="px-6 pt-5 pb-4 border-b border-slate-800/80 flex-shrink-0">
+            <div className="flex items-start justify-between pr-10">
+              <div>
+                <h2 className="text-xl font-black text-white uppercase tracking-wider flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-amber-400" />
+                  Скины карточки
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">Выделись в каждом матче</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-full flex-shrink-0">
+            <div className="flex items-center gap-2 mt-3 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-full w-fit">
               <Coins className="w-4 h-4 text-amber-400" />
               <span className="text-amber-300 font-black text-sm">{profile?.coins ?? 0}</span>
+              <span className="text-amber-600 text-xs">монет</span>
             </div>
           </div>
 
