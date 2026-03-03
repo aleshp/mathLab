@@ -19,7 +19,7 @@ import { PricingPage } from './components/PricingPage';
 import { TermsPage } from './components/TermsPage';
 import { supabase } from './lib/supabase';
 import { Sector, Module } from './lib/supabase';
-import { Loader } from 'lucide-react';
+import { Loader, Crown, Settings, Shield, Zap, Keyboard, Lock, ClipboardList } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 
 // =======================
@@ -221,11 +221,9 @@ function MainApp() {
 
     return () => {
       isMounted = false;
-      // removeChannel expects the channel object
       try {
         supabase.removeChannel(channel);
       } catch (err) {
-        // fallback: try removing by name
         try {
           supabase.removeChannel('global-game-check-' + user?.id);
         } catch (e) {
@@ -428,15 +426,15 @@ function MainApp() {
                         className="p-3 bg-slate-800/90 backdrop-blur-md border-2 border-slate-600 rounded-2xl shadow-lg active:scale-95 transition-all"
                         title="Код турнира"
                       >
-                        {/* иконка клавиатуры */}
-                        <span className="sr-only">Код турнира</span>
-                        <svg className="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M..." /></svg>
+                        <Keyboard className="w-5 h-5 text-slate-400 hover:text-cyan-400 transition-colors" />
                       </button>
 
                       <button
                         onClick={() => setView('analyzer')}
                         className="flex-1 bg-slate-800/90 backdrop-blur-md border-2 border-amber-500/50 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                        title="Журнал ошибок"
                       >
+                        <ClipboardList className="w-5 h-5 text-amber-400 group-hover:text-amber-300 transition-colors" />
                         <span className="font-bold text-amber-300 text-xs uppercase hidden sm:inline tracking-wider">
                           Ошибки
                         </span>
@@ -445,7 +443,10 @@ function MainApp() {
                       <button
                         onClick={() => setView('pvp')}
                         className="flex-[2] relative flex items-center justify-center gap-2 bg-slate-900/90 backdrop-blur-md border-2 border-red-600 px-4 py-3 rounded-2xl shadow-lg shadow-red-900/20 active:scale-95 transition-all overflow-hidden group"
+                        title="PvP"
                       >
+                        <div className="absolute inset-0 bg-red-600/10 group-hover:bg-red-600/20 transition-colors" />
+                        <Zap className="w-6 h-6 text-red-500 fill-current animate-pulse" />
                         <span className="font-black text-white text-base tracking-widest italic uppercase">
                           PVP
                         </span>
@@ -453,6 +454,7 @@ function MainApp() {
                     </>
                   ) : (
                     <div className="bg-slate-900/90 border border-slate-700 px-6 py-3 rounded-full text-slate-400 text-sm flex items-center gap-2 backdrop-blur-md">
+                      <Lock className="w-4 h-4" />
                       PvP и Турниры доступны после регистрации
                     </div>
                   )}
