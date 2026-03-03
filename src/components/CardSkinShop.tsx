@@ -15,11 +15,11 @@ type Cosmetic = {
 };
 
 // Визуальные метаданные скинов (описания, цвета, иконки)
-const SKIN_META: Record<string, { desc: string; accent: string; icon: string }> = {
-  default:  { desc: 'Классический стиль',          accent: 'from-slate-700 to-slate-800',   icon: '🎴' },
-  electric: { desc: 'Электрические молнии',         accent: 'from-cyan-900 to-slate-900',    icon: '⚡' },
-  fire:     { desc: 'Пылающая мощь',               accent: 'from-orange-900 to-slate-900',  icon: '🔥' },
-  gold:     { desc: 'Легендарный статус',           accent: 'from-yellow-900 to-slate-900',  icon: '👑' },
+const SKIN_META: Record<string, { desc: string; accent: string }> = {
+  default:  { desc: 'Классический стиль',   accent: 'from-slate-700 to-slate-800'  },
+  electric: { desc: 'Электрические молнии', accent: 'from-cyan-900 to-slate-900'   },
+  fire:     { desc: 'Пылающая мощь',        accent: 'from-orange-900 to-slate-900' },
+  gold:     { desc: 'Легендарный статус',   accent: 'from-yellow-900 to-slate-900' },
 };
 
 const SKIN_BORDER: Record<string, string> = {
@@ -114,7 +114,7 @@ export function CardSkinShop({ onClose }: { onClose: () => void }) {
           <div className="text-center">
             <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 mb-1">Предпросмотр</p>
             <p className="text-sm font-bold text-slate-300">
-              {SKIN_META[previewSkin]?.icon} {allSkins.find(s => s.image_url === previewSkin)?.name ?? previewSkin}
+              {allSkins.find(s => s.image_url === previewSkin)?.name ?? previewSkin}
             </p>
           </div>
 
@@ -169,7 +169,7 @@ export function CardSkinShop({ onClose }: { onClose: () => void }) {
               const isOwned = item.id === '__default' || ownedIds.has(item.id);
               const isEquipped = activeSkin === skinKey;
               const isPreviewing = previewSkin === skinKey;
-              const meta = SKIN_META[skinKey] ?? { desc: '', accent: 'from-slate-700 to-slate-800', icon: '🎴' };
+              const meta = SKIN_META[skinKey] ?? { desc: '', accent: 'from-slate-700 to-slate-800' };
               const canBuy = !item.is_premium || profile?.is_premium;
 
               return (
@@ -192,11 +192,6 @@ export function CardSkinShop({ onClose }: { onClose: () => void }) {
                   <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${meta.accent} opacity-80`} />
 
                   <div className="flex items-center gap-4 px-4 py-3 pl-5">
-
-                    {/* Иконка скина */}
-                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${meta.accent} flex items-center justify-center text-xl flex-shrink-0 border ${SKIN_BORDER[skinKey] ?? 'border-slate-700'}`}>
-                      {meta.icon}
-                    </div>
 
                     {/* Название + описание */}
                     <div className="flex-1 min-w-0">
