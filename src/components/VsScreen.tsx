@@ -159,94 +159,125 @@ export function VsScreen({ player, opponentName, opponentMMR, onComplete }: Prop
           transition: 'opacity 0.5s',
         }} />
 
-      {/* ── Весь стек — автомасштаб под высоту экрана ── */}
-      <div className="relative z-20 flex flex-col items-center"
+      {/* ── VS Badge + искры (абсолютно по центру на десктопе) ── */}
+      <div className="absolute z-30 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:block hidden"
         style={{
-          transform: 'scale(min(1, calc((100dvh - 32px) / 900px)))',
-          transformOrigin: 'center center',
+          animation: visible ? 'vs-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'none',
+          opacity:   visible ? undefined : 0,
         }}
       >
+        {visible && SPARKS.map(s => (
+          <div key={s.id} className="absolute pointer-events-none"
+            style={{
+              width: s.len, height: 2,
+              top: '50%', left: '50%',
+              background: 'linear-gradient(to right, rgba(255,255,255,0.7), transparent)',
+              transform: `rotate(${s.angle}deg) scaleX(0)`,
+              transformOrigin: 'left center',
+              animation: 'spark-shoot 0.6s ease-out forwards',
+              animationDelay: `${0.1 + s.delay}s`,
+            } as React.CSSProperties}
+          />
+        ))}
+        {visible && [0, 1].map(i => (
+          <div key={i} className="absolute rounded-full border border-white/30 pointer-events-none"
+            style={{
+              width: 64, height: 64, top: '50%', left: '50%',
+              marginTop: -32, marginLeft: -32,
+              animation: 'glow-ring 0.8s ease-out forwards',
+              animationDelay: `${0.1 + i * 0.15}s`,
+            }} />
+        ))}
+        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center relative"
+          style={{ boxShadow: '0 0 40px rgba(255,255,255,0.5), 0 0 80px rgba(255,255,255,0.2)' }}>
+          <span className="text-black font-black text-2xl italic -ml-0.5">VS</span>
+        </div>
+      </div>
 
-        {/* Карточка ИГРОКА */}
+      {/* ── ДЕСКТОП: горизонтально ── */}
+      <div className="relative z-20 hidden md:flex flex-row items-center gap-16">
+        <div style={{
+          transition: 'transform 0.55s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease-out',
+          transform:  visible ? 'translateX(0)' : 'translateX(-140%)',
+          opacity:    visible ? 1 : 0,
+        }}>
+          <PlayerCard isOpponent={false} name={player.username} mmr={player.mmr || 1000}
+            rank={pRank} winRate={myStats.winRate} matchesPlayed={myStats.matchesPlayed}
+            skin={mySkin} stage="idle" />
+        </div>
+        {/* Пустое место под VS бейдж */}
+        <div className="w-16 flex-shrink-0" />
+        <div style={{
+          transition: 'transform 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.07s, opacity 0.4s ease-out 0.07s',
+          transform:  visible ? 'translateX(0)' : 'translateX(140%)',
+          opacity:    visible ? 1 : 0,
+        }}>
+          <PlayerCard isOpponent={true} name={opponentName} mmr={opponentMMR}
+            rank={oRank} winRate={oWinRate} matchesPlayed={oMatches}
+            skin="electric" stage="idle" />
+        </div>
+      </div>
+
+      {/* ── МОБАЙЛ: вертикально, сдвинут чуть вниз ── */}
+      <div className="relative z-20 md:hidden flex flex-col items-center pt-20"
+        style={{
+          transform: 'scale(min(1, calc((100dvh - 80px) / 920px)))',
+          transformOrigin: 'center top',
+        }}
+      >
         <div style={{
           transition: 'transform 0.55s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease-out',
           transform:  visible ? 'translateY(0)' : 'translateY(-140%)',
           opacity:    visible ? 1 : 0,
         }}>
-          <PlayerCard
-            isOpponent={false}
-            name={player.username}
-            mmr={player.mmr || 1000}
-            rank={pRank}
-            winRate={myStats.winRate}
-            matchesPlayed={myStats.matchesPlayed}
-            skin={mySkin}
-            stage="idle"
-          />
+          <PlayerCard isOpponent={false} name={player.username} mmr={player.mmr || 1000}
+            rank={pRank} winRate={myStats.winRate} matchesPlayed={myStats.matchesPlayed}
+            skin={mySkin} stage="idle" />
         </div>
 
-        {/* VS Badge + искры */}
+        {/* VS Badge для мобайла */}
         <div className="relative z-30 flex-shrink-0 -my-4 flex items-center justify-center"
           style={{
             animation: visible ? 'vs-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'none',
             opacity:   visible ? undefined : 0,
           }}
         >
-          {/* Разлетающиеся лучи */}
           {visible && SPARKS.map(s => (
-            <div key={s.id} className="absolute pointer-events-none origin-left"
+            <div key={s.id} className="absolute pointer-events-none"
               style={{
-                width:  s.len,
-                height: 2,
-                top:    '50%',
-                left:   '50%',
+                width: s.len, height: 2, top: '50%', left: '50%',
                 background: 'linear-gradient(to right, rgba(255,255,255,0.7), transparent)',
-                '--angle': `${s.angle}deg`,
                 transform: `rotate(${s.angle}deg) scaleX(0)`,
                 transformOrigin: 'left center',
-                animation: `spark-shoot 0.6s ease-out forwards`,
+                animation: 'spark-shoot 0.6s ease-out forwards',
                 animationDelay: `${0.1 + s.delay}s`,
               } as React.CSSProperties}
             />
           ))}
-
-          {/* Кольца расходятся */}
           {visible && [0, 1].map(i => (
             <div key={i} className="absolute rounded-full border border-white/30 pointer-events-none"
               style={{
-                width: 64, height: 64,
-                top: '50%', left: '50%',
+                width: 64, height: 64, top: '50%', left: '50%',
                 marginTop: -32, marginLeft: -32,
-                animation: `glow-ring 0.8s ease-out forwards`,
+                animation: 'glow-ring 0.8s ease-out forwards',
                 animationDelay: `${0.1 + i * 0.15}s`,
               }} />
           ))}
-
-          {/* Сам бейдж */}
           <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center relative"
             style={{ boxShadow: '0 0 40px rgba(255,255,255,0.5), 0 0 80px rgba(255,255,255,0.2)' }}>
             <span className="text-black font-black text-2xl italic -ml-0.5">VS</span>
           </div>
         </div>
 
-        {/* Карточка СОПЕРНИКА */}
         <div style={{
           transition: 'transform 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.07s, opacity 0.4s ease-out 0.07s',
           transform:  visible ? 'translateY(0)' : 'translateY(140%)',
           opacity:    visible ? 1 : 0,
         }}>
-          <PlayerCard
-            isOpponent={true}
-            name={opponentName}
-            mmr={opponentMMR}
-            rank={oRank}
-            winRate={oWinRate}
-            matchesPlayed={oMatches}
-            skin="electric"
-            stage="idle"
-          />
+          <PlayerCard isOpponent={true} name={opponentName} mmr={opponentMMR}
+            rank={oRank} winRate={oWinRate} matchesPlayed={oMatches}
+            skin="electric" stage="idle" />
         </div>
-
       </div>
 
       {/* Fade-out */}
