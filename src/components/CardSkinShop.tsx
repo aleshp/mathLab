@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { X, Coins, Crown, CheckCircle, Sparkles, Lock } from 'lucide-react';
 import { PlayerCard, CardSkin } from './card-skins/PlayerCard';
 import { getPvPRank } from '../lib/gameLogic';
+import { usePvPStats } from '../hooks/usePvPStats';
 
 type Cosmetic = {
   id: string;
@@ -87,7 +88,8 @@ export function CardSkinShop({ onClose }: { onClose: () => void }) {
     refreshProfile();
   };
 
-  const pRank = getPvPRank(profile?.mmr || 1000);
+  const pRank   = getPvPRank(profile?.mmr || 1000);
+  const pvpStats = usePvPStats(user?.id);
 
   // Строим список: дефолт + из БД
   const allSkins = [
@@ -125,7 +127,8 @@ export function CardSkinShop({ onClose }: { onClose: () => void }) {
               name={profile?.username || 'Player'}
               mmr={profile?.mmr || 1000}
               rank={pRank}
-              winRate={profile?.success_rate || 0}
+              winRate={pvpStats.winRate}
+              matchesPlayed={pvpStats.matchesPlayed}
               skin={previewSkin}
               stage="idle"
             />
