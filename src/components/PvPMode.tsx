@@ -186,6 +186,8 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     await loadProblems(duel.problem_ids);
     setMyScore(isP1 ? duel.player1_score : duel.player2_score);
     setCurrentProbIndex(isP1 ? duel.player1_progress : duel.player2_progress);
+
+    // При реконнекте VS Screen не нужен, сразу в бой
     setStatus('battle');
       if (user) {
         trackEvent(user.id, 'pvp_start', { 
@@ -221,7 +223,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       }).eq('id', waitingDuel.id);
 
       startBattleSubscription(waitingDuel.id, 'player2');
-      setStatus('battle');
+      setStatus('vs_screen');
       if (user) {
         trackEvent(user.id, 'pvp_start', { 
           opponent_type: isBotMatch ? 'bot' : 'human',
@@ -250,7 +252,9 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
           const newData = payload.new;
           if (newData.status === 'active' && newData.player2_id && newData.player2_id !== BOT_UUID) {
             if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-            fetchOpponentData(newData.player2_id).then(() => setStatus('battle'));
+            fetchOpponentData(newData.player2_id).then(() => {
+              setStatus('vs_screen');
+            });
           }
         })
       .subscribe();
@@ -263,7 +267,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
         status: 'active', player2_id: BOT_UUID, player2_mmr: fakeBotMMR
       }).eq('id', newDuel.id);
       setIsBotMatch(true);
-      setStatus('battle');
+      setStatus('vs_screen');
     }, 7000);
   }
 
@@ -543,7 +547,19 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     );
   }
 
-  // 3. Battle
+  // 3. VS Screen
+  if (status === 'vs_screen') {
+    return (
+      <VsScreen
+        player={profile!}
+        opponentName={opponentName}
+        opponentMMR={opponentMMR}
+        onComplete={() => setStatus('battle')}
+      />
+    );
+  }
+
+  // 4. Battle
   if (status === 'battle') {
     const currentProb = problems[currentProbIndex];
 
@@ -675,7 +691,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     );
   }
 
-  // 4. Finished
+  // 5. Finished
   if (status === 'finished') {
     const isWin = winner === 'me';
     const isDraw = winner === 'draw';
