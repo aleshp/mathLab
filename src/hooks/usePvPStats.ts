@@ -18,7 +18,7 @@ export function usePvPStats(userId: string | undefined): PvPStats {
         .select('winner_id')
         .or(`player1_id.eq.${userId},player2_id.eq.${userId}`)
         .eq('status', 'finished')
-        .neq('winner_id', null); // исключаем ничьи без победителя
+        .not('winner_id', 'is', null); // исключаем ничьи без победителя
 
       if (!data || data.length === 0) return;
 
