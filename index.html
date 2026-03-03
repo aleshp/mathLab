@@ -2,7 +2,8 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
     <meta name="theme-color" content="#0f172a" />
 
     <!-- === БАЗОВЫЕ SEO ТЕГИ === -->
@@ -11,32 +12,21 @@
     <meta name="keywords" content="математика, ЕНТ, подготовка к ЕНТ, математика онлайн, mathlab, pvp математика, игры для школы, онлайн репетитор" />
     <meta name="author" content="MathLab Team" />
     <meta name="publisher" content="MathLab PvP" />
-    
-    <!-- Инструкция для роботов -->
     <meta name="robots" content="index, follow" />
-    
-    <!-- Каноническая ссылка -->
     <link rel="canonical" href="https://mathlabpvp.org/" />
+
+    <!-- === PWA (генерируется через VitePWA) === -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MathLab PvP" />
 
     <!-- === ИКОНКИ === -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/meerkat/avatar.png" />
-    <link rel="apple-touch-icon" href="/meerkat/avatar.png" />
-    <link rel="manifest" href="/manifest.json" />
 
-
-    <!-- PWA & Mobile settings -->
-    <meta name="theme-color" content="#0f172a" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="MathLab PvP" />
-    
-    <!-- Запрет зума на мобилках при тапе (важно для игр) -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    
-    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
-
-    <!-- === OPEN GRAPH (Facebook, WhatsApp, Telegram) === -->
+    <!-- === OPEN GRAPH === -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="MathLab PvP" />
     <meta property="og:url" content="https://mathlabpvp.org/" />
@@ -46,14 +36,14 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
 
-    <!-- === TWITTER CARD (X) === -->
+    <!-- === TWITTER CARD === -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://mathlabpvp.org/" />
     <meta name="twitter:title" content="MathLab PvP — Битва Умов" />
     <meta name="twitter:description" content="Готовься к ЕНТ играя. PvP битвы, турниры и прокачка персонажа." />
     <meta name="twitter:image" content="https://mathlabpvp.org/meerkat/og-preview.png" />
 
-    <!-- === SCHEMA.ORG: SoftwareApplication (О приложении) === -->
+    <!-- === SCHEMA.ORG: SoftwareApplication === -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -67,13 +57,6 @@
         "price": "0",
         "priceCurrency": "KZT"
       },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "ratingCount": "120",
-        "bestRating": "5",
-        "worstRating": "1"
-      },
       "author": {
         "@type": "Organization",
         "name": "MathLab Team"
@@ -81,66 +64,27 @@
       "description": "Бесплатная образовательная онлайн-игра для подготовки школьников к ЕНТ по математике через PvP сражения."
     }
     </script>
-
-    <!-- === SCHEMA.ORG: Organization (О бренде) === -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "MathLab PvP",
-      "url": "https://mathlabpvp.org",
-      "logo": "https://mathlabpvp.org/meerkat/avatar.png",
-      "sameAs": [
-        "https://www.instagram.com/mathlabpvp/",
-        "https://www.facebook.com/profile.php?id=61588596912057"
-      ],
-      "contactPoint": {
-        "@type": "ContactPoint",
-        "email": "support@mathlabpvp.org",
-        "contactType": "customer support",
-        "areaServed": "KZ",
-        "availableLanguage": ["Russian", "Kazakh"]
-      }
-    }
-    </script>
   </head>
+
   <body>
     <div id="root">
-      <!-- STATIC CONTENT FALLBACK FOR BOTS (BING/GOOGLE) -->
-      <!-- Этот контент виден только роботам до загрузки JS -->
-      <div style="display: none; visibility: hidden;">
+      <!-- STATIC CONTENT FALLBACK -->
+      <div style="display:none;visibility:hidden;">
         <h1>MathLab PvP — Подготовка к ЕНТ нового поколения</h1>
-        <p>Образовательная платформа для школьников Казахстана. Изучайте математику и матграмотность через игру. Прокачивай своего персонажа (Суриката), сражайся с друзьями на PvP-арене и участвуй в школьных турнирах.</p>
-        
-        <h2>Возможности платформы:</h2>
-        <ul>
-          <li><strong>PvP Битвы:</strong> Вызывай друзей на дуэль и докажи, кто лучше знает алгебру и геометрию.</li>
-          <li><strong>Турниры:</strong> Участвуй в классных турнирах по коду учителя с реальной сеткой плей-офф.</li>
-          <li><strong>Обучение:</strong> Решай задачи, повышай свой рейтинг (MMR) и уровень допуска.</li>
-          <li><strong>B2B для школ:</strong> Подключение учебных центров для мониторинга успеваемости.</li>
-        </ul>
-
-        <h3>Ссылки:</h3>
-        <a href="/pricing">Тарифы и цены на подписку Premium</a>
-        <a href="/terms-and-conditions">Условия использования и Политика конфиденциальности</a>
+        <p>Образовательная платформа для школьников Казахстана. Изучайте математику через PvP.</p>
       </div>
     </div>
-    
+
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Yandex.Metrika counter -->
-    <script type="text/javascript">
-        (function(m,e,t,r,i,k,a){
-            m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-            m[i].l=1*new Date();
-            for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-            k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=106306324', 'ym');
-    
-        ym(106306324, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", accurateTrackBounce:true, trackLinks:true});
+    <!-- Регистрация Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
     </script>
-    <noscript><div><img src="https://mc.yandex.ru/watch/106306324" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-    <!-- /Yandex.Metrika counter -->
-    
+
   </body>
 </html>
