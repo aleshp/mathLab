@@ -132,7 +132,14 @@ export function Header({
                       <div className="w-6 h-6 md:w-8 md:h-8 bg-black/20 rounded-md overflow-hidden">
                         <img src="/meerkat/avatar.png" alt="Pet" className="w-full h-full object-contain" />
                       </div>
-                      {profile.companion_hunger < 30 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 border border-slate-900 rounded-full animate-pulse" />}
+                      
+                      {/* Улучшенная мигающая точка, если голод < 30 */}
+                      {(profile.companion_hunger ?? 100) < 30 && (
+                        <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 z-10">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500 border-2 border-slate-900"></span>
+                        </span>
+                      )}
                     </button>
                   )}
 
