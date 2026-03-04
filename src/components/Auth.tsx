@@ -218,6 +218,7 @@ export function Auth({ onOpenLegal }: Props) {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden shadow-lg shadow-cyan-500/20 border border-cyan-500/30 bg-slate-800 mb-4">
             <img src="/logo.png" alt="MathLab" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display="none"; }} />
           </div>
+          <h1 className="text-2xl font-black text-white tracking-tight">
             Math<span className="text-cyan-400">Lab</span> <span className="text-slate-400 font-light">PVP</span>
           </h1>
           <p className="text-slate-500 text-xs mt-1 tracking-widest uppercase">
