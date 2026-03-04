@@ -205,7 +205,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       setSearchElapsed(prev => prev + 1);
     }, 1000);
 
-    const range = 300;
+    const range = 100;
     const { data: waitingDuel } = await supabase
       .from('duels')
       .select('*')
@@ -587,7 +587,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
           <div className="w-full space-y-1.5">
             {[
               { done: searchElapsed >= 1, text: 'Подключение к серверу' },
-              { done: searchElapsed >= 2, text: 'Поиск соперника в рейтинге ±300 MP' },
+              { done: searchElapsed >= 2, text: 'Поиск соперника в рейтинге ±100 MP' },
               { done: searchElapsed >= 5, active: searchElapsed < 7, text: searchElapsed >= 7 ? 'Соперник не найден' : 'Ожидание игроков онлайн' },
               { done: searchElapsed >= 7, text: 'Подбираем соперника' },
             ].map((step, i) => (
