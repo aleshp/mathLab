@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next'; // Перевод
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Users, Loader, Shield, RefreshCw } from 'lucide-react';
@@ -14,17 +14,43 @@ type LobbyProps = {
 export function TournamentLobby({ tournamentId }: LobbyProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  
+
   const [participants, setParticipants] = useState<any[]>([]);
   const [tournamentCode, setTournamentCode] = useState<string>('');
   const [status, setStatus] = useState<'waiting' | 'active' | 'finished'>('waiting');
- 
   const [activeDuelId, setActiveDuelId] = useState<string | null>(null);
-  
+
   const [showReconnect, setShowReconnect] = useState(false);
   const [reconnectTournamentId, setReconnectTournamentId] = useState<string | null>(null);
   const [reconnectDuelId, setReconnectDuelId] = useState<string | null>(null);
   const [hasCheckedReconnect, setHasCheckedReconnect] = useState(false);
+
+  // Debounce: при старте турнира Realtime шлёт событие на каждую новую дуэль
+  // (10 игроков = 5 событий одновременно). Без debounce — 5 параллельных запросов.
+  const duelCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const checkForActiveDuel = useCallback(async () => {
+    if (!user) return;
+    if (duelCheckTimerRef.current) clearTimeout(duelCheckTimerRef.current);
+    duelCheckTimerRef.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('duels')
+        .select('id')
+        .eq('tournament_id', tournamentId)
+        .eq('status', 'active')
+        .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
+        .maybeSingle();
+      setActiveDuelId(data?.id ?? null);
+    }, 300);
+  }, [user, tournamentId]);
+
+  const fetchParticipants = useCallback(async () => {
+    const { data } = await supabase
+      .from('tournament_participants')
+      .select('*, profiles(username, mmr)')
+      .eq('tournament_id', tournamentId);
+    if (data) setParticipants(data);
+  }, [tournamentId]);
 
   useEffect(() => {
     async function loadInfo() {
@@ -40,12 +66,12 @@ export function TournamentLobby({ tournamentId }: LobbyProps) {
 
     async function checkActiveTournament() {
       if (!user || hasCheckedReconnect) return;
-      
+
       const { data: participation, error } = await supabase
         .from('tournament_participants')
         .select('tournament_id, tournaments(status)')
         .eq('user_id', user.id)
-        .neq('tournament_id', tournamentId) 
+        .neq('tournament_id', tournamentId)
         .in('tournaments.status', ['active', 'waiting'])
         .maybeSingle();
 
@@ -56,9 +82,9 @@ export function TournamentLobby({ tournamentId }: LobbyProps) {
         return;
       }
 
-      if (['active', 'waiting'].includes(participation.tournaments.status)) {
+      if (['active', 'waiting'].includes((participation.tournaments as any)?.status)) {
         setReconnectTournamentId(participation.tournament_id);
-        
+
         const { data: duel } = await supabase
           .from('duels')
           .select('id')
@@ -66,67 +92,55 @@ export function TournamentLobby({ tournamentId }: LobbyProps) {
           .eq('status', 'active')
           .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
           .maybeSingle();
-        
+
         if (duel) setReconnectDuelId(duel.id);
         setShowReconnect(true);
         return;
       }
-      
+
       loadInfo();
     }
 
     checkActiveTournament();
 
-    const tourSub = supabase.channel(`tour-status-${tournamentId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournaments', filter: `id=eq.${tournamentId}` },
-      (payload) => setStatus(payload.new.status))
+    const tourSub = supabase
+      .channel(`tour-status-${tournamentId}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'tournaments', filter: `id=eq.${tournamentId}` },
+        (payload) => setStatus(payload.new.status))
       .subscribe();
-    
-    const partSub = supabase.channel(`tour-parts-${tournamentId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_participants', filter: `tournament_id=eq.${tournamentId}` },
-      () => fetchParticipants())
+
+    const partSub = supabase
+      .channel(`tour-parts-${tournamentId}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'tournament_participants', filter: `tournament_id=eq.${tournamentId}` },
+        () => fetchParticipants())
       .subscribe();
-    
-    const duelSub = supabase.channel(`tour-duels-${tournamentId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'duels', filter: `tournament_id=eq.${tournamentId}` },
-      () => checkForActiveDuel())
+
+    const duelSub = supabase
+      .channel(`tour-duels-${tournamentId}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'duels', filter: `tournament_id=eq.${tournamentId}` },
+        () => checkForActiveDuel())
       .subscribe();
-    
+
     return () => {
+      if (duelCheckTimerRef.current) clearTimeout(duelCheckTimerRef.current);
       supabase.removeChannel(tourSub);
       supabase.removeChannel(partSub);
       supabase.removeChannel(duelSub);
     };
-  }, [tournamentId, user, hasCheckedReconnect]);
-
-  async function fetchParticipants() {
-    const { data } = await supabase.from('tournament_participants').select('*, profiles(username, mmr)').eq('tournament_id', tournamentId);
-    if (data) setParticipants(data);
-  }
-
-  async function checkForActiveDuel() {
-    if (!user) return;
-    const { data } = await supabase
-      .from('duels')
-      .select('id')
-      .eq('tournament_id', tournamentId)
-      .eq('status', 'active')
-      .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
-      .maybeSingle();
-    if (data) {
-      setActiveDuelId(data.id);
-    } else {
-      setActiveDuelId(null);
-    }
-  }
+  }, [tournamentId, user, hasCheckedReconnect, fetchParticipants, checkForActiveDuel]);
 
   if (activeDuelId) {
     return (
       <TournamentPlay
         duelId={activeDuelId}
         onFinished={() => {
-           setActiveDuelId(null);
-           fetchParticipants();
+          setActiveDuelId(null);
+          fetchParticipants();
+          // Небольшая задержка: следующий раунд мог только что создаться
+          setTimeout(() => checkForActiveDuel(), 1500);
         }}
       />
     );
@@ -168,16 +182,16 @@ export function TournamentLobby({ tournamentId }: LobbyProps) {
   if (status === 'active' || status === 'finished') {
     return (
       <div className="h-full p-4 md:p-8 flex flex-col">
-        {!activeDuelId && status === 'active' && (
-           <div className="bg-slate-800 p-4 text-center text-slate-400 mb-4 rounded-xl border border-slate-700 animate-pulse">
-             {t('tournaments.wait_other_matches')}
-           </div>
+        {status === 'active' && !activeDuelId && (
+          <div className="bg-slate-800 p-4 text-center text-slate-400 mb-4 rounded-xl border border-slate-700 animate-pulse">
+            {t('tournaments.wait_other_matches')}
+          </div>
         )}
         <div className="flex-1 overflow-hidden">
-           <TournamentBracket
-             tournamentId={tournamentId}
-             onEnterMatch={() => {}}
-           />
+          <TournamentBracket
+            tournamentId={tournamentId}
+            onEnterMatch={(duelId) => setActiveDuelId(duelId)}
+          />
         </div>
       </div>
     );
@@ -187,14 +201,17 @@ export function TournamentLobby({ tournamentId }: LobbyProps) {
     <div className="flex items-center justify-center h-full p-4">
       <div className="w-full max-w-5xl bg-slate-900/90 border border-cyan-500/30 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-cyan-500 via-purple-500 to-cyan-500 animate-pulse" />
-       
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <div className="flex items-center gap-3 mb-1">
               <Shield className="w-8 h-8 text-cyan-400" />
               <h1 className="text-3xl font-black text-white uppercase italic">{t('tournaments.lobby_title')}</h1>
             </div>
-            <p className="text-slate-400 text-sm">{t('tournaments.code')} <span className="text-cyan-400 font-mono font-bold text-lg ml-2">{tournamentCode}</span></p>
+            <p className="text-slate-400 text-sm">
+              {t('tournaments.code')}
+              <span className="text-cyan-400 font-mono font-bold text-lg ml-2">{tournamentCode}</span>
+            </p>
           </div>
           <div className="flex items-center gap-3 bg-slate-800 px-6 py-3 rounded-full border border-slate-700">
             <Loader className="w-5 h-5 text-cyan-400 animate-spin" />
@@ -204,13 +221,13 @@ export function TournamentLobby({ tournamentId }: LobbyProps) {
 
         <div className="bg-slate-950/50 rounded-2xl p-6 border border-slate-800 min-h-[300px]">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-slate-400 text-sm uppercase tracking-wider font-bold">{t('tournaments.participants')} ({participants.length})</h3>
+            <h3 className="text-slate-400 text-sm uppercase tracking-wider font-bold">
+              {t('tournaments.participants')} ({participants.length})
+            </h3>
             <div className="flex items-center gap-2">
-              <button
-                onClick={fetchParticipants}
+              <button onClick={fetchParticipants}
                 className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors"
-                title={t('tournaments.refresh')}
-              >
+                title={t('tournaments.refresh')}>
                 <RefreshCw className="w-5 h-5" />
               </button>
               <Users className="w-5 h-5 text-slate-500" />
