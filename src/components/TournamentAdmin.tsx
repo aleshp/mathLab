@@ -5,10 +5,91 @@ import QRCode from 'react-qr-code';
 import { TournamentBracket } from './TournamentBracket';
 import {
   Users, Play, Trophy, X, Crown, Copy, Loader, RefreshCw,
-  Trash2, AlertTriangle, Eye, ChevronRight,
+  Trash2, AlertTriangle, Eye, ChevronRight, UserX, SkipForward, Swords,
 } from 'lucide-react';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { SpectatorModal } from './SpectatorModal';
+
+// ── Модалка: принудительно выбрать победителя ────────────────
+function ForceFinishModal({
+  duel,
+  onConfirm,
+  onCancel,
+}: {
+  duel: any;
+  onConfirm: (winnerId: string) => void;
+  onCancel: () => void;
+}) {
+  const [selected, setSelected] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+
+  const p1 = duel.p1?.username || 'Игрок 1';
+  const p2 = duel.p2?.username || 'Игрок 2';
+
+  return (
+    <div className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-slate-900 border border-amber-500/40 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="p-2 bg-amber-500/20 rounded-lg">
+            <SkipForward className="w-5 h-5 text-amber-400" />
+          </div>
+          <div>
+            <h3 className="text-white font-bold text-lg">Скипнуть матч</h3>
+            <p className="text-slate-400 text-xs">Выбери победителя вручную</p>
+          </div>
+        </div>
+
+        <div className="text-xs text-slate-500 font-mono uppercase tracking-wider mb-3">
+          Раунд {duel.round} · Счёт: {duel.player1_score} : {duel.player2_score}
+        </div>
+
+        <div className="space-y-2 mb-6">
+          {[
+            { id: duel.player1_id, name: p1, score: duel.player1_score },
+            { id: duel.player2_id, name: p2, score: duel.player2_score },
+          ].map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setSelected(p.id)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all ${
+                selected === p.id
+                  ? 'border-amber-400 bg-amber-500/15 text-amber-300'
+                  : 'border-slate-700 bg-slate-800/60 text-slate-200 hover:border-slate-500'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {selected === p.id && <Crown className="w-4 h-4 text-amber-400" />}
+                <span className="font-bold">{p.name}</span>
+              </div>
+              <span className="font-mono text-sm opacity-60">{p.score} очков</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm"
+          >
+            Отмена
+          </button>
+          <button
+            disabled={!selected || loading}
+            onClick={async () => {
+              if (!selected) return;
+              setLoading(true);
+              await onConfirm(selected);
+            }}
+            className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4" />}
+            Применить
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function TournamentAdmin({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
@@ -25,6 +106,41 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
   const [advancing, setAdvancing] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [spectatingDuelId, setSpectatingDuelId] = useState<string | null>(null);
+  const [forceFinishDuel, setForceFinishDuel] = useState<any | null>(null);
+
+  // ── Кикнуть игрока ───────────────────────────────────────
+  async function kickPlayer(userId: string, username: string) {
+    if (!tournamentId) return;
+    if (!confirm(`Удалить ${username} из турнира?`)) return;
+    try {
+      const { error } = await supabase.rpc("kick_tournament_player", {
+        t_id: tournamentId,
+        player_uuid: userId,
+      });
+      if (error) throw error;
+      fetchParticipants(tournamentId);
+    } catch (err: any) {
+      alert("Ошибка: " + (err.message || "Не удалось кикнуть игрока"));
+    }
+  }
+
+  // ── Принудительно завершить матч ─────────────────────────
+  async function handleForceFinish(winnerId: string) {
+    if (!forceFinishDuel) return;
+    try {
+      const { error } = await supabase.rpc("force_finish_duel", {
+        duel_uuid: forceFinishDuel.id,
+        winner_uuid: winnerId,
+      });
+      if (error) throw error;
+      setForceFinishDuel(null);
+      if (tournamentId) fetchActiveDuels(tournamentId);
+    } catch (err: any) {
+      alert("Ошибка: " + (err.message || "Не удалось скипнуть матч"));
+      setForceFinishDuel(null);
+    }
+  }
+
 
   // ── Инициализация ────────────────────────────────────────
   useEffect(() => {
@@ -195,6 +311,14 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
         <SpectatorModal duelId={spectatingDuelId} onClose={() => setSpectatingDuelId(null)} />
       )}
 
+      {forceFinishDuel && (
+        <ForceFinishModal
+          duel={forceFinishDuel}
+          onConfirm={handleForceFinish}
+          onCancel={() => setForceFinishDuel(null)}
+        />
+      )}
+
       {showConfirmClose && (
         <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-red-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
@@ -327,15 +451,27 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
                     <p className="text-slate-500 text-sm text-center py-4">Нет активных матчей</p>
                   )}
                   {activeDuels.map((duel) => (
-                    <div key={duel.id} onClick={() => setSpectatingDuelId(duel.id)}
-                      className="bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-cyan-500/50 p-4 rounded-xl cursor-pointer transition-all group relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div key={duel.id}
+                      className="bg-slate-800 border border-slate-700 p-4 rounded-xl transition-all relative overflow-hidden">
                       <div className="relative z-10">
                         <div className="flex justify-between items-center text-xs text-slate-500 mb-2 font-mono">
                           <span className="bg-slate-900 px-2 py-0.5 rounded text-cyan-400 border border-slate-700">R{duel.round}</span>
-                          <span className="flex items-center gap-1 group-hover:text-cyan-400 transition-colors">
-                            <Eye className="w-3 h-3" /> Watch
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setSpectatingDuelId(duel.id)}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition-colors text-xs"
+                              title="Смотреть матч"
+                            >
+                              <Eye className="w-3 h-3" /> Watch
+                            </button>
+                            <button
+                              onClick={() => setForceFinishDuel(duel)}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-400 hover:text-amber-300 transition-colors text-xs"
+                              title="Скипнуть матч"
+                            >
+                              <SkipForward className="w-3 h-3" /> Скип
+                            </button>
+                          </div>
                         </div>
                         <div className="flex justify-between items-center">
                           <div className="font-bold text-white truncate max-w-[80px]">{duel.p1?.username || '???'}</div>
@@ -393,7 +529,7 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
 
                     return (
                       <div key={p.id}
-                        className="bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex items-center gap-3 group hover:border-cyan-500/30 transition-all">
+                        className="bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex items-center gap-3 group hover:border-slate-600 transition-all">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-white font-black text-sm flex-shrink-0">
                           {letter}
                         </div>
@@ -403,6 +539,13 @@ export function TournamentAdmin({ onClose }: { onClose: () => void }) {
                             {mmr} MP · Ур.{lvl}
                           </div>
                         </div>
+                        <button
+                          onClick={() => kickPlayer(p.user_id, username)}
+                          className="flex-shrink-0 p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                          title={`Кикнуть ${username}`}
+                        >
+                          <UserX className="w-4 h-4" />
+                        </button>
                       </div>
                     );
                   })}
