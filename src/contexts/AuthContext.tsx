@@ -20,6 +20,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // === ГЛОБАЛЬНЫЙ ХЕЛПЕР ДЛЯ ПЕРЕСЧЕТА ГОЛОДА ===
+  // Вычисляет, сколько времени прошло с последнего кормления
+  const syncHungerData = (data: any, userId: string) => {
+    let profileData = { ...data };
+    
+    if (profileData.companion_name) {
+      const lastUpdate = profileData.last_fed_at ? new Date(profileData.last_fed_at).getTime() : Date.now();
+      const now = Date.now();
+      const hoursPassed = (now - lastUpdate) / (1000 * 60 * 60);
+      const hungerLoss = Math.floor(hoursPassed * 5); // Теряет 5 единиц в час
+
+      if (hungerLoss > 0) {
+        const newHunger = Math.max(0, (profileData.companion_hunger || 100) - hungerLoss);
+        
+        // Если голод изменился, обновляем локальный стейт и пишем в базу
+        if (newHunger !== profileData.companion_hunger) {
+          profileData.companion_hunger = newHunger;
+          profileData.last_fed_at = new Date().toISOString();
+          
+          // Фоновое обновление БД (не блокирует UI)
+          supabase.from('profiles').update({ 
+            companion_hunger: newHunger,
+            last_fed_at: profileData.last_fed_at
+          }).eq('id', userId).then();
+        }
+      }
+    }
+    return profileData;
+  };
+
   // Обновление профиля вручную (для Реактора и Магазина)
   async function refreshProfile() {
     if (!user) return;
@@ -31,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (error) throw error;
-      if (data) setProfile(data);
+      if (data) setProfile(syncHungerData(data, user.id)); // Пропускаем через проверку голода
     } catch (error) {
       console.error('Ошибка обновления профиля:', error);
     }
@@ -66,14 +96,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  },[]);
 
-  // Realtime подписка на профиль — уникальный канал на каждого юзера
+  // Realtime подписка на профиль
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel(`profile-${user.id}`) // ← фикс: уникальное имя канала, без конфликтов в нескольких вкладках
+      .channel(`profile-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -102,19 +132,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (error) throw error;
-      if (data) setProfile(data);
+      if (data) {
+        // Пропускаем профиль через функцию пересчета голода ДО первой отрисовки!
+        setProfile(syncHungerData(data, userId));
+      }
     } catch (error) {
       console.error('Ошибка загрузки профиля:', error);
-      // Профиль не загрузился, но приложение продолжает работу
     } finally {
-      setLoading(false); // ← всегда сбрасываем loading, даже при ошибке
+      setLoading(false); 
     }
   }
 
   async function signUp(email: string, password: string, username: string) {
     const trimmed = username.trim();
 
-    // Валидация на уровне контекста (второй рубеж защиты)
     if (trimmed.length < 3 || trimmed.length > 20) {
       throw new Error('Имя должно быть от 3 до 20 символов');
     }
@@ -125,7 +156,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Недопустимое имя пользователя');
     }
 
-    // Проверка уникальности username до регистрации
     const { data: existing, error: checkError } = await supabase
       .from('profiles')
       .select('id')
