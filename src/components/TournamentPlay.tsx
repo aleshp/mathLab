@@ -336,7 +336,7 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
             onClick={() => onFinishedRef.current()}
             className="w-full px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-colors"
           >
-            {t('tournaments.bracket_title')}
+            {t('tournaments.bracket_title')} (Авто-выход через 5с...)
           </button>
         </div>
       </div>
