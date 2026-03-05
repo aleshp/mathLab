@@ -451,7 +451,7 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
 
                   {/* Награда SXP суриката — анимация (реальное начисление в триггере БД) */}
                   {result === 'correct' && user && (
-                    <div className="flex flex-col gap-2 mt-3 animate-in slide-in-from-bottom-2 fade-in duration-500">
+                    <div className="flex flex-col gap-2 mt-3">
                       <div
                         className={`inline-flex items-center gap-2 px-3 py-1.5 border rounded-xl text-xs font-bold font-mono w-fit ${
                           profile?.is_premium
