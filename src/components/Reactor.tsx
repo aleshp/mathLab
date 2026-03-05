@@ -62,10 +62,14 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
   // Здесь только анимация — реальное значение берём из профиля (is_premium)
   const [sxpGained, setSxpGained] = useState<number | null>(null);
 
+  // ID задач, которые пользователь уже решил верно хотя бы раз
+  // Нужно чтобы не давать XP/SXP повторно и не показывать бейдж
+  const [alreadySolvedIds, setAlreadySolvedIds] = useState<Set<string>>(new Set());
+
   const GUEST_LIMIT = 3;
   const [showPaywall, setShowPaywall] = useState(false);
 
-  // ── Загрузка задач ────────────────────────────────────────
+  // ── Загрузка задач + уже решённых ────────────────────────
   useEffect(() => {
     async function fetchProblems() {
       setLoading(true);
@@ -81,13 +85,27 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
           const shuffled = data.sort(() => 0.5 - Math.random());
           setProblems(shuffled);
           setCurrentProblem(shuffled[0]);
+
+          // Загружаем уже правильно решённые задачи этого пользователя
+          if (user) {
+            const problemIds = shuffled.map((p: any) => p.id);
+            const { data: solved } = await supabase
+              .from('experiments')
+              .select('problem_id')
+              .eq('user_id', user.id)
+              .eq('correct', true)
+              .in('problem_id', problemIds);
+            if (solved) {
+              setAlreadySolvedIds(new Set(solved.map((e: any) => e.problem_id)));
+            }
+          }
         }
       } finally {
         setLoading(false);
       }
     }
     fetchProblems();
-  }, [module.id, forcedProblemIds]);
+  }, [module.id, forcedProblemIds, user?.id]);
 
   // ── Следующая задача ──────────────────────────────────────
   function loadNextProblem() {
@@ -170,17 +188,20 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
     setProblemsSolved(prev => prev + 1);
     if (isCorrect) setCorrectCount(prev => prev + 1);
 
-    // Показываем SXP сразу — до await, чтобы анимация не ждала сети
-    if (user && isCorrect) {
+    // Первое верное решение этой задачи — только тогда даём XP/SXP
+    const isFirstSolve = user && isCorrect && !alreadySolvedIds.has(currentProblem.id);
+
+    // Показываем SXP-бейдж СРАЗУ (до await), только если первое решение
+    if (isFirstSolve) {
       setSxpGained(profile?.is_premium ? 20 : 10);
     }
 
     // === Только для авторизованных пользователей ===
     if (user) {
       // Записываем эксперимент — триггер handle_new_experiment автоматически:
-      // 1. начислит companion_xp (+10 или +20 для premium)
+      // 1. начислит companion_xp (+10 или +20 для premium) — только первый раз
       // 2. обновит companion_level при накоплении
-      // 3. увеличит total_experiments
+      // 3. увеличит total_experiments — только первый раз
       await supabase.from('experiments').insert({
         user_id: user.id,
         module_id: module.id,
@@ -191,6 +212,8 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
       });
 
       if (isCorrect) {
+        // Добавляем в локальный Set чтобы не дать бейдж повторно в этой же сессии
+        setAlreadySolvedIds(prev => new Set([...prev, currentProblem.id]));
 
         // Если это работа над ошибками — удаляем задачу из ошибок
         if (forcedProblemIds) {
@@ -201,8 +224,8 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
             .eq('problem_id', currentProblem.id);
         }
 
-        // Обновляем прогресс по модулю (отдельно от total_experiments)
-        if (!forcedProblemIds) {
+        // Прогресс по модулю обновляем только при первом решении
+        if (!forcedProblemIds && isFirstSolve) {
           const { data: progressData } = await supabase
             .from('user_progress')
             .select('*')
@@ -229,7 +252,7 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
         }
 
         // Обновляем профиль в UI через 500мс (триггер уже успел отработать)
-        setTimeout(() => refreshProfile(), 500);
+        if (isFirstSolve) setTimeout(() => refreshProfile(), 500);
       }
     }
     // ↑ конец if (user)
