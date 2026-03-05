@@ -170,6 +170,11 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
     setProblemsSolved(prev => prev + 1);
     if (isCorrect) setCorrectCount(prev => prev + 1);
 
+    // Показываем SXP сразу — до await, чтобы анимация не ждала сети
+    if (user && isCorrect) {
+      setSxpGained(profile?.is_premium ? 20 : 10);
+    }
+
     // === Только для авторизованных пользователей ===
     if (user) {
       // Записываем эксперимент — триггер handle_new_experiment автоматически:
@@ -186,9 +191,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
       });
 
       if (isCorrect) {
-        // Показываем анимацию SXP — реальное значение считает триггер
-        const sxp = profile?.is_premium ? 20 : 10;
-        setSxpGained(sxp);
 
         // Если это работа над ошибками — удаляем задачу из ошибок
         if (forcedProblemIds) {
