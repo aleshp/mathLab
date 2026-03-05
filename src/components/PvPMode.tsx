@@ -357,14 +357,18 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     let timer: any;
     if (status === 'battle' && !feedback && currentProbIndex < problems.length) {
       timer = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) { handleTimeout(); return 60; }
-          return prev - 1;
-        });
+        setTimeLeft(prev => Math.max(0, prev - 1));
       }, 1000);
     }
     return () => clearInterval(timer);
   }, [status, feedback, currentProbIndex, problems.length]);
+
+  // Отдельно следит за нулем
+  useEffect(() => {
+    if (timeLeft === 0 && !feedback) {
+      handleTimeout();
+    }
+  },[timeLeft, feedback]); // handleTimeout обернут в useCallback
 
   useEffect(() => setTimeLeft(60), [currentProbIndex]);
 
