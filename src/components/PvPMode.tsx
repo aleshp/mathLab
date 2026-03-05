@@ -380,7 +380,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
   };
 
   // === End Game & Calibration Logic ===
-  async function endGame(winnerId: string | null, eloChange: number = 0) {
+async function endGame(winnerId: string | null, eloChange: number = 0) {
     if (status === 'finished') return;
     setStatus('finished');
 
@@ -392,24 +392,13 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       setWinner(isWin ? 'me' : 'opponent');
     }
 
-    // Корректный расчёт изменения MMR со знаком
     const change = winnerId === 'draw' ? 0 : isBotMatch ? (isWin ? 25 : -25) : Math.abs(eloChange) * (isWin ? 1 : -1);
     setMmrChange(Math.abs(change));
+    setRevealOldMMR(profile?.mmr ?? BASE_MMR);
 
-    // Для бот-матчей явно пишем MMR в БД (RPC с BOT_UUID этого не делает)
-    if (isBotMatch && user && winnerId !== 'draw') {
-      const newMMR = Math.max(0, (profile?.mmr ?? BASE_MMR) + change);
-      await supabase.from('profiles').update({ mmr: newMMR }).eq('id', user.id);
-    }
+    // ВАЖНО: Убрали ручной UPDATE для бота! SQL finish_duel сделает это сама.
 
-    if (user && winnerId !== 'draw') {
-      const isWin = isBotMatch ? winnerId === 'me' : winnerId === user.id;
-    }
-
-    const oldMMR = profile?.mmr ?? BASE_MMR;
-    setRevealOldMMR(oldMMR);
-
-    // Calibration Logic
+    // Логика калибровки остается
     if (user && !profile?.has_calibrated && winnerId !== 'draw') {
       try {
         const result = await recordCalibrationMatch(user.id, isWin, opponentMMR);
