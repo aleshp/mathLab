@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getPvPRankByMMR } from '../lib/PvPRankSystem';
 
-export const BOT_NAMES = [
+export const BOT_NAMES =[
   'Aizere_2008', 'Санжик', 'КиборгУбийца', 'Alikhan07', 
   'Шапи', 'Ералы', 'Aleke', 'Райан-Гослинг', 'Мерей',
   'Math_Terminator', 'X_Ae_A-12', 'Сын Маминой Подруги',
@@ -56,8 +56,12 @@ export function useBotOpponent({
   const [botProgress, setBotProgress] = useState(initialProgress);
   
   const timeouts = useRef<NodeJS.Timeout[]>([]);
+
+  // === ФИКС УТЕЧКИ ПАМЯТИ И ЛИШНИХ РЕНДЕРОВ ===
   const onUpdateRef = useRef(onProgressUpdate);
-  useEffect(() => { onUpdateRef.current = onProgressUpdate; }, [onProgressUpdate]);
+  useEffect(() => { 
+    onUpdateRef.current = onProgressUpdate; 
+  }, [onProgressUpdate]);
 
   // Определяем настройки бота на основе ранга игрока
   const playerRank = getPvPRankByMMR(playerMMR);
@@ -99,7 +103,8 @@ export function useBotOpponent({
       setBotScore(newScore);
       setBotProgress(newProgress);
       
-      onProgressUpdate(newScore, newProgress);
+      // Вызываем коллбэк через ref, чтобы не засорять зависимости useEffect
+      onUpdateRef.current(newScore, newProgress);
 
     }, nextThinkingTime);
 
@@ -109,7 +114,7 @@ export function useBotOpponent({
       timeouts.current.forEach(clearTimeout);
       timeouts.current = [];
     };
-  }, [isEnabled, botProgress, maxQuestions, botScore, behavior]);
+  },[isEnabled, botProgress, maxQuestions, botScore, behavior]);
 
   return { botName, botScore, botProgress };
 }
