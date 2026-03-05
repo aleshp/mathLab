@@ -16,7 +16,8 @@ import {
   Flag,
   AlertTriangle,
   Target,
-  Info
+  Info,
+  Users // <-- Добавлена иконка Users
 } from 'lucide-react';
 import { getPvPRank, getPvPShortRank } from '../lib/gameLogic';
 import { MathKeypad } from './MathKeypad';
@@ -48,10 +49,13 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
   const [duelId, setDuelId] = useState<string | null>(initialDuelId || null);
 
   // Opponent Data
-  const [opponentName, setOpponentName] = useState<string>('???');
+  const[opponentName, setOpponentName] = useState<string>('???');
   const [opponentMMR, setOpponentMMR] = useState<number>(1000);
   const [isBotMatch, setIsBotMatch] = useState(false);
   const [botName, setBotName] = useState<string>('Bot');
+  
+  // Флаг дружеского матча (Патч 2)
+  const[isFriendlyMatch, setIsFriendlyMatch] = useState(false);
 
   // Game Data
   const [problems, setProblems] = useState<any[]>([]);
@@ -74,7 +78,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [showSurrenderModal, setShowSurrenderModal] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [showRankLegend, setShowRankLegend] = useState(false);
+  const[showRankLegend, setShowRankLegend] = useState(false);
 
   // Search timer
   const [searchElapsed, setSearchElapsed] = useState(0);
@@ -163,7 +167,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     if (initialDuelId && status === 'searching') {
       reconnectToDuel(initialDuelId);
     }
-  }, []);
+  },[]);
 
   async function reconnectToDuel(id: string) {
     const { data: duel } = await supabase.from('duels').select('*').eq('id', id).single();
@@ -172,6 +176,9 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       if (duel) endGame(duel.winner_id, duel.elo_change);
       return;
     }
+
+    // Патч 2: Устанавливаем флаг, если матч дружеский
+    setIsFriendlyMatch(!!duel.is_friendly);
 
     const isP1 = duel.player1_id === user?.id;
     const oppId = isP1 ? duel.player2_id : duel.player1_id;
@@ -199,7 +206,9 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
   async function findMatch() {
     setStatus('searching');
     setIsBotMatch(false);
+    setIsFriendlyMatch(false); // Обычный поиск — это рейтинговый матч
     setSearchElapsed(0);
+    
     if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
     searchIntervalRef.current = setInterval(() => {
       setSearchElapsed(prev => prev + 1);
@@ -232,7 +241,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     }
 
     const { data: allProbs } = await supabase.from('problems').select('id').eq('module_id', PVP_MODULE_ID);
-    const shuffled = (allProbs ?? []).sort(() => 0.5 - Math.random()).slice(0, 10).map((p: any) => p.id);
+    const shuffled = (allProbs ??[]).sort(() => 0.5 - Math.random()).slice(0, 10).map((p: any) => p.id);
 
     const { data: newDuel } = await supabase.from('duels').insert({
       player1_id: user!.id, player1_mmr: myMMR, status: 'waiting',
@@ -396,22 +405,22 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       setWinner(isWin ? 'me' : 'opponent');
     }
 
-    // ВОССТАНОВЛЕНА ЛОГИКА: Расчет изменения MMR на клиенте для ботов
+    // Расчет изменения MMR на клиенте для ботов
     const change = winnerId === 'draw' ? 0 : isBotMatch ? (isWin ? 25 : -25) : Math.abs(eloChange) * (isWin ? 1 : -1);
     setMmrChange(Math.abs(change));
     
     // Сохраняем старый MMR для показа анимации
     setRevealOldMMR(profile?.mmr ?? BASE_MMR);
 
-    // ВАЖНО: Если это БОТ — обновляем MMR клиента вручную (как просил вернуть)
-    if (isBotMatch && user && winnerId !== 'draw') {
+    // ВАЖНО: Если это БОТ и НЕ дружеский матч — обновляем MMR клиента вручную
+    if (isBotMatch && user && winnerId !== 'draw' && !isFriendlyMatch) {
       const currentMMR = profile?.mmr ?? BASE_MMR;
       const newMMR = Math.max(0, currentMMR + change);
       await supabase.from('profiles').update({ mmr: newMMR }).eq('id', user.id);
     }
 
-    // Logic for calibration
-    if (user && !profile?.has_calibrated && winnerId !== 'draw') {
+    // Logic for calibration (защищено от дружеских матчей)
+    if (user && !profile?.has_calibrated && winnerId !== 'draw' && !isFriendlyMatch) {
       try {
         const result = await recordCalibrationMatch(user.id, isWin, opponentMMR);
         if (result && !result.isCalibrating) {
@@ -683,9 +692,14 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
               )}
             </div>
 
-            <div className="text-right">
-              <div className="text-cyan-400 text-[10px] font-bold uppercase">{t('pvp.you')}</div>
-              <div className="text-xl font-black text-white leading-none">{myScore}</div>
+            <div className="text-right flex items-center gap-2">
+              <div>
+                <div className="text-cyan-400 text-[10px] font-bold uppercase flex items-center gap-1 justify-end">
+                  {isFriendlyMatch && <Users className="w-3 h-3 text-emerald-400" />}
+                  {t('pvp.you')}
+                </div>
+                <div className="text-xl font-black text-white leading-none">{myScore}</div>
+              </div>
             </div>
 
             <div className="flex flex-col items-center px-3">
@@ -771,14 +785,25 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
 
         <div className="flex items-center justify-center h-full p-4 animate-in zoom-in duration-300">
           <div className="text-center p-8 md:p-12 bg-slate-800 rounded-3xl border-2 border-slate-600 shadow-2xl max-w-lg w-full">
+            
+            {/* Патч 2: Бейдж дружеского матча */}
+            {isFriendlyMatch && (
+              <div className="mb-6 inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-bold shadow-sm">
+                <Users className="w-4 h-4" />
+                Дружеский матч · Рейтинг не меняется
+              </div>
+            )}
+
             {isWin ? (
               <>
                 <Trophy className="w-20 h-20 text-yellow-400 mx-auto mb-4 drop-shadow-lg" />
                 <h1 className="text-4xl font-black text-yellow-400 mb-2">{t('pvp.win')}</h1>
                 {opponentDisconnected && !isBotMatch ? (
                   <p className="text-emerald-300 mb-6 text-sm">{t('pvp.opponent_resigned')}</p>
-                ) : isCalibrating ? (
+                ) : isCalibrating && !isFriendlyMatch ? (
                   <p className="text-slate-300 font-mono mb-6">{t('pvp.calib_recorded')}</p>
+                ) : isFriendlyMatch ? (
+                  <p className="text-emerald-400 font-bold text-lg mb-6">Отличная игра!</p>
                 ) : (
                   <p className="text-emerald-400 font-bold text-lg mb-6 animate-pulse">+ {mmrChange} MP</p>
                 )}
@@ -787,14 +812,20 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
               <>
                 <Flag className="w-20 h-20 text-slate-400 mx-auto mb-4" />
                 <h1 className="text-4xl font-black text-slate-300 mb-2">{t('pvp.draw')}</h1>
-                <p className="text-slate-500 mb-6">0 MP</p>
+                {isFriendlyMatch ? (
+                  <p className="text-slate-500 mb-6">Хорошая тренировка</p>
+                ) : (
+                  <p className="text-slate-500 mb-6">0 MP</p>
+                )}
               </>
             ) : (
               <>
                 <XCircle className="w-20 h-20 text-red-500 mx-auto mb-4" />
                 <h1 className="text-4xl font-black text-red-500 mb-2">{t('pvp.loss')}</h1>
-                {isCalibrating ? (
+                {isCalibrating && !isFriendlyMatch ? (
                   <p className="text-slate-400 mb-6">{t('pvp.result_recorded')}</p>
+                ) : isFriendlyMatch ? (
+                  <p className="text-slate-400 mb-6">Повезет в следующий раз</p>
                 ) : (
                   <p className="text-slate-400 mb-6">- {mmrChange} MP</p>
                 )}
