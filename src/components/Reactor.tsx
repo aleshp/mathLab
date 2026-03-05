@@ -60,8 +60,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
 
   // SXP = опыт суриката, начисляется триггером handle_new_experiment в БД
   // Здесь только анимация — реальное значение берём из профиля (is_premium)
-  const [sxpGained, setSxpGained] = useState<number | null>(null);
-
   // ID задач, которые пользователь уже решил верно хотя бы раз
   // Нужно чтобы не давать XP/SXP повторно и не показывать бейдж
   const [alreadySolvedIds, setAlreadySolvedIds] = useState<Set<string>>(new Set());
@@ -190,11 +188,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
 
     // Первое верное решение этой задачи — только тогда даём XP/SXP
     const isFirstSolve = user && isCorrect && !alreadySolvedIds.has(currentProblem.id);
-
-    // Показываем SXP-бейдж СРАЗУ (до await), только если первое решение
-    if (isFirstSolve) {
-      setSxpGained(profile?.is_premium ? 20 : 10);
-    }
 
     // === Только для авторизованных пользователей ===
     if (user) {
@@ -457,7 +450,7 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
                   </div>
 
                   {/* Награда SXP суриката — анимация (реальное начисление в триггере БД) */}
-                  {result === 'correct' && sxpGained !== null && (
+                  {result === 'correct' && user && (
                     <div className="flex flex-col gap-2 mt-3 animate-in slide-in-from-bottom-2 fade-in duration-500">
                       <div
                         className={`inline-flex items-center gap-2 px-3 py-1.5 border rounded-xl text-xs font-bold font-mono w-fit ${
@@ -471,7 +464,7 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
                             profile?.is_premium ? 'text-amber-400 animate-pulse' : ''
                           }`}
                         />
-                        +{sxpGained} SXP
+                        +{profile?.is_premium ? 20 : 10} SXP
                         {profile?.is_premium && (
                           <span className="ml-1 px-1.5 py-0.5 bg-amber-500 text-black text-[9px] rounded font-black uppercase tracking-wider">
                             PREMIUM ×2
