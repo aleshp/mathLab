@@ -151,6 +151,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     await supabase.from('duels').update({ status: 'finished' }).eq('id', duelId);
     await supabase.rpc('finish_duel', { duel_uuid: duelId, finisher_uuid: user.id });
 
+    // Принудительное начисление админу
     const newMMR = (profile?.mmr ?? BASE_MMR) + 25;
     await supabase.from('profiles').update({ mmr: newMMR }).eq('id', user.id);
 
@@ -191,7 +192,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     setMyScore(isP1 ? duel.player1_score : duel.player2_score);
     setCurrentProbIndex(isP1 ? duel.player1_progress : duel.player2_progress);
 
-    // При реконнекте VS Screen не нужен, сразу в бой
     setStatus('battle');
   }
 
@@ -205,7 +205,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       setSearchElapsed(prev => prev + 1);
     }, 1000);
 
-    const range = 100;
+    const range = 100; // Уменьшенный диапазон по запросу
     const { data: waitingDuel } = await supabase
       .from('duels')
       .select('*')
@@ -352,7 +352,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
 
   const handleTimeout = () => submitResult(false);
 
-  // Timer
+  // Timer: Исправленный таймер, который не вызывает лишних рендеров
   useEffect(() => {
     let timer: any;
     if (status === 'battle' && !feedback && currentProbIndex < problems.length) {
@@ -363,12 +363,12 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     return () => clearInterval(timer);
   }, [status, feedback, currentProbIndex, problems.length]);
 
-  // Отдельно следит за нулем
+  // Обработка 0 таймера
   useEffect(() => {
-    if (timeLeft === 0 && !feedback) {
+    if (timeLeft === 0 && !feedback && status === 'battle') {
       handleTimeout();
     }
-  },[timeLeft, feedback]); // handleTimeout обернут в useCallback
+  }, [timeLeft, feedback, status]);
 
   useEffect(() => setTimeLeft(60), [currentProbIndex]);
 
@@ -384,7 +384,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
   };
 
   // === End Game & Calibration Logic ===
-async function endGame(winnerId: string | null, eloChange: number = 0) {
+  async function endGame(winnerId: string | null, eloChange: number = 0) {
     if (status === 'finished') return;
     setStatus('finished');
 
@@ -396,13 +396,21 @@ async function endGame(winnerId: string | null, eloChange: number = 0) {
       setWinner(isWin ? 'me' : 'opponent');
     }
 
+    // ВОССТАНОВЛЕНА ЛОГИКА: Расчет изменения MMR на клиенте для ботов
     const change = winnerId === 'draw' ? 0 : isBotMatch ? (isWin ? 25 : -25) : Math.abs(eloChange) * (isWin ? 1 : -1);
     setMmrChange(Math.abs(change));
+    
+    // Сохраняем старый MMR для показа анимации
     setRevealOldMMR(profile?.mmr ?? BASE_MMR);
 
-    // ВАЖНО: Убрали ручной UPDATE для бота! SQL finish_duel сделает это сама.
+    // ВАЖНО: Если это БОТ — обновляем MMR клиента вручную (как просил вернуть)
+    if (isBotMatch && user && winnerId !== 'draw') {
+      const currentMMR = profile?.mmr ?? BASE_MMR;
+      const newMMR = Math.max(0, currentMMR + change);
+      await supabase.from('profiles').update({ mmr: newMMR }).eq('id', user.id);
+    }
 
-    // Логика калибровки остается
+    // Logic for calibration
     if (user && !profile?.has_calibrated && winnerId !== 'draw') {
       try {
         const result = await recordCalibrationMatch(user.id, isWin, opponentMMR);
@@ -525,12 +533,9 @@ async function endGame(winnerId: string | null, eloChange: number = 0) {
 
     return (
       <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
-        {/* Фон */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1e293b_0%,_#020617_100%)]" />
 
         <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-sm">
-
-          {/* Пульсирующий радар */}
           <div className="relative w-32 h-32 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full border-2 border-red-500/20 animate-ping" style={{ animationDuration: '1.5s' }} />
             <div className="absolute inset-2 rounded-full border border-red-500/30 animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.3s' }} />
@@ -540,7 +545,6 @@ async function endGame(winnerId: string | null, eloChange: number = 0) {
             </div>
           </div>
 
-          {/* Заголовок */}
           <div className="text-center">
             <h2 className="text-2xl font-black text-white uppercase tracking-widest">
               {initialDuelId ? 'Реконнект' : `Поиск${dots}`}
@@ -550,7 +554,6 @@ async function endGame(winnerId: string | null, eloChange: number = 0) {
             </p>
           </div>
 
-          {/* Прогресс-бар + estimated time */}
           <div className="w-full space-y-2">
             <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider">
               <span className="text-slate-500">Время поиска</span>
@@ -576,7 +579,6 @@ async function endGame(winnerId: string | null, eloChange: number = 0) {
             </div>
           </div>
 
-          {/* Статус-строки */}
           <div className="w-full space-y-1.5">
             {[
               { done: searchElapsed >= 1, text: 'Подключение к серверу' },
@@ -595,7 +597,6 @@ async function endGame(winnerId: string | null, eloChange: number = 0) {
             ))}
           </div>
 
-          {/* Кнопка отмены */}
           <button
             onClick={async () => {
               if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
@@ -660,7 +661,6 @@ async function endGame(winnerId: string | null, eloChange: number = 0) {
           </div>
         )}
 
-        {/* STICKY TOP: SCOREBOARD */}
         <div className="flex-shrink-0 bg-slate-900 border-b border-slate-800 shadow-lg z-10">
           <div className="flex items-center justify-between px-3 py-2 bg-slate-800/80 border-b border-slate-700">
 
@@ -712,7 +712,6 @@ async function endGame(winnerId: string | null, eloChange: number = 0) {
           </div>
         </div>
 
-        {/* MIDDLE: TASK */}
         <div className="flex-1 flex flex-col items-center justify-center p-4 bg-slate-900 overflow-y-auto">
           {currentProb ? (
             <div className="w-full max-w-lg">
@@ -733,7 +732,6 @@ async function endGame(winnerId: string | null, eloChange: number = 0) {
           )}
         </div>
 
-        {/* BOTTOM: INPUT & KEYPAD */}
         <div className="flex-shrink-0 bg-slate-900 border-t border-slate-800 shadow-2xl z-20 pb-safe">
           {feedback ? (
             <div className={`p-8 flex flex-col items-center justify-center h-[320px] animate-in zoom-in duration-200 ${feedback === 'correct' ? 'bg-emerald-900/20' : 'bg-red-900/20'}`}>
