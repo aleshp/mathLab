@@ -107,8 +107,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
 
   // ── Следующая задача ──────────────────────────────────────
   function loadNextProblem() {
-    setSxpGained(null);
-
     if (!user && problemsSolved >= GUEST_LIMIT) {
       setShowPaywall(true);
       return;
