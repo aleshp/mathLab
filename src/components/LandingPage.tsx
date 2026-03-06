@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Zap, Shield, Trophy, Mail, Check, CreditCard } from 'lucide-react';
+import { ArrowRight, Zap, Shield, Trophy, Mail, Check, CreditCard, Play } from 'lucide-react';
 import Squares from './Squares';
+import { CinematicTrailer } from './CinematicTrailer'; // Наш новый эпичный трейлер
 
 type Props = {
   onStartDemo: () => void;
@@ -12,6 +13,9 @@ type Props = {
 export function LandingPage({ onStartDemo, onLogin, onOpenLegal }: Props) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  
+  // Стейт для показа трейлера
+  const[showTrailer, setShowTrailer] = useState(false);
 
   const handleEmailClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -47,6 +51,16 @@ export function LandingPage({ onStartDemo, onLogin, onOpenLegal }: Props) {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+            
+            {/* ГЛАВНАЯ КНОПКА: ЗАПУСК ТРЕЙЛЕРА */}
+            <button 
+              onClick={() => setShowTrailer(true)} 
+              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-red-600 to-orange-600 text-white font-black rounded-xl text-lg transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:shadow-[0_0_30px_rgba(239,68,68,0.6)] hover:scale-105 active:scale-95 border border-red-400/50 uppercase tracking-wide"
+            >
+              <Play className="w-5 h-5 fill-current" />
+              Смотреть Трейлер
+            </button>
+
             <button onClick={onStartDemo} className="w-full sm:w-auto px-8 py-4 bg-white text-slate-900 hover:bg-cyan-50 font-bold rounded-xl text-lg transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105">
               {t('landing.btn_demo')} <ArrowRight className="w-5 h-5" />
             </button>
@@ -98,6 +112,15 @@ export function LandingPage({ onStartDemo, onLogin, onOpenLegal }: Props) {
         </div>
 
       </div>
+
+      {/* Рендерим трейлер, если стейт активен */}
+      {showTrailer && (
+        <CinematicTrailer 
+          onClose={() => setShowTrailer(false)} 
+          onAction={onLogin} // Если юзер жмет "Ворваться на Арену", открываем логин/регу!
+        />
+      )}
+      
     </div>
   );
 }
