@@ -12,9 +12,6 @@ type Props = {
   onAction: () => void;
 };
 
-// ============================================================================
-// 1. ГЛОБАЛЬНЫЕ СТИЛИ И ЭФФЕКТЫ
-// ============================================================================
 const GlobalTrailerStyles = () => (
   <style>{`
     .trailer-vignette {
@@ -104,7 +101,6 @@ const MathRain = () => {
   );
 };
 
-// Призрачный курсор (Только для Акта 3)
 const GhostCursor = ({ x, y, clicking }: { x: number | string; y: number | string; clicking?: boolean }) => (
   <motion.div
     animate={{ x, y, scale: clicking ? 0.8 : 1 }}
@@ -124,9 +120,6 @@ const GhostCursor = ({ x, y, clicking }: { x: number | string; y: number | strin
   </motion.div>
 );
 
-// ============================================================================
-// 2. МОКИ РЕАЛЬНОГО UI (С ИДЕАЛЬНОЙ ВЕРСТКОЙ)
-// ============================================================================
 const MockSectorCard = ({ title, icon: Icon, color, delay }: any) => (
   <motion.div
     initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, type: "spring", stiffness: 100 }}
@@ -208,41 +201,34 @@ const MockKeypad = ({ pressedKey }: { pressedKey: string | null }) => {
   );
 };
 
-// ============================================================================
-// 3. ГЛАВНЫЙ КОНТРОЛЛЕР ТРЕЙЛЕРА
-// ============================================================================
 export function CinematicTrailer({ onClose, onAction }: Props) {
   const [phase, setPhase] = useState(1);
-  // ХУКИ АНИМАЦИИ ВЕРХНЕГО УРОВНЯ
   const xpCount = useMotionValue(0);
   const xpWidth = useTransform(xpCount,[0, 100],["0%", "100%"]);
   const xpText = useTransform(xpCount, v => `${Math.round(v)}/100`);
  
   const mmrCount = useMotionValue(1240);
   const mmrRounded = useTransform(mmrCount, Math.round);
-  // СТЕЙТЫ ВЕРХНЕГО УРОВНЯ ДЛЯ ВНУТРЕННИХ АНИМАЦИЙ
   const [battlePhase, setBattlePhase] = useState(0);
   const [matchTimer, setMatchTimer] = useState(3);
   const [pressedKey, setPressedKey] = useState<string|null>(null);
   const [levelUp, setLevelUp] = useState(false);
   const [mapCursor, setMapCursor] = useState({ x: '50vw', y: '80vh', clicking: false });
-  // ОРКЕСТРАТОР СЦЕН
   useEffect(() => {
     const timeline =[
-      { p: 1, t: 0 }, // Акт 1: Скука
-      { p: 2, t: 4000 }, // Акт 2: Разрушение (Угроза)
-      { p: 3, t: 8000 }, // Акт 3: Карта
-      { p: 4, t: 12000 }, // Акт 4: Питомец
-      { p: 5, t: 16000 }, // Акт 5: VS Экран
-      { p: 6, t: 19500 }, // Акт 6: Геймплей (Мобильный UI)
-      { p: 7, t: 25000 }, // Акт 7: Триумф (Glassmorphism)
-      { p: 8, t: 29000 }, // Акт 8: CTA
+      { p: 1, t: 0 }, // Акт 1
+      { p: 2, t: 4000 }, // Акт 2
+      { p: 3, t: 8000 }, // Акт 3
+      { p: 4, t: 12000 }, // Акт 4
+      { p: 5, t: 16000 }, // Акт 5
+      { p: 6, t: 19500 }, // Акт 6
+      { p: 7, t: 25000 }, // Акт 7
+      { p: 8, t: 29000 }, // Акт 8
     ];
     const timeouts = timeline.map(s => setTimeout(() => setPhase(s.p), s.t));
     return () => timeouts.forEach(clearTimeout);
   },[]);
 
-  // ВНУТРЕННИЕ АНИМАЦИИ В ЗАВИСИМОСТИ ОТ СЦЕНЫ
   useEffect(() => {
     let t1: any, t2: any, t3: any, t4: any, t5: any, t6: any;
     let countdownInterval: any = null;
@@ -296,13 +282,8 @@ export function CinematicTrailer({ onClose, onAction }: Props) {
         />
       </div>
 
-      {/*
-        РЕНДЕР СЦЕН
-        Строгая привязка через key
-      */}
       <AnimatePresence mode="wait">
        
-        {/* === АКТ 1: СКУКА === */}
         {phase === 1 && (
           <motion.div key="act1" exit={{ opacity: 0 }} className="absolute inset-0 bg-[#e2e8f0] flex flex-col items-center justify-center px-4">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSA0MCAwIEwgMCAwIDAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2NiZDVlMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-50" />
@@ -318,7 +299,6 @@ export function CinematicTrailer({ onClose, onAction }: Props) {
           </motion.div>
         )}
 
-        {/* === АКТ 2: РАЗРУШЕНИЕ === */}
         {phase === 2 && (
           <motion.div key="act2" exit={{ opacity: 0, scale: 1.5, filter: "blur(20px)" }} className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center px-4">
             <MathRain />
@@ -335,14 +315,12 @@ export function CinematicTrailer({ onClose, onAction }: Props) {
           </motion.div>
         )}
 
-        {/* === АКТ 3: КАРТА (С курсором!) — АДАПТИВНОСТЬ ДЛЯ МОБИЛОК (только здесь flex-col на <md) === */}
         {phase === 3 && (
           <motion.div key="act3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -50 }} className="absolute inset-0 bg-slate-950 flex flex-col items-center pt-20 md:pt-32 overflow-hidden">
             <div className="trailer-vignette" />
             <motion.h2 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-4xl md:text-7xl font-black text-white z-20 mb-10 md:mb-16 text-center drop-shadow-2xl">
               ИССЛЕДУЙ <span className="text-emerald-400">СЕКТОРА</span>
             </motion.h2>
-            {/* Адаптивный контейнер: на мобильных — столбец (чтобы не вылезало за экран), на md+ — точно как было раньше (row + justify-center) */}
             <div className="flex flex-col md:flex-row items-center md:items-stretch overflow-visible md:justify-center gap-4 md:gap-8 relative z-10 w-full px-4 md:px-0">
               <MockSectorCard title="Логика" icon={Brain} color="emerald" delay={0.2} />
               <MockSectorCard title="Алгебра" icon={Binary} color="blue" delay={0.4} />
@@ -350,12 +328,10 @@ export function CinematicTrailer({ onClose, onAction }: Props) {
                 <MockSectorCard title="Мат. Анализ" icon={Activity} color="cyan" delay={0.6} />
               </div>
             </div>
-            {/* Тот самый возвращенный курсор для этой сцены */}
             <GhostCursor x={mapCursor.x} y={mapCursor.y} clicking={mapCursor.clicking} />
           </motion.div>
         )}
 
-        {/* === АКТ 4: ПИТОМЕЦ === */}
         {phase === 4 && (
           <motion.div key="act4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center px-4">
             <div className="trailer-vignette" />
@@ -393,7 +369,6 @@ export function CinematicTrailer({ onClose, onAction }: Props) {
           </motion.div>
         )}
 
-        {/* === АКТ 5: VS ЭКРАН (ИСПРАВЛЕНО ДЛЯ МОБИЛОК) === */}
         {phase === 5 && (
           <motion.div 
             key="act5" 
@@ -403,7 +378,6 @@ export function CinematicTrailer({ onClose, onAction }: Props) {
             transition={{ duration: 0.6 }} 
             className="absolute inset-0 flex bg-white overflow-hidden"
           >
-            {/* Фоны с clip-path — без изменений */}
             <div className="absolute inset-0 z-0 bg-white shadow-[0_0_100px_rgba(255,255,255,1)]">
               <motion.div 
                 initial={{x: "-100%"}} 
@@ -419,7 +393,6 @@ export function CinematicTrailer({ onClose, onAction }: Props) {
               />
             </div>
            
-            {/* === ИСПРАВЛЕННЫЙ КОНТЕЙНЕР КАРТОЧЕК === */}
             <div className="relative z-10 w-full h-full flex flex-col md:flex-row items-center justify-center md:justify-between gap-8 md:gap-0 px-4 md:px-2 sm:px-10 lg:px-32 py-10 scale-[0.85] sm:scale-[0.9] md:scale-90 lg:scale-100">
               <motion.div 
                 initial={{x: -100, opacity: 0}} 
@@ -438,7 +411,6 @@ export function CinematicTrailer({ onClose, onAction }: Props) {
               </motion.div>
             </div>
         
-            {/* Логотип VS (работает и на мобилках, и на десктопе) */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.6, type: "spring", bounce: 0.6 }}>
                 <div className="w-24 h-24 md:w-48 md:h-48 bg-slate-950 rounded-full border-[3px] md:border-4 border-white flex items-center justify-center shadow-[0_0_80px_rgba(255,255,255,0.8)]">
@@ -449,7 +421,6 @@ export function CinematicTrailer({ onClose, onAction }: Props) {
           </motion.div>
         )}
 
-        {/* === АКТ 6: ГЕЙМПЛЕЙ (МОБИЛЬНЫЙ МОКАП БЕЗ КУРСОРА) === */}
         {phase === 6 && (
           <motion.div key="act6" exit={{ opacity: 0, scale: 0.9 }} className="absolute inset-0 bg-[#020617] flex items-center justify-center overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(6,182,212,0.1),_transparent_60%)]" />
@@ -457,9 +428,7 @@ export function CinematicTrailer({ onClose, onAction }: Props) {
               initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring", bounce: 0.4 }}
               className="relative w-[340px] max-w-[95vw] h-[680px] max-h-[85vh] bg-slate-950 rounded-[3rem] border-[10px] border-slate-800 shadow-[0_0_100px_rgba(6,182,212,0.3)] overflow-hidden flex flex-col z-20"
             >
-              {/* Челка (Dynamic Island) */}
               <div className="absolute top-3 left-1/2 -translate-x-1/2 w-24 h-7 bg-black rounded-full z-50 shadow-inner" />
-              {/* Хедер матча */}
               <div className="bg-slate-900 border-b border-slate-800 pt-12 pb-4 px-4 flex justify-between items-center shadow-lg relative z-20">
                 <div className="flex flex-col">
                   <span className="text-cyan-400 font-bold uppercase tracking-widest text-[10px]">YOU</span>
@@ -477,12 +446,10 @@ export function CinematicTrailer({ onClose, onAction }: Props) {
                   <span className="text-3xl font-black text-white">{battlePhase >= 1 ? 14 : 13}</span>
                 </div>
               </div>
-              {/* Прогресс-бары */}
               <div className="flex h-1.5 bg-slate-900 w-full relative z-20">
                 <motion.div className="bg-cyan-500" animate={{ width: battlePhase >= 5 ? "100%" : "90%" }} transition={{ duration: 0.3 }} />
                 <motion.div className="bg-red-500 ml-auto" animate={{ width: battlePhase >= 1 ? "100%" : "90%" }} transition={{ duration: 0.3 }} />
               </div>
-              {/* Фон (Краснеет при угрозе) */}
               <AnimatePresence>
                 {battlePhase >= 1 && battlePhase < 5 && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-red-900/20 z-10 pointer-events-none" />
