@@ -296,10 +296,10 @@ export function CinematicTrailer({ onClose, onAction }: Props) {
               <Brain className="w-24 h-24 md:w-32 md:h-32 text-red-500 mb-6 md:mb-8 drop-shadow-[0_0_50px_rgba(239,68,68,0.8)]" />
             </motion.div>
             <motion.h2 initial={{ opacity: 0, y: 30 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }} className="text-3xl md:text-7xl font-black text-white uppercase tracking-widest mb-4 md:mb-6 z-20 text-center">
-              Забудь учебники.
+              Забудь учебники
             </motion.h2>
             <motion.h2 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="text-4xl md:text-8xl font-black text-red-500 uppercase tracking-widest glitch-text-heavy drop-shadow-[0_0_30px_rgba(239,68,68,0.6)] z-20 text-center">
-              АДАПТИРУЙСЯ.
+              АДАПТИРУЙСЯ!
             </motion.h2>
           </motion.div>
         )}
