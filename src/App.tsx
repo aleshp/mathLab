@@ -605,6 +605,9 @@ function App() {
         if (path === '/terms-and-conditions' || path === '/terms') {
           return <TermsPage />;
         }
+        if (path === '/promos') {
+          return <PromoPage />;
+        }
         if (path === '/pricing') {
           return <PricingPage />;
         }
