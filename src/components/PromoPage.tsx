@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Play, ArrowLeft, Film, MonitorPlay } from 'lucide-react';
 import { CinematicTrailer } from './CinematicTrailer';
+import { WarTrailer } form './WarTrailer';
 
 export function PromoPage() {
   const [playing, setPlaying] = useState<string | null>(null);
@@ -29,18 +30,17 @@ export function PromoPage() {
         text: 'text-cyan-400'
       }
     },
-    // Заглушка для будущего геймплейного ролика
     {
-      id: 'gameplay',
-      title: 'Геймплей (Скоро)',
-      description: 'Чистый геймплей PvP арены, турниров и прокачки суриката.',
-      duration: 'TBA',
-      icon: MonitorPlay,
-      disabled: true,
+      id: 'war',
+      title: 'Math is War (Action Cut)',
+      description: 'Динамичный тактический промо-ролик. Интеллект — это сила. Выживает умнейший.',
+      duration: '0:16',
+      icon: Crosshair,
+      disabled: false,
       style: {
-        glow: 'from-slate-500/20 to-slate-600/20',
-        iconBg: 'bg-slate-800 border-slate-700',
-        text: 'text-slate-500'
+        glow: 'from-red-500/40 to-orange-600/40',
+        iconBg: 'bg-red-500/20 border-red-500/40',
+        text: 'text-red-400'
       }
     }
   ];
