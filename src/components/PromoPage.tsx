@@ -1,20 +1,32 @@
 import React, { useState } from 'react';
-import { Play, ArrowLeft, Film, MonitorPlay } from 'lucide-react';
+import { Play, ArrowLeft, Film, MonitorPlay, Crosshair } from 'lucide-react';
 import { CinematicTrailer } from './CinematicTrailer';
 import { WarTrailer } from './WarTrailer';
 
 export function PromoPage() {
   const [playing, setPlaying] = useState<string | null>(null);
 
-  // Если выбран главный трейлер — рендерим его на весь экран
+  // Если выбран главный трейлер
   if (playing === 'cinematic') {
-    return <CinematicTrailer onClose={() => setPlaying(null)} onAction={() => window.location.href = '/'} />;
-  }
-  if (playing === 'war') {
-    return <WarTrailer onClose={() => setPlaying(null)} onAction={() => window.location.href = '/'} />;
+    return (
+      <CinematicTrailer 
+        onClose={() => setPlaying(null)} 
+        onAction={() => window.location.href = '/'} 
+      />
+    );
   }
 
-  // Массив доступных роликов (можешь добавлять сюда новые)
+  // Если выбран тактический трейлер "Math is War"
+  if (playing === 'war') {
+    return (
+      <WarTrailer 
+        onClose={() => setPlaying(null)} 
+        onAction={() => window.location.href = '/'} 
+      />
+    );
+  }
+
+  // Карточки для меню
   const promos =[
     {
       id: 'cinematic',
@@ -40,6 +52,19 @@ export function PromoPage() {
         glow: 'from-red-500/40 to-orange-600/40',
         iconBg: 'bg-red-500/20 border-red-500/40',
         text: 'text-red-400'
+      }
+    },
+    {
+      id: 'gameplay',
+      title: 'Геймплей (Скоро)',
+      description: 'Чистый геймплей PvP арены, турниров и прокачки суриката.',
+      duration: 'TBA',
+      icon: MonitorPlay,
+      disabled: true,
+      style: {
+        glow: 'from-slate-500/20 to-slate-600/20',
+        iconBg: 'bg-slate-800 border-slate-700',
+        text: 'text-slate-500'
       }
     }
   ];
