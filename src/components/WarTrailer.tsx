@@ -109,7 +109,8 @@ const ArenaKeypad = ({ pressedKey, combo }: { pressedKey: string | null; combo?:
           const isPressed = pressedKey === k;
           return (
             <div key={k} className={`h-12 rounded-xl flex items-center justify-center font-bold text-xl transition-all duration-75 ${
-              isPressed ? 'bg-cyan-500 text-slate-900 scale-95 shadow-[0_0_20px_rgba(6,182,212,0.5)]' :['÷','×','−','+'].includes(k) ? 'bg-slate-900 text-cyan-400 border border-slate-800' : 'bg-slate-900 text-white border border-slate-800'
+              isPressed ? 'bg-cyan-500 text-slate-900 scale-95 shadow-[0_0_20px_rgba(6,182,212,0.5)]' :
+              ['÷','×','−','+'].includes(k) ? 'bg-slate-900 text-cyan-400 border border-slate-800' : 'bg-slate-900 text-white border border-slate-800'
             }`}>
               {k}
             </div>
@@ -117,7 +118,7 @@ const ArenaKeypad = ({ pressedKey, combo }: { pressedKey: string | null; combo?:
         })}
       </div>
       <div className="flex gap-2">
-        <div className="h-12 flex- bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center text-sm font-bold text-slate-500">abc</div>
+        <div className="h-12 flex-[1.5] bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center text-sm font-bold text-slate-500">abc</div>
         <div className={`h-12 flex-[3.5] rounded-xl flex items-center justify-center font-bold tracking-widest transition-all duration-75 ${
           pressedKey === 'ENTER' ? 'bg-emerald-400 text-slate-900 scale-95 shadow-[0_0_30px_rgba(52,211,153,0.6)]' : 'bg-cyan-600 text-white'
         }`}>
@@ -134,26 +135,29 @@ const ArenaKeypad = ({ pressedKey, combo }: { pressedKey: string | null; combo?:
 
 const Act1_Intro = ({ onComplete }: { onComplete: () => void }) => {
   useEffect(() => {
-    const t3 = setTimeout(() => onComplete(), 2400);
+    // Увеличили время первой сцены для более кинематографичной паузы
+    const t3 = setTimeout(() => onComplete(), 3600);
     return () => clearTimeout(t3);
   }, [onComplete]);
 
   return (
     <motion.div key="act1" exit={{ opacity: 0 }} className="absolute inset-0 bg-[#020617] flex flex-col items-center justify-center">
       <div className="text-center px-6">
+        {/* Первая фраза появляется и висит */}
         <motion.h1
           initial={{ opacity: 0, filter: 'blur(12px)', scale: 0.98 }}
           animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
-          transition={{ duration: 0.85, ease: 'easeOut' }}
+          transition={{ duration: 1.2, ease: 'easeOut' }}
           className="text-3xl md:text-5xl font-serif text-slate-400 tracking-[0.2em] uppercase leading-relaxed"
         >
           In a world
         </motion.h1>
 
+        {/* Вторая фраза бьет с задержкой, давая первой фразе "осесть" */}
         <motion.h2
           initial={{ opacity: 0, y: 18, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1.02 }}
-          transition={{ delay: 0.75, duration: 0.55, ease: 'circOut' }}
+          transition={{ delay: 1.5, duration: 0.8, ease: 'circOut' }}
           className="text-2xl md:text-4xl font-serif text-white mt-6 font-black tracking-tight leading-tight"
           style={{ letterSpacing: '0.04em' }}
         >
@@ -167,18 +171,31 @@ const Act1_Intro = ({ onComplete }: { onComplete: () => void }) => {
 const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
   const [index, setIndex] = useState(0);
 
+  // Расширенный список боевых фракций (математических дисциплин)
   const factions =[
-    { name: "ЛОГИКА", color: "text-emerald-400", bg: "bg-emerald-950", sub: "SYS_01: BASE" },
-    { name: "АЛГЕБРА", color: "text-blue-400", bg: "bg-blue-950", sub: "SYS_02: VARS" },
-    { name: "МАТ. АНАЛИЗ", color: "text-cyan-400", bg: "bg-cyan-950", sub: "SYS_03: LIMITS" },
-    { name: "ГЕОМЕТРИЯ", color: "text-pink-400", bg: "bg-pink-950", sub: "SYS_04: SPACE" },
-    { name: "ТРИГОНОМЕТРИЯ", color: "text-red-400", bg: "bg-red-950", sub: "SYS_05: WAVES" },
-    { name: "СТАТИСТИКА", color: "text-violet-400", bg: "bg-violet-950", sub: "SYS_06: PROBABILITY" },
-    { name: "КРИПТОГРАФИЯ", color: "text-lime-400", bg: "bg-lime-950", sub: "SYS_07: CIPHERS" },
+    { name: "ЛОГИКА", color: "text-emerald-400", bg: "bg-emerald-950", sub: "SYS_01: BASE_OPS" },
+    { name: "АРИФМЕТИКА", color: "text-teal-400", bg: "bg-teal-950", sub: "SYS_02: PRIMITIVES" },
+    { name: "АЛГЕБРА", color: "text-blue-400", bg: "bg-blue-950", sub: "SYS_03: VARIABLES" },
+    { name: "ПЛАНИМЕТРИЯ", color: "text-indigo-400", bg: "bg-indigo-950", sub: "SYS_04: 2D_SPACE" },
+    { name: "СТЕРЕОМЕТРИЯ", color: "text-violet-400", bg: "bg-violet-950", sub: "SYS_05: 3D_SPACE" },
+    { name: "ТРИГОНОМЕТРИЯ", color: "text-purple-400", bg: "bg-purple-950", sub: "SYS_06: WAVES" },
+    { name: "КОМБИНАТОРИКА", color: "text-fuchsia-400", bg: "bg-fuchsia-950", sub: "SYS_07: CHAOS" },
+    { name: "ВЕРОЯТНОСТЬ", color: "text-pink-400", bg: "bg-pink-950", sub: "SYS_08: CHANCE" },
+    { name: "СТАТИСТИКА", color: "text-rose-400", bg: "bg-rose-950", sub: "SYS_09: TRENDS" },
+    { name: "МАТ. АНАЛИЗ", color: "text-red-500", bg: "bg-red-950", sub: "SYS_10: LIMITS" },
+    { name: "ТЕОРИЯ ЧИСЕЛ", color: "text-orange-500", bg: "bg-orange-950", sub: "SYS_11: PRIMES" },
+    { name: "ЛИНЕЙНАЯ АЛГЕБРА", color: "text-amber-500", bg: "bg-amber-950", sub: "SYS_12: MATRICES" },
+    { name: "ТЕОРИЯ ГРАФОВ", color: "text-yellow-400", bg: "bg-yellow-950", sub: "SYS_13: NODES" },
+    { name: "ДИФФУРЫ", color: "text-lime-400", bg: "bg-lime-950", sub: "SYS_14: FLOW" },
+    { name: "ТОПОЛОГИЯ", color: "text-green-400", bg: "bg-green-950", sub: "SYS_15: MANIFOLDS" },
+    { name: "КРИПТОГРАФИЯ", color: "text-emerald-300", bg: "bg-emerald-900", sub: "SYS_16: CIPHERS" },
+    { name: "ТЕОРИЯ ИГР", color: "text-teal-300", bg: "bg-teal-900", sub: "SYS_17: MINMAX" },
+    { name: "АЛГОРИТМЫ", color: "text-cyan-300", bg: "bg-cyan-900", sub: "SYS_18: EXECUTION" },
+    { name: "НЕЙРОСЕТИ", color: "text-blue-300", bg: "bg-blue-900", sub: "SYS_19: LEARNING" },
     { name: "СИСТЕМА", color: "text-white", bg: "bg-white", sub: "CRITICAL OVERLOAD", strobe: true }
   ];
 
-  const startDelay = 140;
+  const startDelay = 180; // Начальная задержка
 
   useEffect(() => {
     let cancelled = false;
@@ -186,10 +203,12 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
       if (cancelled) return;
       if (i >= factions.length - 1) {
         setIndex(factions.length - 1);
-        setTimeout(() => { if (!cancelled) onComplete(); }, 300);
+        setTimeout(() => { if (!cancelled) onComplete(); }, 350);
         return;
       }
-      const delay = Math.max(30, Math.round(startDelay - i * 15));
+      // Экспоненциальное ускорение смены кадров (эффект втягивания в воронку)
+      const delay = Math.max(25, Math.round(startDelay * Math.pow(0.82, i)));
+      
       setTimeout(() => {
         setIndex(prev => Math.min(prev + 1, factions.length - 1));
         tick(i + 1);
@@ -200,16 +219,24 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
   }, [onComplete]);
 
   const current = factions[index];
-  const delayForAnim = Math.max(0.04, Math.min(0.22, (Math.max(30, startDelay - index * 15) / 1000) * 0.9));
+  // Длительность самой анимации подстраивается под скорость кадра
+  const delayForAnim = Math.max(0.02, Math.min(0.2, (Math.max(25, startDelay * Math.pow(0.82, index)) / 1000) * 0.9));
 
   return (
     <motion.div key="act2" className={`absolute inset-0 flex flex-col items-center justify-center ${current.strobe ? 'strobe-flash' : current.bg}`}>
       <TacticalHUD />
-      <SubtleMathRain density={10} />
+      <SubtleMathRain density={12} />
+      
+      {/* Информация о текущем модуле вверху экрана */}
+      <div className="absolute top-16 w-full px-8 flex justify-between text-slate-500 font-mono text-[10px] md:text-xs">
+        <span>{current.sub}</span>
+        <span>LOAD: {Math.round(((index + 1) / factions.length) * 100)}%</span>
+      </div>
+
       <div className="relative z-10 text-center w-full px-4">
         <motion.h2
           key={index}
-          initial={{ scale: 1.5, filter: 'blur(10px)', opacity: 0 }}
+          initial={{ scale: 1.4, filter: 'blur(10px)', opacity: 0 }}
           animate={{ scale: 1, filter: 'blur(0px)', opacity: 1 }}
           transition={{ duration: delayForAnim, ease: 'linear' }}
           className={`text-5xl md:text-[7rem] font-black uppercase tracking-tight ${current.color}`}
@@ -223,15 +250,13 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
 
 // Act3: АРЕНА С ТАКТИЧЕСКИМ ТАЙМЕРОМ
 const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
-  const [battlePhase, setBattlePhase] = useState(0);
+  const[battlePhase, setBattlePhase] = useState(0);
   const[combo, setCombo] = useState(0);
-  const [pressedKey, setPressedKey] = useState<string | null>(null);
+  const[pressedKey, setPressedKey] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState('00:04.50');
   
-  // Реф для мгновенной остановки таймера
   const stoppedRef = useRef(false);
 
-  // Обработка фаз боя
   useEffect(() => {
     const triggerHit = (newCombo: number, phase: number) => {
       setCombo(newCombo);
@@ -245,7 +270,7 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
     const t5 = setTimeout(() => { setPressedKey(null); setBattlePhase(4); }, 2050);
     const t6 = setTimeout(() => { 
       setBattlePhase(5); 
-      stoppedRef.current = true; // Тормозим таймер ровно в этот момент
+      stoppedRef.current = true; // Останавливаем миллисекундный таймер
     }, 2200); 
     const t7 = setTimeout(() => onComplete(), 3600);
 
@@ -438,6 +463,16 @@ export function WarTrailer({ onClose, onAction }: Props) {
       <div className="film-grain-overlay" />
       <div className="war-vignette" />
       <div className="tactical-scanlines" />
+
+      {/* Полоска прогресса видео */}
+      <div className="absolute top-0 left-0 h-1 bg-slate-900 w-full z-[10000]">
+        <motion.div
+          className="h-full bg-cyan-600"
+          initial={{ width: '0%' }}
+          animate={{ width: '100%' }}
+          transition={{ duration: 11, ease: 'linear' }}
+        />
+      </div>
 
       <AnimatePresence mode="wait">
         {phase === 1 && <Act1_Intro onComplete={() => gotoPhase(2)} />}
