@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Play, ArrowLeft, Film, MonitorPlay } from 'lucide-react';
 import { CinematicTrailer } from './CinematicTrailer';
-import { WarTrailer } form './WarTrailer';
+import { WarTrailer } from './WarTrailer';
 
 export function PromoPage() {
   const [playing, setPlaying] = useState<string | null>(null);
