@@ -91,16 +91,16 @@ const TacticalHUD = () => (
 const ArenaKeypad = ({ pressedKey, combo }: { pressedKey: string | null; combo?: number }) => {
   const rows = [['7','8','9','÷'],['4','5','6','×'],['1','2','3','−'],['±','0','.','+']];
   return (
-    <div className="bg-black/30 backdrop-blur-2xl border-t border-white/10 p-3 pb-6 relative z-20">
-      <div className="flex justify-between items-center px-2 py-2 mb-2 border-b border-white/5">
+    <div className="bg-black/30 backdrop-blur-2xl border-t border-white/10 p-2 pb-3 relative z-20">
+      <div className="flex justify-between items-center px-2 py-1 mb-1 border-b border-white/5">
         <div className="text-slate-400 font-bold text-xs tracking-widest">COMBO <span className="font-mono text-white">{combo ?? 0}</span></div>
         <div className="text-cyan-400 font-bold text-xs tracking-widest">ENTER</div>
       </div>
-      <div className="grid grid-cols-4 gap-2 mb-2">
+      <div className="grid grid-cols-4 gap-1.5 mb-1.5">
         {rows.flat().map(k => {
           const isPressed = pressedKey === k;
           return (
-            <div key={k} className={`h-12 rounded-xl flex items-center justify-center font-bold text-xl transition-all duration-75 ${
+            <div key={k} className={`h-10 rounded-xl flex items-center justify-center font-bold text-lg transition-all duration-75 ${
               isPressed
                 ? 'bg-cyan-500 text-slate-900 scale-95 shadow-[0_0_20px_rgba(6,182,212,0.6)]'
                 : ['÷','×','−','+'].includes(k)
@@ -112,9 +112,9 @@ const ArenaKeypad = ({ pressedKey, combo }: { pressedKey: string | null; combo?:
           );
         })}
       </div>
-      <div className="flex gap-2">
-        <div className="h-12 flex- bg-white/5 border border-white/5 shadow-[0_4px_12px_rgba(0,0,0,0.2)] rounded-xl flex items-center justify-center text-sm font-bold text-slate-400">abc</div>
-        <div className={`h-12 flex-[3.5] rounded-xl flex items-center justify-center font-bold tracking-widest transition-all duration-75 ${
+      <div className="flex gap-1.5">
+        <div className="h-10 flex- bg-white/5 border border-white/5 shadow-[0_4px_12px_rgba(0,0,0,0.2)] rounded-xl flex items-center justify-center text-sm font-bold text-slate-400">abc</div>
+        <div className={`h-10 flex-[3.5] rounded-xl flex items-center justify-center font-bold tracking-widest transition-all duration-75 ${
           pressedKey === 'ENTER'
             ? 'bg-emerald-400 text-slate-900 scale-95 shadow-[0_0_30px_rgba(52,211,153,0.6)]'
             : 'bg-cyan-500/80 text-white border border-cyan-300/50 shadow-[0_4px_20px_rgba(6,182,212,0.3)] backdrop-blur-md'
