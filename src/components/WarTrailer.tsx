@@ -15,12 +15,10 @@ type Props = {
 // ============================================================================
 const WarStyles = () => (
   <style>{`
-    /* Главный контейнер цветокоррекции */
     .epic-color-grade {
       filter: contrast(1.15) saturate(1.1) brightness(0.95) sepia(0.05);
     }
     
-    /* Слой пленочного зерна (SVG Noise) */
     .film-grain-overlay {
       position: absolute;
       inset: 0;
@@ -30,7 +28,6 @@ const WarStyles = () => (
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
     }
 
-    /* Teal & Orange градиент (Голливудский лук) */
     .cinematic-tint {
       position: absolute;
       inset: 0;
@@ -92,21 +89,25 @@ const TacticalHUD = () => (
   </div>
 );
 
-// Клавиатура арены
+// Клавиатура арены (GLASSMORPHISM)
 const ArenaKeypad = ({ pressedKey, combo }: { pressedKey: string | null; combo?: number }) => {
   const rows = [['7','8','9','÷'],['4','5','6','×'],['1','2','3','−'],['±','0','.','+']];
   return (
-    <div className="bg-slate-950 border-t border-slate-800 p-3 pb-6 relative z-20">
-      <div className="flex justify-between items-center px-2 py-2 mb-2 border-b border-slate-800/50">
-        <div className="text-slate-500 font-bold text-xs tracking-widest">COMBO <span className="font-mono text-white">{combo ?? 0}</span></div>
-        <div className="text-cyan-500 font-bold text-xs tracking-widest">ENTER</div>
+    <div className="bg-black/30 backdrop-blur-2xl border-t border-white/10 p-3 pb-6 relative z-20">
+      <div className="flex justify-between items-center px-2 py-2 mb-2 border-b border-white/5">
+        <div className="text-slate-400 font-bold text-xs tracking-widest">COMBO <span className="font-mono text-white">{combo ?? 0}</span></div>
+        <div className="text-cyan-400 font-bold text-xs tracking-widest">ENTER</div>
       </div>
       <div className="grid grid-cols-4 gap-2 mb-2">
         {rows.flat().map(k => {
           const isPressed = pressedKey === k;
           return (
             <div key={k} className={`h-12 rounded-xl flex items-center justify-center font-bold text-xl transition-all duration-75 ${
-              isPressed ? 'bg-cyan-500 text-slate-900 scale-95 shadow-[0_0_20px_rgba(6,182,212,0.5)]' :['÷','×','−','+'].includes(k) ? 'bg-slate-900 text-cyan-400 border border-slate-800' : 'bg-slate-900 text-white border border-slate-800'
+              isPressed 
+                ? 'bg-cyan-500 text-slate-900 scale-95 shadow-[0_0_20px_rgba(6,182,212,0.6)]' 
+                : ['÷','×','−','+'].includes(k) 
+                  ? 'bg-white/10 text-cyan-300 border border-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.2)]' 
+                  : 'bg-white/5 text-white border border-white/5 shadow-[0_4px_12px_rgba(0,0,0,0.2)]'
             }`}>
               {k}
             </div>
@@ -114,9 +115,11 @@ const ArenaKeypad = ({ pressedKey, combo }: { pressedKey: string | null; combo?:
         })}
       </div>
       <div className="flex gap-2">
-        <div className="h-12 flex-[1.5] bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center text-sm font-bold text-slate-500">abc</div>
+        <div className="h-12 flex- bg-white/5 border border-white/5 shadow-[0_4px_12px_rgba(0,0,0,0.2)] rounded-xl flex items-center justify-center text-sm font-bold text-slate-400">abc</div>
         <div className={`h-12 flex-[3.5] rounded-xl flex items-center justify-center font-bold tracking-widest transition-all duration-75 ${
-          pressedKey === 'ENTER' ? 'bg-emerald-400 text-slate-900 scale-95 shadow-[0_0_30px_rgba(52,211,153,0.6)]' : 'bg-cyan-600 text-white'
+          pressedKey === 'ENTER' 
+            ? 'bg-emerald-400 text-slate-900 scale-95 shadow-[0_0_30px_rgba(52,211,153,0.6)]' 
+            : 'bg-cyan-500/80 text-white border border-cyan-300/50 shadow-[0_4px_20px_rgba(6,182,212,0.3)] backdrop-blur-md'
         }`}>
           EXECUTE
         </div>
@@ -131,7 +134,6 @@ const ArenaKeypad = ({ pressedKey, combo }: { pressedKey: string | null; combo?:
 
 const Act1_Intro = ({ onComplete }: { onComplete: () => void }) => {
   useEffect(() => {
-    // 4.8 секунды на весь первый акт для идеальной паузы
     const t3 = setTimeout(() => onComplete(), 4800);
     return () => clearTimeout(t3);
   }, [onComplete]);
@@ -148,7 +150,6 @@ const Act1_Intro = ({ onComplete }: { onComplete: () => void }) => {
           In a world
         </motion.h1>
 
-        {/* Пауза ровно 1 секунду перед появлением второго предложения */}
         <motion.h2
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1.05 }}
@@ -164,7 +165,7 @@ const Act1_Intro = ({ onComplete }: { onComplete: () => void }) => {
 };
 
 const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
-  const [index, setIndex] = useState(0);
+  const[index, setIndex] = useState(0);
 
   const factions =[
     { name: "ЛОГИКА", color: "text-emerald-400", bg: "bg-emerald-950", sub: "SYS_01: BASE_OPS" },
@@ -189,7 +190,6 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
     { name: "СИСТЕМА", color: "text-slate-900", bg: "bg-white", sub: "CRITICAL OVERLOAD", isFinal: true }
   ];
 
-  // Массив точных задержек (в мс) для идеального экспоненциального ускорения
   const delays =[
     400, 350, 300, 250, 200, 160, 130, 100, 80, 70,
     60, 50, 45, 40, 35, 30, 30, 30, 30
@@ -197,17 +197,13 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
 
   useEffect(() => {
     let cancelled = false;
-    
     const tick = (i: number) => {
       if (cancelled) return;
-      
       if (i >= factions.length - 1) {
         setIndex(factions.length - 1);
-        // ФИНАЛЬНЫЙ КАДР "СИСТЕМА" - висит ровно 150мс как вспышка и резко обрывается
         setTimeout(() => { if (!cancelled) onComplete(); }, 150);
         return;
       }
-
       const delay = delays[i] || 30;
       setTimeout(() => {
         setIndex(i + 1);
@@ -225,7 +221,6 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
   return (
     <motion.div 
       key="act2" 
-      // Без exit-анимации, чтобы был hard cut на арену (как в кино)
       className={`absolute inset-0 flex flex-col items-center justify-center ${current.bg}`}
     >
       {!current.isFinal && <TacticalHUD />}
@@ -240,7 +235,6 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
 
       <div className="relative z-10 text-center w-full px-4">
         {current.isFinal ? (
-          // Финальный кадр — резкий, без блюра, черный текст на белом фоне
           <h2 className="text-6xl md:text-[9rem] font-black uppercase tracking-tighter text-slate-900">
             {current.name}
           </h2>
@@ -260,6 +254,7 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
   );
 };
 
+// Act3: АРЕНА (GLASSMORPHISM)
 const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
   const[battlePhase, setBattlePhase] = useState(0);
   const[combo, setCombo] = useState(0);
@@ -281,7 +276,7 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
     const t5 = setTimeout(() => { setPressedKey(null); setBattlePhase(4); }, 2050);
     const t6 = setTimeout(() => { 
       setBattlePhase(5); 
-      stoppedRef.current = true; // Тормозим миллисекундный таймер
+      stoppedRef.current = true;
     }, 2200); 
     const t7 = setTimeout(() => onComplete(), 3600);
 
@@ -298,14 +293,11 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
 
     const updateTimer = () => {
       if (stoppedRef.current) return;
-
       const elapsed = Date.now() - startMs;
       const current = Math.max(0, startValue - elapsed);
-      
       const secs = Math.floor(current / 1000);
       const ms = Math.floor((current % 1000) / 10);
       setTimeLeft(`00:0${secs}.${ms.toString().padStart(2, '0')}`);
-
       if (current > 0) rafId = requestAnimationFrame(updateTimer);
     };
     
@@ -316,45 +308,61 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
   return (
     <motion.div key="act3" exit={{ opacity: 0 }} className="absolute inset-0 bg-[#020617] flex items-center justify-center overflow-hidden">
       
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(6,182,212,0.03),_transparent_60%)] pointer-events-none" />
+      {/* ПЛАВАЮЩИЕ СФЕРЫ ДЛЯ РАЗМЫТИЯ СТЕКЛА */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div 
+          animate={{ x: [0, 60, -40, 0], y:[0, -60, 50, 0] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-[20%] left-[20%] w-80 h-80 bg-cyan-600/30 rounded-full blur-[90px]"
+        />
+        <motion.div 
+          animate={{ x:[0, -50, 70, 0], y: [0, 70, -40, 0] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-[20%] right-[20%] w-96 h-96 bg-red-600/20 rounded-full blur-[100px]"
+        />
+      </div>
 
-      <motion.div className="relative w-[380px] max-w-[92vw] h-[720px] max-h-[90vh] bg-slate-950 rounded-[2rem] border border-slate-800 shadow-[0_30px_100px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col z-20" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.6, ease: "easeOut" }}>
+      <motion.div 
+        className="relative w-[380px] max-w-[92vw] h-[720px] max-h-[90vh] bg-slate-900/30 backdrop-blur-2xl rounded-[2rem] border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.9),inset_0_1px_1px_rgba(255,255,255,0.2)] overflow-hidden flex flex-col z-20" 
+        initial={{ y: 20, opacity: 0 }} 
+        animate={{ y: 0, opacity: 1 }} 
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
         
         {/* Хедер боя */}
-        <div className="bg-slate-900 border-b border-slate-800 pt-10 pb-4 px-6 flex justify-between items-center relative z-20">
+        <div className="bg-white/5 border-b border-white/10 pt-10 pb-4 px-6 flex justify-between items-center relative z-20">
           <div className="flex flex-col">
-            <span className="text-cyan-400 font-bold uppercase tracking-widest text-[10px] mb-1">YOU</span>
-            <span className="text-3xl font-black text-white">{battlePhase >= 5 ? 16 : 15}</span>
+            <span className="text-cyan-300 font-bold uppercase tracking-widest text-[10px] mb-1 drop-shadow-md">YOU</span>
+            <span className="text-3xl font-black text-white drop-shadow-md">{battlePhase >= 5 ? 16 : 15}</span>
           </div>
           
-          {/* ТАКТИЧЕСКИЙ ТАЙМЕР */}
-          <div className={`text-xl font-mono font-black flex items-center gap-2 transition-colors duration-300 ${battlePhase >= 5 ? 'text-emerald-400' : 'text-red-500'}`}>
+          <div className={`text-xl font-mono font-black flex items-center gap-2 transition-colors duration-300 ${battlePhase >= 5 ? 'text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.5)]'}`}>
             <Timer className="w-4 h-4 opacity-80" /> 
             {timeLeft}
           </div>
 
           <div className="flex flex-col text-right">
-            <span className="text-red-400 font-bold uppercase tracking-widest text-[10px] mb-1">BOSS</span>
-            <span className="text-3xl font-black text-white">{battlePhase >= 1 ? 14 : 13}</span>
+            <span className="text-red-400 font-bold uppercase tracking-widest text-[10px] mb-1 drop-shadow-md">BOSS</span>
+            <span className="text-3xl font-black text-white drop-shadow-md">{battlePhase >= 1 ? 14 : 13}</span>
           </div>
         </div>
 
         {/* Прогресс бары */}
-        <div className="flex h-1 bg-slate-900 w-full relative z-20">
-          <motion.div className="bg-cyan-500" animate={{ width: battlePhase >= 5 ? "100%" : "90%" }} transition={{ duration: 0.3 }} />
-          <motion.div className="bg-red-500 ml-auto" animate={{ width: battlePhase >= 1 ? "100%" : "90%" }} transition={{ duration: 0.3 }} />
+        <div className="flex h-1 bg-black/50 w-full relative z-20">
+          <motion.div className="bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" animate={{ width: battlePhase >= 5 ? "100%" : "90%" }} transition={{ duration: 0.3 }} />
+          <motion.div className="bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)] ml-auto" animate={{ width: battlePhase >= 1 ? "100%" : "90%" }} transition={{ duration: 0.3 }} />
         </div>
 
         {/* Задача */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-20">
-          <div className="bg-slate-900/50 border border-slate-700/50 w-full p-8 rounded-2xl text-center mb-6">
-            <div className="text-3xl md:text-4xl font-medium text-white">
+          <div className="bg-white/5 border border-white/10 shadow-[inset_0_1px_2px_rgba(255,255,255,0.1)] w-full p-8 rounded-2xl text-center mb-6 backdrop-blur-md">
+            <div className="text-3xl md:text-4xl font-medium text-white drop-shadow-lg">
               <Latex>{"$$\\int_0^{\\pi} \\sin^2(x) dx$$"}</Latex>
             </div>
           </div>
 
           {/* Инпут */}
-          <div className={`w-full h-16 border rounded-xl flex items-center justify-center text-4xl font-mono font-bold transition-colors ${battlePhase >= 4 ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'bg-slate-900 border-slate-700 text-white'}`}>
+          <div className={`w-full h-16 border rounded-xl flex items-center justify-center text-4xl font-mono font-bold transition-all duration-300 ${battlePhase >= 4 ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.3),inset_0_1px_2px_rgba(255,255,255,0.2)]' : 'bg-black/20 border-white/10 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)]'}`}>
             {battlePhase >= 3 ? <span>2.0</span> : battlePhase === 2 ? <span>2</span> : <motion.span animate={{ opacity: [1, 0] }} transition={{ repeat: Infinity, duration: 0.4 }}>_</motion.span>}
           </div>
         </div>
@@ -367,7 +375,7 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
             <motion.div 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
-              className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md"
+              className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-2xl"
             >
               <motion.div 
                 initial={{ scale: 0.8, opacity: 0 }} 
@@ -375,12 +383,14 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
                 transition={{ type: "spring", damping: 15, stiffness: 200 }}
                 className="flex flex-col items-center"
               >
-                <CheckCircle2 className="w-20 h-20 text-emerald-400 mb-6 drop-shadow-[0_0_20px_rgba(16,185,129,0.5)]" />
+                <div className="bg-emerald-500/20 p-6 rounded-full border border-emerald-500/50 shadow-[0_0_50px_rgba(16,185,129,0.3)] mb-6">
+                  <CheckCircle2 className="w-16 h-16 text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,1)]" />
+                </div>
                 <motion.div 
                   initial={{ letterSpacing: "0em" }}
-                  animate={{ letterSpacing: "0.2em" }}
+                  animate={{ letterSpacing: "0.25em" }}
                   transition={{ duration: 0.8, ease: "easeOut" }}
-                  className="text-2xl font-black text-emerald-400 uppercase"
+                  className="text-3xl font-black text-emerald-400 uppercase drop-shadow-[0_0_15px_rgba(16,185,129,0.8)]"
                 >
                   EXECUTED
                 </motion.div>
@@ -440,7 +450,7 @@ const Act4_PremiumFinale = ({ onAction, onClose }: { onAction: () => void; onClo
             whileHover={{ scale: 1.02, backgroundColor: "#f8fafc" }}
             whileTap={{ scale: 0.98 }}
             onClick={() => { onClose(); onAction(); }}
-            className="mt-16 px-10 py-4 bg-white text-black font-bold text-sm md:text-base uppercase tracking-widest flex items-center gap-3 transition-colors rounded-lg"
+            className="mt-16 px-10 py-4 bg-white text-black font-bold text-sm md:text-base uppercase tracking-widest flex items-center gap-3 transition-colors rounded-lg shadow-[0_10px_40px_rgba(255,255,255,0.2)]"
           >
             <Swords className="w-5 h-5" /> Enter Arena
           </motion.button>
@@ -470,7 +480,7 @@ export function WarTrailer({ onClose, onAction }: Props) {
       {/* Полоска прогресса видео (Акт 1 + 2 + 3 + 4) = 4.8 + 1.8 + 3.6 + 3.0 ≈ 13.2с */}
       <div className="absolute top-0 left-0 h-1 bg-slate-900 w-full z-[10000]">
         <motion.div
-          className="h-full bg-cyan-600"
+          className="h-full bg-cyan-600 shadow-[0_0_15px_rgba(6,182,212,0.8)]"
           initial={{ width: '0%' }}
           animate={{ width: '100%' }}
           transition={{ duration: 13.2, ease: 'linear' }}
