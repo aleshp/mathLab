@@ -327,14 +327,14 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
         <motion.div
           className="absolute inset-0 rounded-[2rem] bg-slate-900/40 backdrop-blur-2xl border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.9),inset_0_1px_1px_rgba(255,255,255,0.15)]"
           animate={{ opacity: dissolving ? 0 : 1 }}
-          transition={{ duration: 0.7, ease: [0.4,0,0.2,1] }}
+          transition={{ duration: 0.35, ease: [0.4,0,0.2,1] }}
         />
 
         {/* header */}
         <motion.div
           className="relative bg-white/5 border-b border-white/10 rounded-t-[2rem] pt-10 pb-4 px-6 flex justify-between items-center"
           animate={{ opacity: dissolving ? 0 : 1 }}
-          transition={{ duration: 0.55 }}
+          transition={{ duration: 0.3 }}
         >
           <div className="flex flex-col">
             <span className="text-cyan-300 font-bold uppercase tracking-widest text-[10px] mb-1">YOU</span>
@@ -353,7 +353,7 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
         <motion.div
           className="relative flex h-1 bg-black/50 w-full"
           animate={{ opacity: dissolving ? 0 : 1 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.3 }}
         >
           <div className="bg-cyan-400 w-[90%] shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
           <div className="bg-red-500 w-[90%] ml-auto shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
@@ -426,7 +426,7 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
         <motion.div
           className="relative mx-6 mb-3 h-12 border border-white/10 rounded-xl bg-black/20 flex items-center justify-center"
           animate={{ opacity: dissolving ? 0 : 1 }}
-          transition={{ duration: 0.5, delay: 0.05 }}
+          transition={{ duration: 0.3, delay: 0.05 }}
         >
           <motion.span className="text-white/40 text-2xl font-mono" animate={{ opacity:[1,0] }} transition={{ repeat:Infinity, duration:0.5 }}>_</motion.span>
         </motion.div>
@@ -435,7 +435,7 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
         <motion.div
           className="relative rounded-b-[2rem] overflow-hidden"
           animate={{ opacity: dissolving ? 0 : 1 }}
-          transition={{ duration: 0.55, delay: 0.08 }}
+          transition={{ duration: 0.3, delay: 0.08 }}
         >
           <ArenaKeypad pressedKey={null} combo={0} />
         </motion.div>
