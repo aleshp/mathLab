@@ -11,7 +11,7 @@ type Props = {
 };
 
 // ============================================================================
-// СТИЛИ (без edge-glow)
+// СТИЛИ (без виньетки)
 // ============================================================================
 const WarStyles = () => (
   <style>{`
@@ -27,14 +27,6 @@ const WarStyles = () => (
       opacity: 0.15;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
       mix-blend-mode: overlay;
-    }
-
-    .war-vignette { 
-      position: absolute; 
-      inset: 0; 
-      background: radial-gradient(circle at 50% 45%, transparent 28%, rgba(0,0,0,0.92) 68%, rgba(80,0,0,0.75) 100%); 
-      z-index: 100; 
-      pointer-events: none; 
     }
 
     .tactical-scanlines { 
@@ -135,7 +127,7 @@ const ArenaKeypad = ({ pressedKey, combo }: { pressedKey: string | null; combo?:
 };
 
 // ============================================================================
-// СЦЕНЫ (без изменений)
+// СЦЕНЫ
 // ============================================================================
 const Act1_Intro = ({ onComplete }: { onComplete: () => void }) => {
   useEffect(() => {
@@ -158,7 +150,7 @@ const Act1_Intro = ({ onComplete }: { onComplete: () => void }) => {
 
 const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
   const[index, setIndex] = useState(0);
-  const factions =[ /* твой большой массив */ 
+  const factions =[ 
     { name: "ЛОГИКА", color: "text-emerald-400", bg: "bg-emerald-950", sub: "SYS_01: BASE_OPS" },
     { name: "АРИФМЕТИКА", color: "text-teal-400", bg: "bg-teal-950", sub: "SYS_02: PRIMITIVES" },
     { name: "АЛГЕБРА", color: "text-blue-400", bg: "bg-blue-950", sub: "SYS_03: VARIABLES" },
@@ -377,7 +369,6 @@ export function WarTrailer({ onClose, onAction }: Props) {
       <WarStyles />
       
       <div className="film-grain-overlay" />
-      <div className="war-vignette" />
       <div className="tactical-scanlines" />
 
       <div className="absolute top-0 left-0 h-1 bg-slate-900 w-full z-[10000]">
