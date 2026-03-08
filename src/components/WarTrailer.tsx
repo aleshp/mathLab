@@ -224,38 +224,30 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
   );
 };
 
-// ─── Шаги решения ────────────────────────────────────────────────────────────
+// ─── Шаги решения (каждый ЗАМЕНЯЕТ предыдущий) ───────────────────────────────
 const SOLVE_STEPS = [
-  { label: "Формула понижения степени", eq: "$$\\sin^2 x = \\frac{1 - \\cos 2x}{2}$$" },
-  { label: "Подставляем в интеграл",    eq: "$$\\int_0^{\\pi} \\frac{1 - \\cos 2x}{2}\\, dx$$" },
-  { label: "Разбиваем на два интеграла",eq: "$$\\frac{1}{2}\\int_0^{\\pi} dx\\; -\\; \\frac{1}{2}\\int_0^{\\pi} \\cos 2x\\, dx$$" },
-  { label: "Берём интеграл",            eq: "$$\\left[\\frac{x}{2} - \\frac{\\sin 2x}{4}\\right]_0^{\\pi}$$" },
-  { label: "Подставляем пределы",       eq: "$$\\frac{\\pi}{2} - 0 \\;=\\; \\frac{\\pi}{2}$$", isAnswer: true },
+  { label: "понижаем степень",    eq: "$$\\int_0^{\\pi} \\frac{1 - \\cos 2x}{2}\\, dx$$" },
+  { label: "разбиваем",           eq: "$$\\frac{1}{2}\\int_0^{\\pi} dx\\; -\\; \\frac{1}{2}\\int_0^{\\pi}\\!\\cos 2x\\, dx$$" },
+  { label: "интегрируем",         eq: "$$\\left[\\frac{x}{2} - \\frac{\\sin 2x}{4}\\right]_0^{\\pi}$$" },
+  { label: "ответ",               eq: "$$\\frac{\\pi}{2}$$", isAnswer: true },
 ];
 
-// ─── Акт 3А: телефон с задачей ───────────────────────────────────────────────
-const Act3_Battle = ({ onFreeze }: { onFreeze: () => void }) => {
+// ─── Акт 3: телефон → уравнение вырывается → решение ─────────────────────────
+const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
+  // phase: 'phone' | 'free' | 'solve'
+  const [phase, setPhase] = useState<'phone' | 'free' | 'solve'>('phone');
+  const [solveStep, setSolveStep] = useState(-1); // -1 = оригинал, 0..3 = шаги
   const [timeLeft, setTimeLeft] = useState('00:04.50');
-  const [frozen, setFrozen] = useState(false);
-  const stoppedRef = useRef(false);
+  const timerStopRef = useRef(false);
 
-  useEffect(() => {
-    const tFreeze = setTimeout(() => {
-      stoppedRef.current = true;
-      setFrozen(true);
-      setTimeout(onFreeze, 900);
-    }, 3200);
-    return () => clearTimeout(tFreeze);
-  }, [onFreeze]);
-
+  // таймер
   useEffect(() => {
     let rafId: number;
     const startMs = Date.now();
-    const startValue = 4500;
     const update = () => {
-      if (stoppedRef.current) return;
+      if (timerStopRef.current) return;
       const elapsed = Date.now() - startMs;
-      const cur = Math.max(0, startValue - elapsed);
+      const cur = Math.max(0, 4500 - elapsed);
       const secs = Math.floor(cur / 1000);
       const ms = Math.floor((cur % 1000) / 10);
       setTimeLeft(`00:0${secs}.${ms.toString().padStart(2, '0')}`);
@@ -265,32 +257,59 @@ const Act3_Battle = ({ onFreeze }: { onFreeze: () => void }) => {
     return () => cancelAnimationFrame(rafId);
   }, []);
 
+  // оркестровка
+  useEffect(() => {
+    // 2.8s — телефон замирает, chrome исчезает, уравнение остаётся
+    const t1 = setTimeout(() => { timerStopRef.current = true; setPhase('free'); }, 2800);
+    // 4.2s — начинаем решение (уравнение уже "свободно")
+    const t2 = setTimeout(() => { setPhase('solve'); setSolveStep(0); }, 4200);
+    // шаги с интервалом 1.6s
+    const t3 = setTimeout(() => setSolveStep(1), 5800);
+    const t4 = setTimeout(() => setSolveStep(2), 7400);
+    const t5 = setTimeout(() => setSolveStep(3), 9000);
+    // финал
+    const t6 = setTimeout(() => onComplete(), 11800);
+    return () => { [t1,t2,t3,t4,t5,t6].forEach(clearTimeout); };
+  }, [onComplete]);
+
+  const chromeFaded = phase !== 'phone';
+  const isSolving   = phase === 'solve';
+  const isAnswer    = solveStep === 3;
+
   return (
-    <motion.div
-      className="absolute inset-0 flex items-center justify-center overflow-hidden"
-      animate={frozen ? { scale: 0.88, filter: 'blur(6px)', opacity: 0 } : { scale: 1, filter: 'blur(0px)', opacity: 1 }}
-      transition={{ duration: 0.9, ease: [0.4, 0, 0.2, 1] }}
-    >
+    <motion.div key="act3" exit={{ opacity: 0 }} className="absolute inset-0 bg-[#020617] flex items-center justify-center overflow-hidden">
+
       {/* ambient blobs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div animate={{ x: [0,60,-40,0], y:[0,-60,50,0] }} transition={{ duration: 8, repeat: Infinity, ease:"easeInOut" }} className="absolute top-[20%] left-[20%] w-80 h-80 bg-cyan-600/30 rounded-full blur-[90px]" />
-        <motion.div animate={{ x:[0,-50,70,0], y:[0,70,-40,0] }} transition={{ duration:10, repeat: Infinity, ease:"easeInOut" }} className="absolute bottom-[20%] right-[20%] w-96 h-96 bg-red-600/20 rounded-full blur-[100px]" />
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <motion.div animate={{ x:[0,60,-40,0], y:[0,-60,50,0] }} transition={{ duration:8, repeat:Infinity, ease:"easeInOut" }}
+          className="absolute top-[20%] left-[20%] w-80 h-80 bg-cyan-600/25 rounded-full blur-[90px]" />
+        <motion.div animate={{ x:[0,-50,70,0], y:[0,70,-40,0] }} transition={{ duration:10, repeat:Infinity, ease:"easeInOut" }}
+          className="absolute bottom-[20%] right-[20%] w-96 h-96 bg-red-600/15 rounded-full blur-[100px]" />
+        {/* свечение вокруг ответа */}
+        <motion.div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] rounded-full blur-[80px] pointer-events-none"
+          animate={{ opacity: isAnswer ? 0.18 : 0, scale: isAnswer ? 1.1 : 0.8 }}
+          transition={{ duration: 1.2, ease: "easeOut" }}
+          style={{ background: 'radial-gradient(circle, rgba(16,185,129,1) 0%, transparent 70%)' }}
+        />
       </div>
 
-      {/* phone mockup */}
+      {/* ── PHONE CHROME (исчезает) ── */}
       <motion.div
-        className="relative w-[340px] max-w-[88vw] bg-slate-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.9),inset_0_1px_1px_rgba(255,255,255,0.15)] overflow-hidden flex flex-col z-20"
-        initial={{ y: 30, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.7, ease: "easeOut" }}
+        className="absolute w-[320px] max-w-[88vw] flex flex-col pointer-events-none z-10"
+        style={{ top: '50%', transform: 'translateY(-50%)' }}
+        animate={{ opacity: chromeFaded ? 0 : 1, scale: chromeFaded ? 0.94 : 1 }}
+        transition={{ duration: 0.75, ease: [0.4, 0, 0.2, 1] }}
       >
+        {/* телефонная рамка — фон и бордер */}
+        <div className="absolute inset-0 rounded-[2rem] bg-slate-900/40 backdrop-blur-2xl border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.9)]" />
         {/* header */}
-        <div className="bg-white/5 border-b border-white/10 pt-10 pb-4 px-6 flex justify-between items-center">
+        <div className="relative bg-white/5 border-b border-white/10 pt-10 pb-4 px-6 flex justify-between items-center rounded-t-[2rem]">
           <div className="flex flex-col">
             <span className="text-cyan-300 font-bold uppercase tracking-widest text-[10px] mb-1">YOU</span>
             <span className="text-3xl font-black text-white">15</span>
           </div>
-          <div className="text-xl font-mono font-black flex items-center gap-2 text-red-400">
+          <div className="text-lg font-mono font-black flex items-center gap-2 text-red-400">
             <Timer className="w-4 h-4 opacity-80" />
             {timeLeft}
           </div>
@@ -300,145 +319,106 @@ const Act3_Battle = ({ onFreeze }: { onFreeze: () => void }) => {
           </div>
         </div>
         {/* hp bars */}
-        <div className="flex h-1 bg-black/50 w-full">
+        <div className="relative flex h-1 bg-black/50 w-full">
           <div className="bg-cyan-400 w-[90%] shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
           <div className="bg-red-500 w-[90%] ml-auto shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
         </div>
-        {/* question */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
-          <div className="bg-white/5 border border-white/10 w-full p-8 rounded-2xl text-center backdrop-blur-md">
-            <div className="text-3xl text-white">
-              <Latex>{"$$\\int_0^{\\pi} \\sin^2(x)\\, dx$$"}</Latex>
-            </div>
-          </div>
-          <div className="mt-6 w-full h-14 border border-white/10 rounded-xl bg-black/20 flex items-center justify-center">
-            <motion.span className="text-white/40 text-3xl font-mono" animate={{ opacity:[1,0] }} transition={{ repeat:Infinity, duration:0.5 }}>_</motion.span>
-          </div>
+        {/* пустое место под уравнение (реальное уравнение рендерится отдельно) */}
+        <div className="relative h-[140px]" />
+        {/* answer box */}
+        <div className="relative mx-6 mb-4 h-14 border border-white/10 rounded-xl bg-black/20 flex items-center justify-center">
+          <motion.span className="text-white/40 text-3xl font-mono" animate={{ opacity:[1,0] }} transition={{ repeat:Infinity, duration:0.5 }}>_</motion.span>
         </div>
-        <ArenaKeypad pressedKey={null} combo={0} />
+        {/* keypad */}
+        <div className="relative rounded-b-[2rem] overflow-hidden">
+          <ArenaKeypad pressedKey={null} combo={0} />
+        </div>
       </motion.div>
-    </motion.div>
-  );
-};
 
-// ─── Акт 3Б: кинематографическое решение ─────────────────────────────────────
-const Act3_Solve = ({ onComplete }: { onComplete: () => void }) => {
-  const [step, setStep] = useState(-1); // -1 = уравнение летит, 0..4 = шаги
-
-  useEffect(() => {
-    // уравнение появляется в центре
-    const t0 = setTimeout(() => setStep(0), 1000);
-    const t1 = setTimeout(() => setStep(1), 3000);
-    const t2 = setTimeout(() => setStep(2), 5200);
-    const t3 = setTimeout(() => setStep(3), 7200);
-    const t4 = setTimeout(() => setStep(4), 9200);
-    const t5 = setTimeout(() => onComplete(), 12000);
-    return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
-  }, [onComplete]);
-
-  return (
-    <motion.div
-      className="absolute inset-0 bg-[#020617] flex flex-col items-center justify-center px-6 overflow-hidden"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.8, ease: "easeOut" }}
-    >
-      {/* soft ambient */}
+      {/* ── УРАВНЕНИЕ — живёт отдельно, остаётся на месте ── */}
       <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70vw] h-[70vw] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.07) 0%, transparent 70%)' }}
-        animate={{ scale: [1, 1.15, 1] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-      />
-
-      {/* исходное уравнение — всегда вверху */}
-      <motion.div
-        className="w-full text-center mb-10"
-        initial={{ opacity: 0, y: 40, scale: 1.3, filter: 'blur(10px)' }}
-        animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-        transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-30 w-full max-w-[340px] flex flex-col items-center px-4"
+        initial={{ y: 0 }}
+        animate={
+          phase === 'phone' ? { y: 20 } :
+          phase === 'free'  ? { y: 0, scale: 1.08 } :
+          { y: 0, scale: 1 }
+        }
+        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="text-slate-400 font-mono text-[11px] uppercase tracking-[0.3em] mb-3">Задача</div>
-        <div className="text-2xl md:text-3xl text-white">
-          <Latex>{"$$\\int_0^{\\pi} \\sin^2(x)\\, dx$$"}</Latex>
-        </div>
-        <div className="mt-4 h-px w-24 mx-auto bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        {/* метка шага — появляется только при решении */}
+        <motion.div
+          className="mb-3 font-mono text-[10px] uppercase tracking-[0.3em] text-slate-500 h-4"
+          animate={{ opacity: isSolving && solveStep >= 0 ? 1 : 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={solveStep}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.3 }}
+            >
+              {solveStep >= 0 ? (isAnswer ? '✦ ответ' : SOLVE_STEPS[solveStep]?.label) : ''}
+            </motion.span>
+          </AnimatePresence>
+        </motion.div>
+
+        {/* само уравнение — плавно перетекает */}
+        <motion.div
+          className="w-full rounded-2xl text-center px-6 py-7 border"
+          animate={{
+            backgroundColor: isAnswer ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
+            borderColor:     isAnswer ? 'rgba(16,185,129,0.35)' : 'rgba(255,255,255,0.08)',
+            boxShadow:       isAnswer
+              ? '0 0 60px rgba(16,185,129,0.2), inset 0 1px 1px rgba(255,255,255,0.1)'
+              : '0 0 0px rgba(0,0,0,0)',
+          }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={solveStep}
+              initial={{ opacity: 0, y: 22, filter: 'blur(8px)' }}
+              animate={{ opacity: 1, y: 0,  filter: 'blur(0px)' }}
+              exit={{   opacity: 0, y: -22, filter: 'blur(8px)' }}
+              transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+              className={isAnswer ? 'text-emerald-300' : 'text-white'}
+            >
+              {solveStep < 0
+                ? <div className="text-2xl"><Latex>{"$$\\int_0^{\\pi} \\sin^2(x)\\, dx$$"}</Latex></div>
+                : isAnswer
+                  ? <div className="text-5xl font-light"><Latex>{SOLVE_STEPS[solveStep].eq}</Latex></div>
+                  : <div className="text-xl"><Latex>{SOLVE_STEPS[solveStep].eq}</Latex></div>
+              }
+            </motion.div>
+          </AnimatePresence>
+        </motion.div>
+
+        {/* SOLVED badge */}
+        <AnimatePresence>
+          {isAnswer && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.5, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-8 flex items-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,1)]" />
+              <motion.span
+                initial={{ letterSpacing: '0.05em' }}
+                animate={{ letterSpacing: '0.4em' }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
+                className="text-sm font-black text-emerald-400 uppercase drop-shadow-[0_0_12px_rgba(16,185,129,0.8)]"
+              >
+                Solved
+              </motion.span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
-      {/* шаги */}
-      <div className="w-full max-w-md flex flex-col gap-5">
-        {SOLVE_STEPS.map((s, i) => (
-          <AnimatePresence key={i}>
-            {step >= i && (
-              <motion.div
-                initial={{ opacity: 0, x: -24, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
-                className={`flex flex-col gap-1.5 ${s.isAnswer ? 'mt-2' : ''}`}
-              >
-                {/* label */}
-                <div className={`font-mono text-[10px] uppercase tracking-[0.25em] ${s.isAnswer ? 'text-emerald-400' : 'text-slate-500'}`}>
-                  {String(i + 1).padStart(2, '0')} — {s.label}
-                </div>
-                {/* equation card */}
-                <motion.div
-                  className={`rounded-xl px-4 py-3 border text-center ${
-                    s.isAnswer
-                      ? 'bg-emerald-500/10 border-emerald-400/30 shadow-[0_0_40px_rgba(16,185,129,0.15)]'
-                      : 'bg-white/[0.03] border-white/[0.07]'
-                  }`}
-                  animate={s.isAnswer ? { boxShadow: ['0 0 20px rgba(16,185,129,0.1)', '0 0 50px rgba(16,185,129,0.25)', '0 0 20px rgba(16,185,129,0.1)'] } : {}}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <div className={`text-lg md:text-xl ${s.isAnswer ? 'text-emerald-300' : 'text-white/90'}`}>
-                    <Latex>{s.eq}</Latex>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        ))}
-      </div>
-
-      {/* финальная вспышка SOLVED */}
-      <AnimatePresence>
-        {step >= 4 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.6, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute bottom-16 flex items-center gap-3"
-          >
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,1)]" />
-            <motion.span
-              initial={{ letterSpacing: '0.05em' }}
-              animate={{ letterSpacing: '0.35em' }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="text-base font-black text-emerald-400 uppercase drop-shadow-[0_0_12px_rgba(16,185,129,0.7)]"
-            >
-              Solved
-            </motion.span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-};
-
-// ─── Акт 3: оркестратор ──────────────────────────────────────────────────────
-const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
-  const [scene, setScene] = useState<'battle' | 'solve'>('battle');
-
-  return (
-    <motion.div key="act3" exit={{ opacity: 0, transition: { duration: 0.6 } }} className="absolute inset-0 bg-[#020617]">
-      <AnimatePresence mode="wait">
-        {scene === 'battle' && (
-          <Act3_Battle key="battle" onFreeze={() => setScene('solve')} />
-        )}
-        {scene === 'solve' && (
-          <Act3_Solve key="solve" onComplete={onComplete} />
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 };
