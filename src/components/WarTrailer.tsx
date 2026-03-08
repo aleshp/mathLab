@@ -448,7 +448,7 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.9, duration: 0.7, ease: [0.16,1,0.3,1] }}
-            className="absolute bottom-16 flex items-center gap-2"
+            className="absolute bottom-24 flex items-center gap-2"
           >
             <CheckCircle2 className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,1)]" />
             <motion.span
