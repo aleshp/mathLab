@@ -224,99 +224,221 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
   );
 };
 
-const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
-  const[battlePhase, setBattlePhase] = useState(0);
-  const[combo, setCombo] = useState(0);
-  const [pressedKey, setPressedKey] = useState<string | null>(null);
+// ─── Шаги решения ────────────────────────────────────────────────────────────
+const SOLVE_STEPS = [
+  { label: "Формула понижения степени", eq: "$$\\sin^2 x = \\frac{1 - \\cos 2x}{2}$$" },
+  { label: "Подставляем в интеграл",    eq: "$$\\int_0^{\\pi} \\frac{1 - \\cos 2x}{2}\\, dx$$" },
+  { label: "Разбиваем на два интеграла",eq: "$$\\frac{1}{2}\\int_0^{\\pi} dx\\; -\\; \\frac{1}{2}\\int_0^{\\pi} \\cos 2x\\, dx$$" },
+  { label: "Берём интеграл",            eq: "$$\\left[\\frac{x}{2} - \\frac{\\sin 2x}{4}\\right]_0^{\\pi}$$" },
+  { label: "Подставляем пределы",       eq: "$$\\frac{\\pi}{2} - 0 \\;=\\; \\frac{\\pi}{2}$$", isAnswer: true },
+];
+
+// ─── Акт 3А: телефон с задачей ───────────────────────────────────────────────
+const Act3_Battle = ({ onFreeze }: { onFreeze: () => void }) => {
   const [timeLeft, setTimeLeft] = useState('00:04.50');
+  const [frozen, setFrozen] = useState(false);
   const stoppedRef = useRef(false);
 
   useEffect(() => {
-    const triggerHit = (newCombo: number, phase: number) => {
-      setCombo(newCombo);
-      setBattlePhase(phase);
-    };
-    const t1 = setTimeout(() => setBattlePhase(1), 500);
-    const t2 = setTimeout(() => { triggerHit(1, 2); setPressedKey('±'); }, 1200);
-    const t3 = setTimeout(() => setPressedKey(null), 1350);
-    const t4 = setTimeout(() => { triggerHit(2, 3); setPressedKey('ENTER'); }, 1900);
-    const t5 = setTimeout(() => { setPressedKey(null); setBattlePhase(4); }, 2050);
-    const t6 = setTimeout(() => { setBattlePhase(5); stoppedRef.current = true; }, 2200);
-    const t7 = setTimeout(() => onComplete(), 3600);
-    return () => {
-      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4);
-      clearTimeout(t5); clearTimeout(t6); clearTimeout(t7);
-    };
-  }, [onComplete]);
+    const tFreeze = setTimeout(() => {
+      stoppedRef.current = true;
+      setFrozen(true);
+      setTimeout(onFreeze, 900);
+    }, 3200);
+    return () => clearTimeout(tFreeze);
+  }, [onFreeze]);
 
   useEffect(() => {
     let rafId: number;
     const startMs = Date.now();
     const startValue = 4500;
-    const updateTimer = () => {
+    const update = () => {
       if (stoppedRef.current) return;
       const elapsed = Date.now() - startMs;
-      const current = Math.max(0, startValue - elapsed);
-      const secs = Math.floor(current / 1000);
-      const ms = Math.floor((current % 1000) / 10);
+      const cur = Math.max(0, startValue - elapsed);
+      const secs = Math.floor(cur / 1000);
+      const ms = Math.floor((cur % 1000) / 10);
       setTimeLeft(`00:0${secs}.${ms.toString().padStart(2, '0')}`);
-      if (current > 0) rafId = requestAnimationFrame(updateTimer);
+      if (cur > 0) rafId = requestAnimationFrame(update);
     };
-    rafId = requestAnimationFrame(updateTimer);
+    rafId = requestAnimationFrame(update);
     return () => cancelAnimationFrame(rafId);
-  },[]);
+  }, []);
 
   return (
-    <motion.div key="act3" exit={{ opacity: 0 }} className="absolute inset-0 bg-[#020617] flex items-center justify-center overflow-hidden">
+    <motion.div
+      className="absolute inset-0 flex items-center justify-center overflow-hidden"
+      animate={frozen ? { scale: 0.88, filter: 'blur(6px)', opacity: 0 } : { scale: 1, filter: 'blur(0px)', opacity: 1 }}
+      transition={{ duration: 0.9, ease: [0.4, 0, 0.2, 1] }}
+    >
+      {/* ambient blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div animate={{ x: [0, 60, -40, 0], y:[0, -60, 50, 0] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[20%] left-[20%] w-80 h-80 bg-cyan-600/30 rounded-full blur-[90px]" />
-        <motion.div animate={{ x:[0, -50, 70, 0], y: [0, 70, -40, 0] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-[20%] right-[20%] w-96 h-96 bg-red-600/20 rounded-full blur-[100px]" />
+        <motion.div animate={{ x: [0,60,-40,0], y:[0,-60,50,0] }} transition={{ duration: 8, repeat: Infinity, ease:"easeInOut" }} className="absolute top-[20%] left-[20%] w-80 h-80 bg-cyan-600/30 rounded-full blur-[90px]" />
+        <motion.div animate={{ x:[0,-50,70,0], y:[0,70,-40,0] }} transition={{ duration:10, repeat: Infinity, ease:"easeInOut" }} className="absolute bottom-[20%] right-[20%] w-96 h-96 bg-red-600/20 rounded-full blur-[100px]" />
       </div>
-      <motion.div className="relative w-[380px] max-w-[92vw] h-[720px] max-h-[90vh] bg-slate-900/30 backdrop-blur-2xl rounded-[2rem] border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.9),inset_0_1px_1px_rgba(255,255,255,0.2)] overflow-hidden flex flex-col z-20" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.6, ease: "easeOut" }}>
-        <div className="bg-white/5 border-b border-white/10 pt-10 pb-4 px-6 flex justify-between items-center relative z-20">
+
+      {/* phone mockup */}
+      <motion.div
+        className="relative w-[340px] max-w-[88vw] bg-slate-900/40 backdrop-blur-2xl rounded-[2rem] border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.9),inset_0_1px_1px_rgba(255,255,255,0.15)] overflow-hidden flex flex-col z-20"
+        initial={{ y: 30, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
+      >
+        {/* header */}
+        <div className="bg-white/5 border-b border-white/10 pt-10 pb-4 px-6 flex justify-between items-center">
           <div className="flex flex-col">
-            <span className="text-cyan-300 font-bold uppercase tracking-widest text-[10px] mb-1 drop-shadow-md">YOU</span>
-            <span className="text-3xl font-black text-white drop-shadow-md">{battlePhase >= 5 ? 16 : 15}</span>
+            <span className="text-cyan-300 font-bold uppercase tracking-widest text-[10px] mb-1">YOU</span>
+            <span className="text-3xl font-black text-white">15</span>
           </div>
-          <div className={`text-xl font-mono font-black flex items-center gap-2 transition-colors duration-300 ${battlePhase >= 5 ? 'text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.5)]'}`}>
+          <div className="text-xl font-mono font-black flex items-center gap-2 text-red-400">
             <Timer className="w-4 h-4 opacity-80" />
             {timeLeft}
           </div>
           <div className="flex flex-col text-right">
-            <span className="text-red-400 font-bold uppercase tracking-widest text-[10px] mb-1 drop-shadow-md">BOSS</span>
-            <span className="text-3xl font-black text-white drop-shadow-md">{battlePhase >= 1 ? 14 : 13}</span>
+            <span className="text-red-400 font-bold uppercase tracking-widest text-[10px] mb-1">BOSS</span>
+            <span className="text-3xl font-black text-white">14</span>
           </div>
         </div>
-        <div className="flex h-1 bg-black/50 w-full relative z-20">
-          <motion.div className="bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" animate={{ width: battlePhase >= 5 ? "100%" : "90%" }} transition={{ duration: 0.3 }} />
-          <motion.div className="bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)] ml-auto" animate={{ width: battlePhase >= 1 ? "100%" : "90%" }} transition={{ duration: 0.3 }} />
+        {/* hp bars */}
+        <div className="flex h-1 bg-black/50 w-full">
+          <div className="bg-cyan-400 w-[90%] shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+          <div className="bg-red-500 w-[90%] ml-auto shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-20">
-          <div className="bg-white/5 border border-white/10 shadow-[inset_0_1px_2px_rgba(255,255,255,0.1)] w-full p-8 rounded-2xl text-center mb-6 backdrop-blur-md">
-            <div className="text-3xl md:text-4xl font-medium text-white drop-shadow-lg">
-              <Latex>{"$$\\int_0^{\\pi} \\sin^2(x) dx$$"}</Latex>
+        {/* question */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
+          <div className="bg-white/5 border border-white/10 w-full p-8 rounded-2xl text-center backdrop-blur-md">
+            <div className="text-3xl text-white">
+              <Latex>{"$$\\int_0^{\\pi} \\sin^2(x)\\, dx$$"}</Latex>
             </div>
           </div>
-          <div className={`w-full h-16 border rounded-xl flex items-center justify-center text-4xl font-mono font-bold transition-all duration-300 ${battlePhase >= 4 ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.3),inset_0_1px_2px_rgba(255,255,255,0.2)]' : 'bg-black/20 border-white/10 text-white shadow-[inset_0_1px_2px_rgba(255,255,255,0.05)]'}`}>
-            {battlePhase >= 3 ? <Latex>{"$\\frac{\\pi}{2}$"}</Latex> : battlePhase === 2 ? <Latex>{"$\\pi$"}</Latex> : <motion.span animate={{ opacity: [1, 0] }} transition={{ repeat: Infinity, duration: 0.4 }}>_</motion.span>}
+          <div className="mt-6 w-full h-14 border border-white/10 rounded-xl bg-black/20 flex items-center justify-center">
+            <motion.span className="text-white/40 text-3xl font-mono" animate={{ opacity:[1,0] }} transition={{ repeat:Infinity, duration:0.5 }}>_</motion.span>
           </div>
         </div>
-        <ArenaKeypad pressedKey={pressedKey} combo={combo} />
-        <AnimatePresence>
-          {battlePhase >= 5 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-2xl">
-              <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", damping: 15, stiffness: 200 }} className="flex flex-col items-center">
-                <div className="bg-emerald-500/20 p-6 rounded-full border border-emerald-500/50 shadow-[0_0_50px_rgba(16,185,129,0.3)] mb-6">
-                  <CheckCircle2 className="w-16 h-16 text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,1)]" />
+        <ArenaKeypad pressedKey={null} combo={0} />
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// ─── Акт 3Б: кинематографическое решение ─────────────────────────────────────
+const Act3_Solve = ({ onComplete }: { onComplete: () => void }) => {
+  const [step, setStep] = useState(-1); // -1 = уравнение летит, 0..4 = шаги
+
+  useEffect(() => {
+    // уравнение появляется в центре
+    const t0 = setTimeout(() => setStep(0), 1000);
+    const t1 = setTimeout(() => setStep(1), 3000);
+    const t2 = setTimeout(() => setStep(2), 5200);
+    const t3 = setTimeout(() => setStep(3), 7200);
+    const t4 = setTimeout(() => setStep(4), 9200);
+    const t5 = setTimeout(() => onComplete(), 12000);
+    return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
+  }, [onComplete]);
+
+  return (
+    <motion.div
+      className="absolute inset-0 bg-[#020617] flex flex-col items-center justify-center px-6 overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+    >
+      {/* soft ambient */}
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70vw] h-[70vw] rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.07) 0%, transparent 70%)' }}
+        animate={{ scale: [1, 1.15, 1] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      {/* исходное уравнение — всегда вверху */}
+      <motion.div
+        className="w-full text-center mb-10"
+        initial={{ opacity: 0, y: 40, scale: 1.3, filter: 'blur(10px)' }}
+        animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+        transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="text-slate-400 font-mono text-[11px] uppercase tracking-[0.3em] mb-3">Задача</div>
+        <div className="text-2xl md:text-3xl text-white">
+          <Latex>{"$$\\int_0^{\\pi} \\sin^2(x)\\, dx$$"}</Latex>
+        </div>
+        <div className="mt-4 h-px w-24 mx-auto bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      </motion.div>
+
+      {/* шаги */}
+      <div className="w-full max-w-md flex flex-col gap-5">
+        {SOLVE_STEPS.map((s, i) => (
+          <AnimatePresence key={i}>
+            {step >= i && (
+              <motion.div
+                initial={{ opacity: 0, x: -24, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                className={`flex flex-col gap-1.5 ${s.isAnswer ? 'mt-2' : ''}`}
+              >
+                {/* label */}
+                <div className={`font-mono text-[10px] uppercase tracking-[0.25em] ${s.isAnswer ? 'text-emerald-400' : 'text-slate-500'}`}>
+                  {String(i + 1).padStart(2, '0')} — {s.label}
                 </div>
-                <motion.div initial={{ letterSpacing: "0em" }} animate={{ letterSpacing: "0.25em" }} transition={{ duration: 0.8, ease: "easeOut" }} className="text-3xl font-black text-emerald-400 uppercase drop-shadow-[0_0_15px_rgba(16,185,129,0.8)]">
-                  EXECUTED
+                {/* equation card */}
+                <motion.div
+                  className={`rounded-xl px-4 py-3 border text-center ${
+                    s.isAnswer
+                      ? 'bg-emerald-500/10 border-emerald-400/30 shadow-[0_0_40px_rgba(16,185,129,0.15)]'
+                      : 'bg-white/[0.03] border-white/[0.07]'
+                  }`}
+                  animate={s.isAnswer ? { boxShadow: ['0 0 20px rgba(16,185,129,0.1)', '0 0 50px rgba(16,185,129,0.25)', '0 0 20px rgba(16,185,129,0.1)'] } : {}}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <div className={`text-lg md:text-xl ${s.isAnswer ? 'text-emerald-300' : 'text-white/90'}`}>
+                    <Latex>{s.eq}</Latex>
+                  </div>
                 </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+            )}
+          </AnimatePresence>
+        ))}
+      </div>
+
+      {/* финальная вспышка SOLVED */}
+      <AnimatePresence>
+        {step >= 4 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.6, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute bottom-16 flex items-center gap-3"
+          >
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,1)]" />
+            <motion.span
+              initial={{ letterSpacing: '0.05em' }}
+              animate={{ letterSpacing: '0.35em' }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className="text-base font-black text-emerald-400 uppercase drop-shadow-[0_0_12px_rgba(16,185,129,0.7)]"
+            >
+              Solved
+            </motion.span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+// ─── Акт 3: оркестратор ──────────────────────────────────────────────────────
+const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
+  const [scene, setScene] = useState<'battle' | 'solve'>('battle');
+
+  return (
+    <motion.div key="act3" exit={{ opacity: 0, transition: { duration: 0.6 } }} className="absolute inset-0 bg-[#020617]">
+      <AnimatePresence mode="wait">
+        {scene === 'battle' && (
+          <Act3_Battle key="battle" onFreeze={() => setScene('solve')} />
+        )}
+        {scene === 'solve' && (
+          <Act3_Solve key="solve" onComplete={onComplete} />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
@@ -376,7 +498,7 @@ export function WarTrailer({ onClose, onAction }: Props) {
           className="h-full bg-cyan-600 shadow-[0_0_15px_rgba(6,182,212,0.8)]"
           initial={{ width: '0%' }}
           animate={{ width: '100%' }}
-          transition={{ duration: 13.2, ease: 'linear' }}
+          transition={{ duration: 26, ease: 'linear' }}
         />
       </div>
 
