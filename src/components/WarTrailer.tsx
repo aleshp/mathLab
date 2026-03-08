@@ -8,6 +8,7 @@ import 'katex/dist/katex.min.css';
 type Props = {
   onClose: () => void;
   onAction: () => void;
+  active?: boolean; // ← CHANGED
 };
 
 // ============================================================================
@@ -129,11 +130,12 @@ const ArenaKeypad = ({ pressedKey, combo }: { pressedKey: string | null; combo?:
 // ============================================================================
 // СЦЕНЫ
 // ============================================================================
-const Act1_Intro = ({ onComplete }: { onComplete: () => void }) => {
+const Act1_Intro = ({ onComplete, active }: { onComplete: () => void; active: boolean }) => { // ← CHANGED
   useEffect(() => {
+    if (!active) return; // ← CHANGED
     const t3 = setTimeout(() => onComplete(), 4800);
     return () => clearTimeout(t3);
-  }, [onComplete]);
+  }, [onComplete, active]); // ← CHANGED
   return (
     <motion.div key="act1" exit={{ opacity: 0 }} className="absolute inset-0 bg-[#020617] flex flex-col items-center justify-center">
       <div className="text-center px-6">
@@ -148,7 +150,7 @@ const Act1_Intro = ({ onComplete }: { onComplete: () => void }) => {
   );
 };
 
-const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
+const Act2_Factions = ({ onComplete, active }: { onComplete: () => void; active: boolean }) => { // ← CHANGED
   const[index, setIndex] = useState(0);
   const factions =[ 
     { name: "ЛОГИКА", color: "text-emerald-400", bg: "bg-emerald-950", sub: "SYS_01: BASE_OPS" },
@@ -174,6 +176,7 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
   ];
   const delays =[400, 350, 300, 250, 200, 160, 130, 100, 80, 70,60, 50, 45, 40, 35, 30, 30, 30, 30];
   useEffect(() => {
+    if (!active) return; // ← CHANGED
     let cancelled = false;
     const tick = (i: number) => {
       if (cancelled) return;
@@ -190,7 +193,7 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
     };
     tick(0);
     return () => { cancelled = true; };
-  }, [onComplete]);
+  }, [onComplete, active]); // ← CHANGED
   const current = factions[index];
   const animDuration = (delays[index] || 30) / 1000;
   return (
@@ -225,34 +228,27 @@ const Act2_Factions = ({ onComplete }: { onComplete: () => void }) => {
 };
 
 // ─── Token-level equation steps ──────────────────────────────────────────────
-// Токены с одинаковым id+tex НЕ анимируются (остаются на месте)
-// Токены с одинаковым id но другим tex — вылетают и прилетают
 type EqToken = { id: string; tex: string; big?: boolean };
 
 const EQ_STEPS: EqToken[][] = [
-  // 0 — оригинал
   [
     { id: 'int',       tex: '\\int_0^{\\pi}' },
     { id: 'integrand', tex: '\\sin^2(x)' },
     { id: 'dx',        tex: '\\,dx' },
   ],
-  // 1 — понижаем степень (int и dx ОСТАЮТСЯ, только integrand меняется)
   [
     { id: 'int',       tex: '\\int_0^{\\pi}' },
     { id: 'integrand', tex: '\\dfrac{1-\\cos 2x}{2}' },
     { id: 'dx',        tex: '\\,dx' },
   ],
-  // 2 — разбиваем
   [
     { id: 'left',  tex: '\\dfrac{1}{2}\\!\\int_0^{\\pi}\\!dx' },
     { id: 'minus', tex: '-' },
     { id: 'right', tex: '\\dfrac{1}{2}\\!\\int_0^{\\pi}\\!\\cos 2x\\,dx' },
   ],
-  // 3 — берём интеграл
   [
     { id: 'bracket', tex: '\\left[\\dfrac{x}{2} - \\dfrac{\\sin 2x}{4}\\right]_0^{\\pi}' },
   ],
-  // 4 — ответ
   [
     { id: 'answer', tex: '\\dfrac{\\pi}{2}', big: true },
   ],
@@ -261,7 +257,7 @@ const EQ_STEPS: EqToken[][] = [
 const STEP_LABELS = ['', 'понижаем степень', 'разбиваем', 'берём интеграл', '✦ ответ'];
 
 // ─── Акт 3 ───────────────────────────────────────────────────────────────────
-const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
+const Act3_WarArena = ({ onComplete, active }: { onComplete: () => void; active: boolean }) => { // ← CHANGED
   const [phase, setPhase]       = useState<'phone' | 'dissolve' | 'solve'>('phone');
   const [stepIdx, setStepIdx]   = useState(0);
   const [timeLeft, setTimeLeft] = useState('00:04.50');
@@ -269,6 +265,7 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
 
   // таймер
   useEffect(() => {
+    if (!active) return; // ← CHANGED
     let raf: number;
     const t0 = Date.now();
     const tick = () => {
@@ -282,10 +279,11 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [active]); // ← CHANGED
 
   // оркестровка
   useEffect(() => {
+    if (!active) return; // ← CHANGED
     const T = [
       setTimeout(() => { timerStopRef.current = true; setPhase('dissolve'); }, 2200),
       setTimeout(() => setPhase('solve'),   2400),
@@ -296,7 +294,7 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
       setTimeout(() => onComplete(),        7000),
     ];
     return () => T.forEach(clearTimeout);
-  }, [onComplete]);
+  }, [onComplete, active]); // ← CHANGED
 
   const dissolving = phase !== 'phone';
   const isSolving  = phase === 'solve';
@@ -320,10 +318,9 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
         />
       </div>
 
-      {/* ══ PHONE — один flex-контейнер, chrome фейдит opacity-only ══ */}
+      {/* ══ PHONE ══ */}
       <div className="relative w-[320px] max-w-[88vw] flex flex-col z-20">
 
-        {/* phone background — фейдит, но занимает место */}
         <motion.div
           className="absolute inset-0 rounded-[2rem] bg-slate-900/40 backdrop-blur-2xl border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.9),inset_0_1px_1px_rgba(255,255,255,0.15)]"
           animate={{ opacity: dissolving ? 0 : 1 }}
@@ -359,14 +356,12 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
           <div className="bg-red-500 w-[90%] ml-auto shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
         </motion.div>
 
-        {/* ══ EQUATION ZONE — никогда не двигается ══ */}
+        {/* ══ EQUATION ZONE ══ */}
         <motion.div
           className="relative flex-1 flex flex-col items-center justify-center py-10 px-4 min-h-[190px]"
           animate={{ scale: dissolving ? 1.28 : 1 }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         >
-
-          {/* карточка-фон уравнения: исчезает при dissolve, emerald при ответе */}
           <motion.div
             className="absolute inset-3 rounded-2xl border"
             animate={{
@@ -398,9 +393,7 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
             </AnimatePresence>
           </div>
 
-          {/* TOKEN ROW — сердце анимации */}
-          {/* Одинаковый key (id:tex) = элемент остаётся на месте без анимации  */}
-          {/* Изменившийся key = старый вылетает вверх, новый влетает снизу     */}
+          {/* TOKEN ROW */}
           <div className="relative flex flex-wrap items-center justify-center gap-x-1 gap-y-1 px-2">
             <AnimatePresence mode="popLayout">
               {tokens.map(token => (
@@ -506,9 +499,13 @@ const Act4_PremiumFinale = ({ onAction, onClose }: { onAction: () => void; onClo
 // ============================================================================
 // ГЛАВНЫЙ КОМПОНЕНТ
 // ============================================================================
-export function WarTrailer({ onClose, onAction }: Props) {
+export function WarTrailer({ onClose, onAction, active = true }: Props) { // ← CHANGED
   const[phase, setPhase] = useState<number>(1);
-  const gotoPhase = (p: number) => setPhase(p);
+
+  // Сбрасываем фазу когда active меняется с false → true
+  useEffect(() => {
+    if (active) setPhase(1); // ← CHANGED
+  }, [active]);
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black overflow-hidden font-sans select-none epic-color-grade">
@@ -527,9 +524,9 @@ export function WarTrailer({ onClose, onAction }: Props) {
       </div>
 
       <AnimatePresence mode="wait">
-        {phase === 1 && <Act1_Intro onComplete={() => gotoPhase(2)} />}
-        {phase === 2 && <Act2_Factions onComplete={() => gotoPhase(3)} />}
-        {phase === 3 && <Act3_WarArena onComplete={() => gotoPhase(4)} />}
+        {phase === 1 && <Act1_Intro active={active} onComplete={() => setPhase(2)} />}
+        {phase === 2 && <Act2_Factions active={active} onComplete={() => setPhase(3)} />}
+        {phase === 3 && <Act3_WarArena active={active} onComplete={() => setPhase(4)} />}
         {phase === 4 && <Act4_PremiumFinale onAction={onAction} onClose={onClose} />}
       </AnimatePresence>
     </div>
