@@ -288,12 +288,12 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
   useEffect(() => {
     const T = [
       setTimeout(() => { timerStopRef.current = true; setPhase('dissolve'); }, 2800),
-      setTimeout(() => setPhase('solve'),   4000),
-      setTimeout(() => setStepIdx(1),       4700),
-      setTimeout(() => setStepIdx(2),       6300),
-      setTimeout(() => setStepIdx(3),       7900),
-      setTimeout(() => setStepIdx(4),       9500),
-      setTimeout(() => onComplete(),        12200),
+      setTimeout(() => setPhase('solve'),   3600),
+      setTimeout(() => setStepIdx(1),       4200),
+      setTimeout(() => setStepIdx(2),       5400),
+      setTimeout(() => setStepIdx(3),       6600),
+      setTimeout(() => setStepIdx(4),       7800),
+      setTimeout(() => onComplete(),        10400),
     ];
     return () => T.forEach(clearTimeout);
   }, [onComplete]);
@@ -360,7 +360,11 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
         </motion.div>
 
         {/* ══ EQUATION ZONE — никогда не двигается ══ */}
-        <div className="relative flex-1 flex flex-col items-center justify-center py-10 px-4 min-h-[190px]">
+        <motion.div
+          className="relative flex-1 flex flex-col items-center justify-center py-10 px-4 min-h-[190px]"
+          animate={{ scale: dissolving ? 1.12 : 1 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        >
 
           {/* карточка-фон уравнения: исчезает при dissolve, emerald при ответе */}
           <motion.div
@@ -416,7 +420,7 @@ const Act3_WarArena = ({ onComplete }: { onComplete: () => void }) => {
               ))}
             </AnimatePresence>
           </div>
-        </div>
+        </motion.div>
 
         {/* answer input box */}
         <motion.div
