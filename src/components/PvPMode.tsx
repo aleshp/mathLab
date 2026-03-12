@@ -17,7 +17,9 @@ import {
   AlertTriangle,
   Target,
   Info,
-  Users // <-- Добавлена иконка Users
+  Users,
+  ChevronLeft, // <-- добавили
+  ChevronRight // <-- добавили
 } from 'lucide-react';
 import { getPvPRank, getPvPShortRank } from '../lib/gameLogic';
 import { MathKeypad } from './MathKeypad';
