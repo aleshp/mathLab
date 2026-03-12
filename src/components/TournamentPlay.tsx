@@ -463,37 +463,40 @@ export function TournamentPlay({ duelId, onFinished }: Props) {
             </div>
           </div>
         ) : (
-          <div className="p-2">
-          <div className="mb-2 px-1 flex gap-2">
-            <div className="flex-1 min-w-0">
-              <MathInput
-                value={userAnswer}
-                onChange={setUserAnswer}
-                onSubmit={() => handleAnswer()}
-                mfRef={mfRef}
-              />
-            </div>
-            <div className="flex gap-1 shrink-0">
-              <button
-                onClick={() => moveCursor('backward')}
-                className="px-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-xl transition-colors active:scale-95 border border-cyan-500/30 flex items-center justify-center shadow-inner"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-              <button
-                onClick={() => moveCursor('forward')}
-                className="px-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-xl transition-colors active:scale-95 border border-cyan-500/30 flex items-center justify-center shadow-inner"
-              >
-                <ChevronRight className="w-6 h-6" />
-              </button>
-            </div>
+        <div className="p-2">
+          <div className="mb-2 px-1">
+            <MathInput
+              value={userAnswer}
+              onChange={setUserAnswer}
+              onSubmit={() => handleAnswer()}
+              mfRef={mfRef}
+            />
           </div>
+          
           <MathKeypad
             onCommand={handleKeypadCommand}
             onDelete={handleKeypadDelete}
             onClear={handleKeypadClear}
             onSubmit={() => handleAnswer()}
           />
+
+          {/* Панель со стрелками как в Реакторе */}
+          <div className="flex justify-start items-center pt-3 px-1 pb-1">
+            <div className="flex gap-2">
+              <button
+                onClick={() => moveCursor('backward')}
+                className="p-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl transition-colors active:scale-95 shadow-lg"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button
+                onClick={() => moveCursor('forward')}
+                className="p-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl transition-colors active:scale-95 shadow-lg"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
         </div>
         )}
       </div>
