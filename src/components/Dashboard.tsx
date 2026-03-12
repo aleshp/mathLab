@@ -9,7 +9,7 @@ import {
   HelpCircle, ChevronDown, ChevronUp, ChevronLeft, FileText, ArrowRight, Palette
 } from 'lucide-react';
 import { BecomeTeacherModal } from './BecomeTeacherModal';
-import { getRank, getLevelProgress } from '../lib/gameLogic';
+import { getRank, getPvPRank, getLevelProgress } from '../lib/gameLogic';
 
 type DashboardProps = {
   onClose: () => void;
