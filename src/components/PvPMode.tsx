@@ -394,6 +394,13 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     onSubmit: () => handleAnswer()
   };
 
+  const moveCursor = (direction: 'backward' | 'forward') => {
+    if (!mfRef.current) return;
+    const cmd = direction === 'backward' ? 'moveToPreviousChar' : 'moveToNextChar';
+    mfRef.current.executeCommand(cmd);
+    mfRef.current.focus({ preventScroll: true });
+  };
+
   // === End Game & Calibration Logic ===
   async function endGame(winnerId: string | null, eloChange: number = 0) {
     if (status === 'finished') return;
