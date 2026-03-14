@@ -314,8 +314,12 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
 
     if (!isCorrect && user && problems[currentProbIndex]) {
       supabase.from('user_errors').insert({
-        user_id: user.id, problem_id: problems[currentProbIndex].id, module_id: PVP_MODULE_ID,
-        user_answer: userAnswer, correct_answer: problems[currentProbIndex].answer
+        user_id: user.id,
+        problem_id: problems[currentProbIndex].id,
+        module_id: PVP_MODULE_ID,
+        user_answer: userAnswer,
+        correct_answer: problems[currentProbIndex].answer,
+        expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
       }).then(() => {});
     }
 
