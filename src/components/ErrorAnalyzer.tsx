@@ -52,10 +52,44 @@ type ErrorAnalyzerProps = {
 // Убирает лишние $ и оборачивает в один слой $...$
 const renderMath = (text: string) => {
   if (!text) return '';
-  // Убираем все существующие $ чтобы не было $$$
   const clean = text.replace(/\$/g, '').trim();
   return `$${clean}$`;
 };
+
+function TheoryContent({ text }: { text: string }) {
+  if (!text) return null;
+
+  return (
+    <div className="space-y-1.5 text-sm leading-relaxed overflow-x-auto">
+      {text.split('\n').map((line, i) => {
+        if (!line.trim()) return <div key={i} className="h-1" />;
+
+        // Разбиваем строку на части: обычный текст и **жирный**
+        const parts = line.split(/(\*\*[^*]+\*\*)/g);
+
+        return (
+          <div key={i} className="min-w-0">
+            {parts.map((part, j) => {
+              const boldMatch = part.match(/^\*\*([^*]+)\*\*$/);
+              if (boldMatch) {
+                return (
+                  <strong key={j} className="text-white font-bold">
+                    <Latex>{boldMatch[1]}</Latex>
+                  </strong>
+                );
+              }
+              return part ? (
+                <span key={j} className="text-slate-300">
+                  <Latex>{part}</Latex>
+                </span>
+              ) : null;
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function ErrorAnalyzer({ onBack, onStartTraining }: ErrorAnalyzerProps) {
   const { t, i18n } = useTranslation();
@@ -281,16 +315,21 @@ export function ErrorAnalyzer({ onBack, onStartTraining }: ErrorAnalyzerProps) {
                     </button>
                     
                     {expandedTheoryId === err.id && (
-                      <div className="mt-2 p-4 bg-slate-900 rounded-xl border border-slate-700 text-slate-300 text-sm leading-relaxed animate-in slide-in-from-top-2 fade-in duration-200">
+                      <div className="mt-2 p-4 bg-slate-900 rounded-xl border border-slate-700 animate-in slide-in-from-top-2 fade-in duration-200">
                         {theory ? (
                           <>
-                            <div className="text-[10px] text-slate-500 uppercase mb-3 font-bold tracking-wider">{t('analyzer.theory_hint')}</div>
-                            <div className="prose prose-invert prose-sm max-w-none">
-                              <Latex>{theory}</Latex>
+                            <div className="text-[10px] text-slate-500 uppercase mb-3 font-bold tracking-wider">
+                              {t('analyzer.theory_hint')}
+                            </div>
+                            {/* overflow-x-auto — формулы не вылезают за экран на мобиле */}
+                            <div className="overflow-x-auto">
+                              <TheoryContent text={theory} />
                             </div>
                           </>
                         ) : (
-                          <div className="text-slate-500 italic text-center py-2">{t('analyzer.no_theory')}</div>
+                          <div className="text-slate-500 italic text-center py-2">
+                            {t('analyzer.no_theory')}
+                          </div>
                         )}
                       </div>
                     )}
