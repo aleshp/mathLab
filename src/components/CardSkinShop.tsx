@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { X, Coins, Crown, CheckCircle, Sparkles, Lock, Eye, ShoppingBag } from 'lucide-react';
+import { X, Coins, Crown, CheckCircle, Sparkles, Lock, Eye, ShoppingBag, Trophy } from 'lucide-react';
 import { PlayerCard, CardSkin } from './card-skins/PlayerCard';
 import { getPvPRank } from '../lib/gameLogic';
 import { usePvPStats } from '../hooks/usePvPStats';
@@ -16,50 +16,122 @@ type Cosmetic = {
 };
 
 const SKIN_META: Record<string, { desc: string; accent: string }> = {
-  default:  { desc: 'Классический стиль',   accent: 'from-slate-700 to-slate-800'   },
-  electric: { desc: 'Электрические молнии', accent: 'from-cyan-900 to-slate-900'    },
-  fire:     { desc: 'Пылающая мощь',        accent: 'from-orange-900 to-slate-900'  },
-  gold:     { desc: 'Легендарный статус',   accent: 'from-yellow-900 to-slate-900'  },
-  ice:      { desc: 'Кристальный холод',    accent: 'from-sky-900 to-slate-900'     },
-  shadow:   { desc: 'Тьма поглощает всё',   accent: 'from-violet-950 to-slate-900'  },
-  neon:     { desc: 'Матричный импульс',    accent: 'from-green-950 to-slate-900'   },
-  plasma:   { desc: 'Нестабильная энергия', accent: 'from-fuchsia-950 to-slate-900' },
+  default:  { desc: 'Классический стиль',            accent: 'from-slate-700 to-slate-800'    },
+  electric: { desc: 'Электрические молнии',           accent: 'from-cyan-900 to-slate-900'     },
+  fire:     { desc: 'Пылающая мощь',                  accent: 'from-orange-900 to-slate-900'   },
+  gold:     { desc: 'Легендарный статус',             accent: 'from-yellow-900 to-slate-900'   },
+  ice:      { desc: 'Кристальный холод',              accent: 'from-sky-900 to-slate-900'      },
+  shadow:   { desc: 'Тьма поглощает всё',             accent: 'from-violet-950 to-slate-900'   },
+  neon:     { desc: 'Матричный импульс',              accent: 'from-green-950 to-slate-900'    },
+  plasma:   { desc: 'Нестабильная энергия',           accent: 'from-fuchsia-950 to-slate-900'  },
+  warlord:  { desc: '#1 PvP — Военачальник арены',    accent: 'from-red-900 to-slate-900'      },
+  sage:     { desc: '#1 Опыт — Великий Мудрец',       accent: 'from-cyan-900 to-slate-900'     },
+  absolute: { desc: '#1 Общий — Абсолютный чемпион',  accent: 'from-yellow-800 to-slate-900'   },
 };
 
 const SKIN_BORDER: Record<string, string> = {
-  default: 'border-slate-600', electric: 'border-cyan-500/60', fire: 'border-orange-500/60',
-  gold: 'border-yellow-400/60', ice: 'border-sky-300/60', shadow: 'border-violet-500/60',
-  neon: 'border-green-400/60', plasma: 'border-fuchsia-400/60',
+  default:  'border-slate-600',
+  electric: 'border-cyan-500/60',
+  fire:     'border-orange-500/60',
+  gold:     'border-yellow-400/60',
+  ice:      'border-sky-300/60',
+  shadow:   'border-violet-500/60',
+  neon:     'border-green-400/60',
+  plasma:   'border-fuchsia-400/60',
+  warlord:  'border-red-600/70',
+  sage:     'border-cyan-400/70',
+  absolute: 'border-yellow-400/80',
 };
 
 const SKIN_GLOW: Record<string, string> = {
-  default: '', electric: 'shadow-[0_0_20px_rgba(6,182,212,0.3)]',
-  fire: 'shadow-[0_0_20px_rgba(249,115,22,0.35)]', gold: 'shadow-[0_0_25px_rgba(250,204,21,0.4)]',
-  ice: 'shadow-[0_0_22px_rgba(125,211,252,0.35)]', shadow: 'shadow-[0_0_22px_rgba(139,92,246,0.4)]',
-  neon: 'shadow-[0_0_20px_rgba(74,222,128,0.35)]', plasma: 'shadow-[0_0_28px_rgba(232,121,249,0.45)]',
+  default:  '',
+  electric: 'shadow-[0_0_20px_rgba(6,182,212,0.3)]',
+  fire:     'shadow-[0_0_20px_rgba(249,115,22,0.35)]',
+  gold:     'shadow-[0_0_25px_rgba(250,204,21,0.4)]',
+  ice:      'shadow-[0_0_22px_rgba(125,211,252,0.35)]',
+  shadow:   'shadow-[0_0_22px_rgba(139,92,246,0.4)]',
+  neon:     'shadow-[0_0_20px_rgba(74,222,128,0.35)]',
+  plasma:   'shadow-[0_0_28px_rgba(232,121,249,0.45)]',
+  warlord:  'shadow-[0_0_25px_rgba(220,38,38,0.5)]',
+  sage:     'shadow-[0_0_25px_rgba(34,211,238,0.45)]',
+  absolute: 'shadow-[0_0_35px_rgba(255,215,0,0.55),0_0_60px_rgba(138,43,226,0.3)]',
 };
+
+// ─── Achievement-скины (не в БД, разблокируются по месту в рейтинге) ──
+const ACHIEVEMENT_SKINS: Array<{
+  skinKey: string;
+  name: string;
+  requirement: string;
+  category: 'pvp' | 'exp' | 'global';
+  icon: string;
+  gradientBorder: string;
+}> = [
+  {
+    skinKey: 'warlord',
+    name: '⚔️ Военачальник',
+    requirement: '#1 место в рейтинге PvP',
+    category: 'pvp',
+    icon: '⚔️',
+    gradientBorder: 'from-red-900/60 to-slate-900 border-red-700/50',
+  },
+  {
+    skinKey: 'sage',
+    name: '🧪 Мудрец',
+    requirement: '#1 место по опыту (PvE)',
+    category: 'exp',
+    icon: '🧪',
+    gradientBorder: 'from-cyan-900/60 to-slate-900 border-cyan-700/50',
+  },
+  {
+    skinKey: 'absolute',
+    name: '👑 Абсолют',
+    requirement: '#1 место в общем рейтинге',
+    category: 'global',
+    icon: '👑',
+    gradientBorder: 'from-yellow-900/60 to-slate-900 border-yellow-600/60',
+  },
+];
 
 export function CardSkinShop({ onClose }: { onClose: () => void }) {
   const { user, profile, refreshProfile } = useAuth();
-  const [items, setItems]     = useState<Cosmetic[]>([]);
+  const [items, setItems]   = useState<Cosmetic[]>([]);
   const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading]  = useState(true);
   const [buying, setBuying]    = useState<string | null>(null);
-  // Мобильный таб: 'shop' | 'preview'
   const [mobileTab, setMobileTab] = useState<'shop' | 'preview'>('shop');
 
   const equippedSkin = profile?.equipped_card_skin || 'default';
   const [previewSkin, setPreviewSkin] = useState<CardSkin>(equippedSkin);
   const [activeSkin,  setActiveSkin]  = useState<CardSkin>(equippedSkin);
 
+  // Позиции в рейтингах (null = ещё не загружено)
+  const [rankPositions, setRankPositions] = useState<Record<string, number | null>>({
+    pvp: null, exp: null, global: null,
+  });
+
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     if (!user) return;
-    const { data: allItems }  = await supabase.from('cosmetics').select('*').eq('type', 'card_skin');
+
+    const { data: allItems } = await supabase.from('cosmetics').select('*').eq('type', 'card_skin');
     if (allItems) setItems(allItems);
+
     const { data: inventory } = await supabase.from('user_inventory').select('cosmetic_id').eq('user_id', user.id);
     if (inventory) setOwnedIds(new Set(inventory.map(i => i.cosmetic_id)));
+
+    // Загружаем позиции во всех трёх рейтингах параллельно
+    const [pvpRes, expRes, globalRes] = await Promise.all([
+      supabase.rpc('get_user_rank_position', { target_user_id: user.id, sort_type: 'pvp'    }),
+      supabase.rpc('get_user_rank_position', { target_user_id: user.id, sort_type: 'exp'    }),
+      supabase.rpc('get_user_rank_position', { target_user_id: user.id, sort_type: 'global' }),
+    ]);
+    setRankPositions({
+      pvp:    pvpRes.data    ?? null,
+      exp:    expRes.data    ?? null,
+      global: globalRes.data ?? null,
+    });
+
     setLoading(false);
   }
 
@@ -89,109 +161,200 @@ export function CardSkinShop({ onClose }: { onClose: () => void }) {
     ...items,
   ];
 
-  // ── Список скинов (переиспользуется в обоих лейаутах) ──
+  // ── Список скинов ──────────────────────────────────────────────────────
   const SkinList = () => (
-    <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2">
+    <div className="flex-1 overflow-y-auto p-3 md:p-4">
       {loading ? (
         <div className="flex items-center justify-center h-40 text-slate-500 text-sm animate-pulse">Загрузка...</div>
-      ) : allSkins.map(item => {
-        const skinKey     = item.image_url;
-        const isOwned     = item.id === '__default' || ownedIds.has(item.id);
-        const isEquipped  = activeSkin === skinKey;
-        const isPreviewing = previewSkin === skinKey;
-        const meta        = SKIN_META[skinKey] ?? { desc: '', accent: 'from-slate-700 to-slate-800' };
-        const canBuy      = !item.is_premium || profile?.is_premium;
+      ) : (
+        <>
+          {/* ── Обычные скины из БД ── */}
+          <div className="space-y-2">
+            {allSkins.map(item => {
+              const skinKey      = item.image_url;
+              const isOwned      = item.id === '__default' || ownedIds.has(item.id);
+              const isEquipped   = activeSkin === skinKey;
+              const isPreviewing = previewSkin === skinKey;
+              const meta         = SKIN_META[skinKey] ?? { desc: '', accent: 'from-slate-700 to-slate-800' };
+              const canBuy       = !item.is_premium || profile?.is_premium;
 
-        return (
-          <div
-            key={item.id}
-            onMouseEnter={() => setPreviewSkin(skinKey)}
-            onMouseLeave={() => setPreviewSkin(activeSkin)}
-            // На мобиле тап открывает превью
-            onClick={() => {
-              if (window.innerWidth < 768) {
-                setPreviewSkin(skinKey);
-                setMobileTab('preview');
-              } else if (isOwned) {
-                equipSkin(skinKey);
-              }
-            }}
-            className={`
-              relative rounded-xl border overflow-hidden cursor-pointer
-              transition-all duration-200
-              ${isPreviewing
-                ? `${SKIN_BORDER[skinKey] ?? 'border-slate-600'} bg-slate-800/80`
-                : 'border-slate-800 bg-slate-900/50 hover:bg-slate-800/40'
-              }
-            `}
-          >
-            <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${meta.accent} opacity-80`} />
-            <div className="flex items-center gap-3 px-3 py-2.5 pl-4 md:px-4 md:py-3 md:pl-5">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h4 className="font-black text-white text-sm truncate">{item.name}</h4>
-                  {item.is_premium && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+              return (
+                <div
+                  key={item.id}
+                  onMouseEnter={() => setPreviewSkin(skinKey)}
+                  onMouseLeave={() => setPreviewSkin(activeSkin)}
+                  onClick={() => {
+                    if (window.innerWidth < 768) {
+                      setPreviewSkin(skinKey);
+                      setMobileTab('preview');
+                    } else if (isOwned) {
+                      equipSkin(skinKey);
+                    }
+                  }}
+                  className={`
+                    relative rounded-xl border overflow-hidden cursor-pointer
+                    transition-all duration-200
+                    ${isPreviewing
+                      ? `${SKIN_BORDER[skinKey] ?? 'border-slate-600'} bg-slate-800/80`
+                      : 'border-slate-800 bg-slate-900/50 hover:bg-slate-800/40'
+                    }
+                  `}
+                >
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${meta.accent} opacity-80`} />
+                  <div className="flex items-center gap-3 px-3 py-2.5 pl-4 md:px-4 md:py-3 md:pl-5">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-black text-white text-sm truncate">{item.name}</h4>
+                        {item.is_premium && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 hidden sm:block">{meta.desc}</p>
+                    </div>
+
+                    <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
+                      {isEquipped ? (
+                        <div className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600/20 border border-emerald-500/40 rounded-lg">
+                          <CheckCircle className="w-3 h-3 text-emerald-400" />
+                          <span className="text-emerald-300 text-xs font-black uppercase">Надето</span>
+                        </div>
+                      ) : isOwned ? (
+                        <button
+                          onClick={() => equipSkin(skinKey)}
+                          className="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-slate-200 text-xs font-bold transition-colors"
+                        >
+                          Надеть
+                        </button>
+                      ) : !canBuy ? (
+                        <div className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-lg opacity-60">
+                          <Lock className="w-3 h-3 text-slate-500" />
+                          <span className="text-slate-500 text-xs font-bold">Premium</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => buyItem(item)}
+                          disabled={buying === item.id || (profile?.coins ?? 0) < item.price}
+                          className={`
+                            flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-black transition-all
+                            ${(profile?.coins ?? 0) < item.price
+                              ? 'bg-slate-800 border border-slate-700 text-slate-500 cursor-not-allowed'
+                              : 'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-900/30 active:scale-95'
+                            }
+                          `}
+                        >
+                          {buying === item.id
+                            ? <span className="animate-pulse px-1">...</span>
+                            : <><Coins className="w-3 h-3" />{item.price}</>
+                          }
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {isPreviewing && !isEquipped && (
+                    <div className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r ${meta.accent}`} />
+                  )}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-0.5 hidden sm:block">{meta.desc}</p>
-              </div>
+              );
+            })}
+          </div>
 
-              <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
-                {isEquipped ? (
-                  <div className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600/20 border border-emerald-500/40 rounded-lg">
-                    <CheckCircle className="w-3 h-3 text-emerald-400" />
-                    <span className="text-emerald-300 text-xs font-black uppercase">Надето</span>
-                  </div>
-                ) : isOwned ? (
-                  <button
-                    onClick={() => equipSkin(skinKey)}
-                    className="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-slate-200 text-xs font-bold transition-colors"
-                  >
-                    Надеть
-                  </button>
-                ) : !canBuy ? (
-                  <div className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-lg opacity-60">
-                    <Lock className="w-3 h-3 text-slate-500" />
-                    <span className="text-slate-500 text-xs font-bold">Premium</span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => buyItem(item)}
-                    disabled={buying === item.id || (profile?.coins ?? 0) < item.price}
-                    className={`
-                      flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-black transition-all
-                      ${(profile?.coins ?? 0) < item.price
-                        ? 'bg-slate-800 border border-slate-700 text-slate-500 cursor-not-allowed'
-                        : 'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-900/30 active:scale-95'
+          {/* ── Achievement-скины ── */}
+          <div className="mt-4 pt-3 border-t border-slate-800/60">
+            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 px-1 mb-2 flex items-center gap-1.5">
+              <Trophy className="w-3 h-3" /> Скины за достижения
+            </p>
+            <div className="space-y-2">
+              {ACHIEVEMENT_SKINS.map(achSkin => {
+                const isUnlocked   = rankPositions[achSkin.category] === 1;
+                const isEquipped   = activeSkin === achSkin.skinKey;
+                const isPreviewing = previewSkin === achSkin.skinKey;
+                const meta         = SKIN_META[achSkin.skinKey] ?? { desc: '', accent: 'from-slate-700 to-slate-800' };
+
+                return (
+                  <div
+                    key={achSkin.skinKey}
+                    onMouseEnter={() => isUnlocked && setPreviewSkin(achSkin.skinKey)}
+                    onMouseLeave={() => setPreviewSkin(activeSkin)}
+                    onClick={() => {
+                      if (!isUnlocked) return;
+                      if (window.innerWidth < 768) {
+                        setPreviewSkin(achSkin.skinKey);
+                        setMobileTab('preview');
                       }
+                    }}
+                    className={`
+                      relative flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all duration-200
+                      bg-gradient-to-r ${achSkin.gradientBorder}
+                      ${isPreviewing ? 'ring-1 ring-inset ring-white/20' : ''}
+                      ${isUnlocked ? 'cursor-pointer hover:brightness-110' : 'opacity-55 cursor-not-allowed'}
                     `}
                   >
-                    {buying === item.id
-                      ? <span className="animate-pulse px-1">...</span>
-                      : <><Coins className="w-3 h-3" />{item.price}</>
-                    }
-                  </button>
-                )}
-              </div>
+                    {/* Иконка */}
+                    <div className={`
+                      w-9 h-9 rounded-lg flex items-center justify-center text-xl shrink-0
+                      ${isUnlocked ? 'bg-white/10' : 'bg-slate-800/50 grayscale'}
+                    `}>
+                      {achSkin.icon}
+                    </div>
+
+                    {/* Инфо */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-black text-sm leading-tight">{achSkin.name}</p>
+                      <p className="text-slate-400 text-[10px] mt-0.5 leading-snug">{meta.desc}</p>
+                      <div className={`flex items-center gap-1 mt-0.5 text-[9px] font-bold uppercase tracking-wider
+                        ${isUnlocked ? 'text-emerald-400' : 'text-slate-500'}`}>
+                        {isUnlocked ? (
+                          <><CheckCircle className="w-2.5 h-2.5" /> Разблокировано</>
+                        ) : (
+                          <><Lock className="w-2.5 h-2.5" /> {achSkin.requirement}</>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Кнопка */}
+                    <div className="shrink-0" onClick={e => e.stopPropagation()}>
+                      {isEquipped ? (
+                        <div className="px-2.5 py-1.5 bg-emerald-500/20 border border-emerald-500/40 rounded-lg flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3 text-emerald-400" />
+                          <span className="text-emerald-300 text-xs font-black uppercase">Надето</span>
+                        </div>
+                      ) : isUnlocked ? (
+                        <button
+                          onClick={() => equipSkin(achSkin.skinKey)}
+                          className="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-slate-200 text-xs font-bold transition-colors"
+                        >
+                          Надеть
+                        </button>
+                      ) : (
+                        <div className="p-2 bg-slate-800/50 rounded-lg">
+                          <Lock className="w-3.5 h-3.5 text-slate-600" />
+                        </div>
+                      )}
+                    </div>
+
+                    {isPreviewing && !isEquipped && (
+                      <div className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r ${meta.accent}`} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            {isPreviewing && !isEquipped && (
-              <div className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r ${meta.accent}`} />
-            )}
           </div>
-        );
-      })}
+        </>
+      )}
     </div>
   );
 
-  // ── Превью карточки ──
+  // ── Превью карточки ───────────────────────────────────────────────────
   const PreviewPanel = () => (
     <div className="flex flex-col items-center justify-center gap-4 p-6 h-full">
       <div className="text-center">
         <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 mb-1">Предпросмотр</p>
         <p className="text-sm font-bold text-slate-300">
-          {allSkins.find(s => s.image_url === previewSkin)?.name ?? previewSkin}
+          {allSkins.find(s => s.image_url === previewSkin)?.name
+            ?? ACHIEVEMENT_SKINS.find(s => s.skinKey === previewSkin)?.name
+            ?? previewSkin}
         </p>
       </div>
-      <div className={`transition-all duration-300 ${SKIN_GLOW[previewSkin] ?? ''}`}>
+      <div className={`transition-all duration-300 ${SKIN_GLOW[previewSkin as string] ?? ''}`}>
         <PlayerCard
           isOpponent={false}
           name={profile?.username || 'Player'}
@@ -204,7 +367,7 @@ export function CardSkinShop({ onClose }: { onClose: () => void }) {
         />
       </div>
       <p className="text-xs text-slate-500 italic text-center">
-        {SKIN_META[previewSkin]?.desc ?? ''}
+        {SKIN_META[previewSkin as string]?.desc ?? ''}
       </p>
     </div>
   );
@@ -228,7 +391,6 @@ export function CardSkinShop({ onClose }: { onClose: () => void }) {
 
         {/* ── ДЕСКТОП: правая панель витрины ── */}
         <div className="hidden md:flex w-[55%] flex-col h-full">
-          {/* Шапка */}
           <div className="px-6 pt-5 pb-4 border-b border-slate-800/80 flex-shrink-0">
             <div className="flex items-start justify-between pr-8">
               <div>
@@ -273,7 +435,7 @@ export function CardSkinShop({ onClose }: { onClose: () => void }) {
           {/* Мобайл-табы */}
           <div className="flex border-b border-slate-800/80 flex-shrink-0">
             {[
-              { key: 'shop',    icon: <ShoppingBag className="w-3.5 h-3.5" />, label: 'Магазин' },
+              { key: 'shop',    icon: <ShoppingBag className="w-3.5 h-3.5" />, label: 'Магазин'      },
               { key: 'preview', icon: <Eye className="w-3.5 h-3.5" />,         label: 'Предпросмотр' },
             ].map(tab => (
               <button
@@ -296,7 +458,7 @@ export function CardSkinShop({ onClose }: { onClose: () => void }) {
               <>
                 <div className="px-4 py-2 flex items-center justify-center gap-1.5 border-b border-slate-800/60 flex-shrink-0">
                   <span className="text-[10px] text-slate-600 uppercase tracking-widest">
-                    Дабл-тап на скин для предпросмотра
+                    Тап на скин — открыть превью
                   </span>
                 </div>
                 <SkinList />
