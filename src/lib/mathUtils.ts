@@ -499,3 +499,10 @@ export function checkAnswer(userAnswer: string, dbAnswer: string): boolean {
   const dbSorted   = expandOptions(dbTrim).map(clean).sort().join(';');
   return userSorted === dbSorted;
 }
+
+const norm = s
+  .replace(/\\infty|∞/g, 'Infinity')
+  .replace(/\+Infinity/g, 'Infinity')  // уже есть
+  .replace(/\+\\infty|\+∞/g, 'Infinity') // ← добавить это
+  .replace(/\\pi/g, String(Math.PI))
+  .replace(/\s/g, '');
