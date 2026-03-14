@@ -51,9 +51,7 @@ type ErrorAnalyzerProps = {
 // === ФИКС ОТОБРАЖЕНИЯ ===
 // Убирает лишние $ и оборачивает в один слой $...$
 const renderMath = (text: string) => {
-  if (!text) return '';
-  const clean = text.replace(/\$/g, '').trim();
-  return `$${clean}$`;
+  return text || '';
 };
 
 function TheoryContent({ text }: { text: string }) {
