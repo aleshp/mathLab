@@ -1,6 +1,6 @@
 import { Trophy, Target, Swords } from 'lucide-react';
 
-export type CardSkin = 'default' | 'electric' | 'fire' | 'gold' | 'ice' | 'shadow' | 'neon' | 'plasma' | string;
+export type CardSkin = 'default' | 'electric' | 'fire' | 'gold' | 'ice' | 'shadow' | 'neon' | 'plasma' | 'warlord' | 'sage' | 'absolute' | string;
 
 type PlayerCardProps = {
   isOpponent: boolean;
@@ -226,11 +226,143 @@ function SkinPlasma({ isOpponent, children }: { isOpponent: boolean; children: R
   );
 }
 
+function SkinWarlord({ isOpponent, children }: { isOpponent: boolean; children: React.ReactNode }) {
+  const c    = '#dc2626'; // blood red
+  const gold = '#fbbf24';
+  const dark = '#450a0a';
+  // Восьмиугольник — боевой щит
+  const clip = 'polygon(20px 0%, calc(100% - 20px) 0%, 100% 20px, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0% calc(100% - 20px), 0% 20px)';
+  return (
+    <div className="relative w-[280px] min-h-[380px] flex flex-col"
+      style={{ clipPath: clip, background: '#0d0000', boxShadow: `0 0 60px ${c}55, 0 0 120px ${dark}40` }}>
+      {/* Граница */}
+      <div className="absolute inset-0 pointer-events-none" style={{ clipPath: clip, border: `2px solid ${c}` }} />
+      {/* Перекрещенные мечи SVG */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.07]" style={{ zIndex: 1 }}>
+        <line x1="30" y1="30" x2="250" y2="350" stroke={c} strokeWidth="2" />
+        <line x1="250" y1="30" x2="30" y2="350" stroke={c} strokeWidth="2" />
+        <circle cx="140" cy="190" r="22" stroke={gold} strokeWidth="1.2" fill="none" />
+        <circle cx="140" cy="190" r="8" stroke={gold} strokeWidth="1" fill="none" />
+      </svg>
+      {/* Золотые угловые засечки */}
+      {[
+        { top: 8, left: 8 }, { top: 8, right: 8 },
+        { bottom: 8, left: 8 }, { bottom: 8, right: 8 },
+      ].map((pos, i) => (
+        <div key={i} className="absolute w-3 h-3 pointer-events-none" style={{
+          ...pos,
+          border: `1.5px solid ${gold}`,
+          opacity: 0.55,
+        }} />
+      ))}
+      {/* Верхняя полоса */}
+      <div style={{ height: 4, background: `linear-gradient(90deg, ${dark}, ${c}, ${gold}, ${c}, ${dark})`, flexShrink: 0 }} />
+      {/* Радиальное свечение */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: `radial-gradient(ellipse at 50% 0%, ${dark}90 0%, transparent 60%)` }} />
+      {children}
+      {/* Нижняя полоса */}
+      <div style={{ height: 3, background: `linear-gradient(90deg, transparent, ${c}80, ${gold}50, ${c}80, transparent)`, flexShrink: 0 }} />
+    </div>
+  );
+}
+ 
+function SkinSage({ isOpponent, children }: { isOpponent: boolean; children: React.ReactNode }) {
+  const c      = '#22d3ee'; // electric cyan
+  const bright = '#a5f3fc';
+  const dim    = '#164e63';
+  // Шестиугольник — колба лаборатории
+  const clip = 'polygon(28px 0%, calc(100% - 28px) 0%, 100% 50%, calc(100% - 28px) 100%, 28px 100%, 0% 50%)';
+  return (
+    <div className="relative w-[292px] min-h-[380px] flex flex-col"
+      style={{ clipPath: clip, background: '#000c14', boxShadow: `0 0 50px ${c}55, 0 0 100px ${dim}35` }}>
+      {/* Граница */}
+      <div className="absolute inset-0 pointer-events-none" style={{ clipPath: clip, border: `2px solid ${c}90` }} />
+      {/* Сетка-цепи */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.10]" style={{ zIndex: 1 }}>
+        {/* Горизонтальные линии */}
+        {[95, 190, 285].map(y => (
+          <line key={y} x1="0" y1={y} x2="292" y2={y} stroke={c} strokeWidth="0.7" />
+        ))}
+        {/* Вертикальные линии */}
+        {[73, 146, 219].map(x => (
+          <line key={x} x1={x} y1="0" x2={x} y2="380" stroke={c} strokeWidth="0.5" />
+        ))}
+        {/* Узлы пересечений */}
+        {[73, 146, 219].flatMap(x => [95, 190, 285].map(y => (
+          <circle key={`${x}-${y}`} cx={x} cy={y} r={2.5} fill={c} opacity={0.7} />
+        )))}
+        {/* Атом по центру */}
+        <circle cx="146" cy="190" r="28" stroke={c} strokeWidth="0.8" fill="none" opacity={0.5} />
+        <ellipse cx="146" cy="190" rx="28" ry="10" stroke={bright} strokeWidth="0.6" fill="none" opacity={0.35} transform="rotate(60 146 190)" />
+        <ellipse cx="146" cy="190" rx="28" ry="10" stroke={bright} strokeWidth="0.6" fill="none" opacity={0.35} transform="rotate(120 146 190)" />
+        <circle cx="146" cy="190" r="4" fill={c} opacity={0.6} />
+      </svg>
+      <div style={{ height: 3, background: `linear-gradient(90deg, transparent, ${c}, ${bright}, ${c}, transparent)`, flexShrink: 0 }} />
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: `radial-gradient(ellipse at 50% 50%, ${dim}55 0%, transparent 65%)` }} />
+      {children}
+      <div style={{ height: 3, background: `linear-gradient(90deg, transparent, ${c}80, ${bright}50, transparent)`, flexShrink: 0 }} />
+    </div>
+  );
+}
+ 
+function SkinAbsolute({ isOpponent, children }: { isOpponent: boolean; children: React.ReactNode }) {
+  const rainbow = 'linear-gradient(135deg, #ffd700, #ff4500, #ff1493, #9400d3, #00bfff, #00ff7f, #ffd700)';
+  const gold    = '#ffd700';
+  return (
+    <div
+      className="relative flex flex-col"
+      style={{
+        width: 280,
+        minHeight: 380,
+        borderRadius: 14,
+        // Трюк: фон = два слоя — тёмный + радужный. Внутренний (padding-box) тёмный, внешний (border-box) радужный → радужная рамка
+        background: `linear-gradient(#000305, #000305) padding-box, ${rainbow} border-box`,
+        border: '2px solid transparent',
+        boxShadow: `0 0 55px rgba(255,215,0,0.45), 0 0 110px rgba(138,43,226,0.3), 0 0 160px rgba(0,191,255,0.15)`,
+      }}
+    >
+      {/* Радужный мерцающий оверлей */}
+      <div className="absolute inset-0 pointer-events-none rounded-xl"
+        style={{ background: rainbow, opacity: 0.04 }} />
+      {/* Звёзды */}
+      {[
+        { top: '7%',  left: '10%' }, { top: '10%', left: '85%' },
+        { top: '75%', left: '7%'  }, { top: '82%', left: '82%' },
+        { top: '48%', left: '93%' }, { top: '35%', left: '2%'  },
+      ].map((s, i) => (
+        <div key={i} className="absolute pointer-events-none select-none"
+          style={{ top: s.top, left: s.left, color: gold, fontSize: 9, opacity: 0.5 }}>✦</div>
+      ))}
+      {/* Три короны вверху по центру */}
+      <div className="absolute top-[6px] left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-none" style={{ zIndex: 5 }}>
+        {[{ s: 8, o: 0.4 }, { s: 11, o: 0.65 }, { s: 8, o: 0.4 }].map((cr, i) => (
+          <span key={i} style={{ color: gold, fontSize: cr.s, opacity: cr.o, lineHeight: 1 }}>♛</span>
+        ))}
+      </div>
+      {/* Верхняя полоса */}
+      <div style={{ height: 4, background: rainbow, flexShrink: 0, borderRadius: '12px 12px 0 0' }} />
+      {/* Угловые ромбы */}
+      {[
+        { top: 14, left: 14 }, { top: 14, right: 14 },
+        { bottom: 14, left: 14 }, { bottom: 14, right: 14 },
+      ].map((pos, i) => (
+        <div key={i} className="absolute pointer-events-none"
+          style={{ ...pos, width: 6, height: 6, background: gold, transform: 'rotate(45deg)', opacity: 0.5 }} />
+      ))}
+      {children}
+      {/* Нижняя полоса */}
+      <div style={{ height: 3, background: rainbow, flexShrink: 0, borderRadius: '0 0 12px 12px' }} />
+    </div>
+  );
+}
+
 // ─── Маппинг скинов ───────────────────────────────────────
 const SKIN_WRAPPERS: Record<string, React.FC<{ isOpponent: boolean; children: React.ReactNode }>> = {
   default: SkinDefault, electric: SkinElectric, fire: SkinFire,
   gold: SkinGold, ice: SkinIce, shadow: SkinShadow,
-  neon: SkinNeon, plasma: SkinPlasma,
+  neon: SkinNeon, plasma: SkinPlasma, warlord: SkinWarlord, sage: SkinSage, absolute: SkinAbsolute,
 };
 
 const SKIN_COLORS: Record<string, { badge: string; label: string; labelText: string; stat: string; barColor: string }> = {
@@ -242,6 +374,9 @@ const SKIN_COLORS: Record<string, { badge: string; label: string; labelText: str
   shadow:   { badge: 'bg-violet-500/15 text-violet-300 border border-violet-500/30',label: 'text-violet-400',  labelText: '🌑 SHADOW',  stat: 'text-violet-400',  barColor: '#8b5cf6' },
   neon:     { badge: 'bg-green-500/15 text-green-300 border border-green-500/30',   label: 'text-green-400',   labelText: '💚 NEON',    stat: 'text-green-400',   barColor: '#4ade80' },
   plasma:   { badge: 'bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30', label: 'text-fuchsia-400', labelText: '🔮 PLASMA', stat: 'text-fuchsia-400', barColor: '#e879f9' },
+  warlord:  { badge: 'bg-red-900/30 text-red-200 border border-red-600/40',         label: 'text-red-400',    labelText: '⚔️ WARLORD',  stat: 'text-red-300',    barColor: '#dc2626' },
+  sage:     { badge: 'bg-cyan-900/30 text-cyan-200 border border-cyan-500/40',       label: 'text-cyan-300',   labelText: '🧪 SAGE',     stat: 'text-cyan-200',   barColor: '#22d3ee' },
+  absolute: { badge: 'bg-yellow-900/30 text-yellow-200 border border-yellow-400/50', label: 'text-yellow-300', labelText: '👑 ABSOLUTE', stat: 'text-yellow-300', barColor: '#ffd700' },
 };
 
 // ─── Main component ───────────────────────────────────────
