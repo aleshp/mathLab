@@ -37,6 +37,7 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
   const [showChat, setShowChat] = useState(false);
   const [userAnswer, setUserAnswer] = useState('');
   const mfRef = useRef<any>(null);
+  const [achToast, setAchToast] = useState<{ name: string; coins: number } | null>(null);
 
   const [result, setResult] = useState<'correct' | 'incorrect' | null>(null);
   const [showHint, setShowHint] = useState(false);
