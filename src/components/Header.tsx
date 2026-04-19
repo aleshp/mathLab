@@ -6,6 +6,7 @@ import { Profile, supabase } from '../lib/supabase';
 import { getRank, getLevelProgress } from '../lib/gameLogic';
 import { NotificationsModal } from './NotificationsModal';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { DailyQuestsModal } from './DailyQuestsModal';
 
 // --- СЧЕТЧИК ОНЛАЙНА ---
 function getBaseOnline(): number {
@@ -62,6 +63,7 @@ export function Header({
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const[showQuests, setShowQuests] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -122,13 +124,14 @@ export function Header({
                     <span className="text-amber-400 font-black font-mono text-[10px] md:text-xs">{profile?.coins || 0}</span>
                   </div>
 
-                  <button 
-                    onClick={() => { setShowNotifications(true); setUnreadCount(0); }}
-                    className="relative p-1.5 md:p-2 bg-slate-800/50 hover:bg-slate-700 rounded-xl border border-slate-700 transition-colors"
-                  >
-                    <Bell className="w-4 h-4 md:w-5 md:h-5 text-slate-400 hover:text-purple-400" />
-                    {unreadCount > 0 && <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full animate-ping" />}
-                  </button>
+                <button 
+                  onClick={() => setShowQuests(true)}
+                  className="flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg shrink-0 cursor-pointer transition-colors shadow-lg shadow-amber-900/10" 
+                  title="Ежедневные задания"
+                >
+                  <Coins className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-400" />
+                  <span className="text-amber-400 font-black font-mono text-[10px] md:text-xs">{profile?.coins || 0}</span>
+                </button>
 
                   {profile?.companion_name && (
                     <button 
