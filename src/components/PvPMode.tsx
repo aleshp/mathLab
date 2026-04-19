@@ -442,6 +442,27 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       } catch (e) { console.error(e); }
     }
 
+
+    if (user && !isFriendlyMatch) {
+       const today = new Date().toISOString().split('T')[0];
+       const { data: dq } = await supabase.from('daily_quests').select('*').eq('user_id', user.id).maybeSingle();
+       
+       const addWin = isWin ? 1 : 0;
+       
+       if (!dq || dq.quest_date !== today) {
+         await supabase.from('daily_quests').upsert({ 
+           user_id: user.id, quest_date: today, 
+           pve_solved: 0, pvp_played: 1, pvp_won: addWin, 
+           pve_claimed: false, pvp_played_claimed: false, pvp_won_claimed: false 
+         });
+       } else {
+         await supabase.from('daily_quests').update({ 
+           pvp_played: dq.pvp_played + 1, 
+           pvp_won: dq.pvp_won + addWin 
+         }).eq('user_id', user.id);
+       }
+    }
+
     await refreshProfile();
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
   }
