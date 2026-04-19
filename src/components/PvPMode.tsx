@@ -1,3 +1,4 @@
+// src/components/PvPMode.tsx
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
@@ -18,8 +19,9 @@ import {
   Target,
   Info,
   Users,
-  ChevronLeft, // <-- добавили
-  ChevronRight // <-- добавили
+  ChevronLeft,
+  ChevronRight,
+  Coins
 } from 'lucide-react';
 import { getPvPRank, getPvPShortRank } from '../lib/gameLogic';
 import { MathKeypad } from './MathKeypad';
@@ -46,56 +48,49 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
   const { t, i18n } = useTranslation();
   const { user, profile, refreshProfile } = useAuth();
 
-  // === State ===
   const [status, setStatus] = useState<DuelState>(initialDuelId ? 'searching' : 'lobby');
   const [duelId, setDuelId] = useState<string | null>(initialDuelId || null);
 
-  // Opponent Data
-  const[opponentName, setOpponentName] = useState<string>('???');
+  const [opponentName, setOpponentName] = useState<string>('???');
   const [opponentMMR, setOpponentMMR] = useState<number>(1000);
   const [isBotMatch, setIsBotMatch] = useState(false);
   const [botName, setBotName] = useState<string>('Bot');
   
-  // Флаг дружеского матча (Патч 2)
   const[isFriendlyMatch, setIsFriendlyMatch] = useState(false);
 
-  // Game Data
   const [problems, setProblems] = useState<any[]>([]);
   const [currentProbIndex, setCurrentProbIndex] = useState(0);
-  const [myScore, setMyScore] = useState(0);
+  const[myScore, setMyScore] = useState(0);
   const [oppScore, setOppScore] = useState(0);
   const [oppProgress, setOppProgress] = useState(0);
 
-  // Input
-  const [userAnswer, setUserAnswer] = useState('');
+  const[userAnswer, setUserAnswer] = useState('');
   const mfRef = useRef<any>(null);
 
-  // Results & UI
-  const [winner, setWinner] = useState<'me' | 'opponent' | 'draw' | null>(null);
+  const[winner, setWinner] = useState<'me' | 'opponent' | 'draw' | null>(null);
   const [mmrChange, setMmrChange] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-  const [timeLeft, setTimeLeft] = useState(60);
+  const[feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+  const[timeLeft, setTimeLeft] = useState(60);
 
-  // Modals / Statuses
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [showSurrenderModal, setShowSurrenderModal] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const[showRankLegend, setShowRankLegend] = useState(false);
+  const [showRankLegend, setShowRankLegend] = useState(false);
 
-  // Search timer
   const [searchElapsed, setSearchElapsed] = useState(0);
   const searchIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Rank Reveal (Calibration finish)
   const [showRevealModal, setShowRevealModal] = useState(false);
   const [revealOldMMR, setRevealOldMMR] = useState<number | null>(null);
   const [revealNewMMR, setRevealNewMMR] = useState<number | null>(null);
   const [revealRank, setRevealRank] = useState<PvPRank | null>(null);
 
+  const [coinsEarned, setCoinsEarned] = useState<number>(0);
+  const[hasSurrendered, setHasSurrendered] = useState(false);
+
   const isAdmin = profile?.role === 'admin';
   const myMMR = profile?.mmr ?? BASE_MMR;
 
-  // === Bot Setup ===
   const botOpponent = useBotOpponent({
     isEnabled: isBotMatch && status === 'battle',
     duelId: duelId,
@@ -148,7 +143,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     }
   };
 
-  // === Admin: Force Win ===
   const handleAdminForceWin = async () => {
     if (!duelId || !user) return;
 
@@ -157,14 +151,12 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     await supabase.from('duels').update({ status: 'finished' }).eq('id', duelId);
     await supabase.rpc('finish_duel', { duel_uuid: duelId, finisher_uuid: user.id });
 
-    // Принудительное начисление админу
     const newMMR = (profile?.mmr ?? BASE_MMR) + 25;
     await supabase.from('profiles').update({ mmr: newMMR }).eq('id', user.id);
 
     endGame(isBotMatch ? 'me' : user.id, 25);
   };
 
-  // === Initial Load / Reconnect ===
   useEffect(() => {
     if (initialDuelId && status === 'searching') {
       reconnectToDuel(initialDuelId);
@@ -179,7 +171,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       return;
     }
 
-    // Патч 2: Устанавливаем флаг, если матч дружеский
     setIsFriendlyMatch(!!duel.is_friendly);
 
     const isP1 = duel.player1_id === user?.id;
@@ -204,11 +195,12 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     setStatus('battle');
   }
 
-  // === Matchmaking ===
   async function findMatch() {
     setStatus('searching');
     setIsBotMatch(false);
-    setIsFriendlyMatch(false); // Обычный поиск — это рейтинговый матч
+    setIsFriendlyMatch(false); 
+    setHasSurrendered(false);
+    setCoinsEarned(0);
     setSearchElapsed(0);
     
     if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
@@ -216,7 +208,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       setSearchElapsed(prev => prev + 1);
     }, 1000);
 
-    const range = 100; // Уменьшенный диапазон по запросу
+    const range = 100;
     const { data: waitingDuel } = await supabase
       .from('duels')
       .select('*')
@@ -305,7 +297,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       .subscribe();
   }
 
-  // === Game Logic ===
   async function submitResult(isCorrect: boolean) {
     setFeedback(isCorrect ? 'correct' : 'wrong');
     const newScore = isCorrect ? myScore + 1 : myScore;
@@ -367,7 +358,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
 
   const handleTimeout = () => submitResult(false);
 
-  // Timer: Исправленный таймер, который не вызывает лишних рендеров
   useEffect(() => {
     let timer: any;
     if (status === 'battle' && !feedback && currentProbIndex < problems.length) {
@@ -376,9 +366,8 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [status, feedback, currentProbIndex, problems.length]);
+  },[status, feedback, currentProbIndex, problems.length]);
 
-  // Обработка 0 таймера
   useEffect(() => {
     if (timeLeft === 0 && !feedback && status === 'battle') {
       handleTimeout();
@@ -405,7 +394,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     mfRef.current.focus({ preventScroll: true });
   };
 
-  // === End Game & Calibration Logic ===
   async function endGame(winnerId: string | null, eloChange: number = 0) {
     if (status === 'finished') return;
     setStatus('finished');
@@ -418,21 +406,30 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
       setWinner(isWin ? 'me' : 'opponent');
     }
 
-    // Расчет изменения MMR на клиенте для ботов
+    const isDraw = winnerId === 'draw';
+    let earned = 0;
+    if (isDraw) earned = 5;
+    else if (isWin) earned = 15;
+    else if (!hasSurrendered) earned = 2;
+
+    if (profile?.is_premium) earned *= 2;
+    setCoinsEarned(earned);
+
+    if (earned > 0 && user && !isFriendlyMatch) {
+      await supabase.rpc('grant_coins', { amount: earned });
+    }
+
     const change = winnerId === 'draw' ? 0 : isBotMatch ? (isWin ? 25 : -25) : Math.abs(eloChange) * (isWin ? 1 : -1);
     setMmrChange(Math.abs(change));
     
-    // Сохраняем старый MMR для показа анимации
     setRevealOldMMR(profile?.mmr ?? BASE_MMR);
 
-    // ВАЖНО: Если это БОТ и НЕ дружеский матч — обновляем MMR клиента вручную
     if (isBotMatch && user && winnerId !== 'draw' && !isFriendlyMatch) {
       const currentMMR = profile?.mmr ?? BASE_MMR;
       const newMMR = Math.max(0, currentMMR + change);
       await supabase.from('profiles').update({ mmr: newMMR }).eq('id', user.id);
     }
 
-    // Logic for calibration (защищено от дружеских матчей)
     if (user && !profile?.has_calibrated && winnerId !== 'draw' && !isFriendlyMatch) {
       try {
         const result = await recordCalibrationMatch(user.id, isWin, opponentMMR);
@@ -451,6 +448,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
 
   const confirmSurrender = async () => {
     setShowSurrenderModal(false);
+    setHasSurrendered(true);
     if (duelId && user) {
       await supabase.from('duels').update({ status: 'finished' }).eq('id', duelId);
       await supabase.rpc('surrender_duel', { duel_uuid: duelId, surrendering_uuid: user.id });
@@ -479,9 +477,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     }
   }
 
-  // --- RENDERING ---
-
-  // 1. Lobby
   if (status === 'lobby') {
     const isUnranked = !!(profile && !profile.has_calibrated);
     const calibPlayed = profile?.calibration_matches_played ?? 0;
@@ -507,9 +502,7 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
               <Info className="w-5 h-5" />
             </button>
 
-            {/* ОГРОМНЫЙ РАНГ */}
             <div className="mx-auto w-32 h-32 flex items-center justify-center relative mb-6">
-              {/* Аурическое свечение под цвет ранга */}
               {!isUnranked && (
                 <div 
                   className="absolute inset-0 opacity-30 blur-2xl rounded-full animate-pulse" 
@@ -559,7 +552,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     );
   }
 
-  // 2. Searching
   if (status === 'searching') {
     const BOT_TIMER = 7;
     const progress = Math.min((searchElapsed / BOT_TIMER) * 100, 100);
@@ -651,7 +643,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     );
   }
 
-  // 3. VS Screen
   if (status === 'vs_screen') {
     return (
       <VsScreen
@@ -663,7 +654,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     );
   }
 
-  // 4. Battle
   if (status === 'battle') {
     const currentProb = problems[currentProbIndex];
 
@@ -792,7 +782,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
             
             <MathKeypad {...keypadProps} />
 
-            {/* Панель со стрелками как в Реакторе */}
             <div className="flex justify-start items-center pt-3 px-1 pb-1">
               <div className="flex gap-2">
                 <button
@@ -816,7 +805,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
     );
   }
 
-  // 5. Finished
   if (status === 'finished') {
     const isWin = winner === 'me';
     const isDraw = winner === 'draw';
@@ -831,7 +819,6 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
         <div className="flex items-center justify-center h-full p-4 animate-in zoom-in duration-300">
           <div className="text-center p-8 md:p-12 bg-slate-800 rounded-3xl border-2 border-slate-600 shadow-2xl max-w-lg w-full">
             
-            {/* Патч 2: Бейдж дружеского матча */}
             {isFriendlyMatch && (
               <div className="mb-6 inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-bold shadow-sm">
                 <Users className="w-4 h-4" />
@@ -850,7 +837,14 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
                 ) : isFriendlyMatch ? (
                   <p className="text-emerald-400 font-bold text-lg mb-6">Отличная игра!</p>
                 ) : (
-                  <p className="text-emerald-400 font-bold text-lg mb-6 animate-pulse">+ {mmrChange} MP</p>
+                  <div className="flex items-center justify-center gap-4 mb-6">
+                    <p className="text-emerald-400 font-bold text-lg animate-pulse">+ {mmrChange} MP</p>
+                    {coinsEarned > 0 && (
+                      <p className="text-amber-400 font-bold text-lg flex items-center gap-1 bg-amber-500/10 px-3 py-1 rounded-lg border border-amber-500/30">
+                        <Coins className="w-5 h-5"/> +{coinsEarned} MC
+                      </p>
+                    )}
+                  </div>
                 )}
               </>
             ) : isDraw ? (
@@ -860,7 +854,14 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
                 {isFriendlyMatch ? (
                   <p className="text-slate-500 mb-6">Хорошая тренировка</p>
                 ) : (
-                  <p className="text-slate-500 mb-6">0 MP</p>
+                  <div className="flex items-center justify-center gap-4 mb-6">
+                    <p className="text-slate-500">0 MP</p>
+                    {coinsEarned > 0 && (
+                      <p className="text-amber-400 font-bold text-lg flex items-center gap-1 bg-amber-500/10 px-3 py-1 rounded-lg border border-amber-500/30">
+                        <Coins className="w-5 h-5"/> +{coinsEarned} MC
+                      </p>
+                    )}
+                  </div>
                 )}
               </>
             ) : (
@@ -872,7 +873,14 @@ export function PvPMode({ onBack, initialDuelId }: Props) {
                 ) : isFriendlyMatch ? (
                   <p className="text-slate-400 mb-6">Повезет в следующий раз</p>
                 ) : (
-                  <p className="text-slate-400 mb-6">- {mmrChange} MP</p>
+                  <div className="flex items-center justify-center gap-4 mb-6">
+                    <p className="text-slate-400">- {mmrChange} MP</p>
+                    {coinsEarned > 0 && (
+                      <p className="text-amber-400 font-bold text-lg flex items-center gap-1 bg-amber-500/10 px-3 py-1 rounded-lg border border-amber-500/30">
+                        <Coins className="w-5 h-5"/> +{coinsEarned} MC
+                      </p>
+                    )}
+                  </div>
                 )}
               </>
             )}
