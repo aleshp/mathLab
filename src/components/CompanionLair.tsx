@@ -1,3 +1,4 @@
+// src/components/CompanionLair.tsx
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,14 +10,14 @@ type Props = {
 
 export function CompanionLair({ onClose }: Props) {
   const { profile, refreshProfile } = useAuth();
-  const [animationState, setAnimationState] = useState<'idle' | 'eating' | 'happy' | 'crying'>('idle');
-  const[hunger, setHunger] = useState(profile?.companion_hunger || 100);
+  const[animationState, setAnimationState] = useState<'idle' | 'eating' | 'happy' | 'crying'>('idle');
+  const [hunger, setHunger] = useState(profile?.companion_hunger || 100);
   
   // Управление меню еды
   const [showFoodMenu, setShowFoodMenu] = useState(false);
-  const[feedingLoading, setFeedingLoading] = useState(false);
+  const [feedingLoading, setFeedingLoading] = useState(false);
 
-  // === 1. СИНХРОНИЗАЦИЯ ГОЛОДА ===
+  // === 1. ФОНОВАЯ СИНХРОНИЗАЦИЯ ГОЛОДА ===
   useEffect(() => {
     async function syncHunger() {
       if (!profile) return;
@@ -34,14 +35,20 @@ export function CompanionLair({ onClose }: Props) {
           last_fed_at: new Date().toISOString()
         }).eq('id', profile.id);
         refreshProfile();
-      } else {
-        setHunger(profile.companion_hunger);
       }
     }
     syncHunger();
     const interval = setInterval(syncHunger, 60000);
     return () => clearInterval(interval);
   }, [profile?.id]);
+
+  // === 1.1 РЕАКТИВНОЕ ОБНОВЛЕНИЕ ШКАЛЫ ===
+  // Слушаем глобальный профиль. Если он обновился (например, после покупки еды), синхронизируем локальный стейт.
+  useEffect(() => {
+    if (profile?.companion_hunger !== undefined) {
+      setHunger(profile.companion_hunger);
+    }
+  }, [profile?.companion_hunger]);
 
   // === 2. АВТО-ОПРЕДЕЛЕНИЕ ЭМОЦИИ ===
   useEffect(() => {
@@ -75,10 +82,16 @@ export function CompanionLair({ onClose }: Props) {
       if (error) throw error;
 
       if (data === true) {
+        // === ОПТИМИСТИЧНОЕ ОБНОВЛЕНИЕ UI ===
+        // Мгновенно обновляем локальную сытость, не дожидаясь загрузки с сервера
+        const restoreAmount = type === 'steak' ? 100 : 50;
+        setHunger(prev => Math.min(100, prev + restoreAmount));
+
         setAnimationState('eating');
         setTimeout(() => setAnimationState('happy'), 500);
         setTimeout(() => setAnimationState('idle'), 1500);
-        await refreshProfile(); // Обновляем профиль (монеты и сытость подтянутся)
+        
+        await refreshProfile(); // Фоново подтягиваем новые монеты и сытость
       } else {
         alert('Не удалось покормить (недостаточно монет или паек уже использован).');
       }
