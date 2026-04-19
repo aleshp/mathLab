@@ -249,6 +249,22 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
 
         if (isFirstSolve) setTimeout(() => refreshProfile(), 500);
       }
+
+      // === ДОБАВИТЬ ЭТОТ БЛОК ДЛЯ КВЕСТОВ ===
+      // Инкремент дейлика (PvE), если это не режим "Работа над ошибками"
+      if (isCorrect && !forcedProblemIds) {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: dq } = await supabase.from('daily_quests').select('*').eq('user_id', user.id).maybeSingle();
+        if (!dq || dq.quest_date !== today) {
+          await supabase.from('daily_quests').upsert({ 
+            user_id: user.id, quest_date: today, pve_solved: 1, pvp_played: 0, pvp_won: 0, 
+            pve_claimed: false, pvp_played_claimed: false, pvp_won_claimed: false 
+          });
+        } else {
+          await supabase.from('daily_quests').update({ pve_solved: dq.pve_solved + 1 }).eq('user_id', user.id);
+        }
+      }
+      // === КОНЕЦ БЛОКА ===
     }
 
     setTimeout(() => loadNextProblem(), 2000);
