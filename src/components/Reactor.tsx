@@ -131,16 +131,35 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
   // Функция для автоматического получения ачивки
   async function checkAndGrantAchievement(name: string) {
     if (!user) return;
+    
+    // Ищем ID ачивки по имени (без учета регистра)
     const { data: ach } = await supabase
       .from('achievements')
       .select('id')
-      .eq('name', name)
+      .ilike('name', name) 
       .maybeSingle();
-
+  
     if (ach) {
-      const { data: success } = await supabase.rpc('claim_achievement', { target_ach_id: ach.id });
-      if (success) {
-        confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 }, colors: ['#facc15', '#fbbf24', '#ffffff'] });
+      // Вызываем RPC функцию
+      const { data: claimed, error } = await supabase.rpc('claim_achievement', { 
+        target_ach_id: ach.id 
+      });
+      
+      if (error) {
+        console.error("Achievement RPC Error:", error.message);
+        return;
+      }
+  
+      if (claimed) {
+        console.log(`Achievement ${name} granted!`);
+        confetti({ 
+          particleCount: 150, 
+          spread: 70, 
+          origin: { y: 0.6 }, 
+          colors: ['#facc15', '#fbbf24', '#ffffff'] 
+        });
+        // Обновляем профиль сразу, чтобы монетки прибавились в UI
+        await refreshProfile(); 
       }
     }
   }
@@ -148,13 +167,16 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
   async function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
     if (!currentProblem) return;
-
+  
+    // Запоминаем текущее кол-во решенных задач ДО отправки новой
+    const isAccountBrandNew = profile?.total_experiments === 0;
+  
     const isCorrect = checkAnswer(userAnswer, currentProblem.answer);
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
-
+  
     setResult(isCorrect ? 'correct' : 'incorrect');
     setProblemsSolved(prev => prev + 1);
-
+  
     if (user) {
       await supabase.from('experiments').insert({
         user_id: user.id,
@@ -164,33 +186,32 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
         correct: isCorrect,
         time_spent: timeSpent,
       });
-
+  
       if (isCorrect) {
         setCorrectCount(prev => prev + 1);
-        const newStreak = streak + 1;
+        const newStreak = streak + 1; // Считаем новый стрик в переменную
         setStreak(newStreak);
-
-        const isFirstSolve = !alreadySolvedIds.has(currentProblem.id);
         
-        // 1. Монетки за решение
+        const isFirstSolve = !alreadySolvedIds.has(currentProblem.id);
+  
         if (isFirstSolve) {
           const coinsToGive = profile?.is_premium ? 10 : 5;
           await supabase.rpc('grant_coins', { amount: coinsToGive });
           setEarnedCoins(coinsToGive);
           setAlreadySolvedIds(prev => new Set([...prev, currentProblem.id]));
-
-          // 2. Ачивка "Первый шаг"
-          if (profile?.total_experiments === 0) {
+  
+          // АЧИВКА: Первый шаг
+          if (isAccountBrandNew) {
             await checkAndGrantAchievement('Первый шаг');
           }
         }
-
-        // 3. Ачивка "Безошибочный эксперимент" (10 подряд)
+  
+        // АЧИВКА: 10 подряд (проверяем по переменной newStreak, а не по стейту!)
         if (newStreak === 10) {
           await checkAndGrantAchievement('Безошибочный эксперимент');
         }
-
-        // 4. Прогресс дейликов
+  
+        // Квесты (Daily)
         if (!forcedProblemIds) {
           const today = new Date().toISOString().split('T')[0];
           const { data: dq } = await supabase.from('daily_quests').select('*').eq('user_id', user.id).maybeSingle();
@@ -200,12 +221,12 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
             await supabase.from('daily_quests').update({ pve_solved: dq.pve_solved + 1 }).eq('user_id', user.id);
           }
         }
-
-        setTimeout(() => refreshProfile(), 500);
+        
+        refreshProfile();
       } else {
-        setStreak(0); // Сброс стрика при ошибке
+        setStreak(0); // Ошибка — сброс стрика
         if (!forcedProblemIds) {
-          await supabase.from('user_errors').insert({
+           await supabase.from('user_errors').insert({
             user_id: user.id,
             problem_id: currentProblem.id,
             module_id: module.id,
@@ -216,7 +237,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
         }
       }
     }
-
     setTimeout(() => loadNextProblem(), 2000);
   }
 
