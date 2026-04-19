@@ -1,3 +1,4 @@
+// src/components/Reactor.tsx
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Module } from '../lib/supabase';
@@ -17,6 +18,7 @@ import {
   Lock,
   ChevronLeft,
   ChevronRight,
+  Coins
 } from 'lucide-react';
 import { CompanionChat } from './CompanionChat';
 import { MathInput } from './MathInput';
@@ -54,20 +56,16 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
 
   const [result, setResult] = useState<'correct' | 'incorrect' | null>(null);
   const [showHint, setShowHint] = useState(false);
-  const [startTime, setStartTime] = useState(Date.now());
+  const[startTime, setStartTime] = useState(Date.now());
   const [problemsSolved, setProblemsSolved] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
+  const[earnedCoins, setEarnedCoins] = useState<number | null>(null);
 
-  // SXP = опыт суриката, начисляется триггером handle_new_experiment в БД
-  // Здесь только анимация — реальное значение берём из профиля (is_premium)
-  // ID задач, которые пользователь уже решил верно хотя бы раз
-  // Нужно чтобы не давать XP/SXP повторно и не показывать бейдж
   const [alreadySolvedIds, setAlreadySolvedIds] = useState<Set<string>>(new Set());
 
   const GUEST_LIMIT = 3;
-  const [showPaywall, setShowPaywall] = useState(false);
+  const[showPaywall, setShowPaywall] = useState(false);
 
-  // ── Загрузка задач + уже решённых ────────────────────────
   useEffect(() => {
     async function fetchProblems() {
       setLoading(true);
@@ -84,7 +82,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
           setProblems(shuffled);
           setCurrentProblem(shuffled[0]);
 
-          // Загружаем уже правильно решённые задачи этого пользователя
           if (user) {
             const problemIds = shuffled.map((p: any) => p.id);
             const { data: solved } = await supabase
@@ -103,15 +100,15 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
       }
     }
     fetchProblems();
-  }, [module.id, forcedProblemIds, user?.id]);
+  },[module.id, forcedProblemIds, user?.id]);
 
-  // ── Следующая задача ──────────────────────────────────────
   function loadNextProblem() {
     if (!user && problemsSolved >= GUEST_LIMIT) {
       setShowPaywall(true);
       return;
     }
 
+    setEarnedCoins(null);
     let nextProblems = [...problems];
     if (forcedProblemIds && result === 'correct' && currentProblem) {
       nextProblems = problems.filter(p => p.id !== currentProblem.id);
@@ -138,7 +135,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
     }
   }
 
-  // ── Управление курсором (стрелки) ────────────────────────
   const moveCursor = (direction: 'backward' | 'forward') => {
     if (!mfRef.current) return;
     const cmd = direction === 'backward' ? 'moveToPreviousChar' : 'moveToNextChar';
@@ -172,7 +168,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
     requestAnimationFrame(() => window.scrollTo(0, scrollY));
   };
 
-  // ── Проверка ответа ───────────────────────────────────────
   async function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
     if (!currentProblem) return;
@@ -184,15 +179,9 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
     setProblemsSolved(prev => prev + 1);
     if (isCorrect) setCorrectCount(prev => prev + 1);
 
-    // Первое верное решение этой задачи — только тогда даём XP/SXP
     const isFirstSolve = user && isCorrect && !alreadySolvedIds.has(currentProblem.id);
 
-    // === Только для авторизованных пользователей ===
     if (user) {
-      // Записываем эксперимент — триггер handle_new_experiment автоматически:
-      // 1. начислит companion_xp (+10 или +20 для premium) — только первый раз
-      // 2. обновит companion_level при накоплении
-      // 3. увеличит total_experiments — только первый раз
       await supabase.from('experiments').insert({
         user_id: user.id,
         module_id: module.id,
@@ -214,10 +203,16 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
       }
       
       if (isCorrect) {
-        // Добавляем в локальный Set чтобы не дать бейдж повторно в этой же сессии
         setAlreadySolvedIds(prev => new Set([...prev, currentProblem.id]));
 
-        // Если это работа над ошибками — удаляем задачу из ошибок
+        if (isFirstSolve) {
+          const coinsToGive = profile?.is_premium ? 10 : 5;
+          await supabase.rpc('grant_coins', { amount: coinsToGive });
+          setEarnedCoins(coinsToGive);
+        } else {
+          setEarnedCoins(0);
+        }
+
         if (forcedProblemIds) {
           await supabase
             .from('user_errors')
@@ -226,7 +221,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
             .eq('problem_id', currentProblem.id);
         }
 
-        // Прогресс по модулю обновляем только при первом решении
         if (!forcedProblemIds && isFirstSolve) {
           const { data: progressData } = await supabase
             .from('user_progress')
@@ -253,17 +247,13 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
           }
         }
 
-        // Обновляем профиль в UI через 500мс (триггер уже успел отработать)
         if (isFirstSolve) setTimeout(() => refreshProfile(), 500);
       }
     }
-    // ↑ конец if (user)
 
-    // Переходим к следующей задаче через 2 сек — для ВСЕХ (и гостей тоже)
     setTimeout(() => loadNextProblem(), 2000);
   }
 
-  // ── Данные для рендера ────────────────────────────────────
   const modName = i18n.language === 'kk' && module.name_kz ? module.name_kz : module.name;
   const questionText = currentProblem
     ? (i18n.language === 'kk' && currentProblem.question_kz
@@ -276,14 +266,12 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
         : currentProblem.hint)
     : '';
 
-  // ── Loading ───────────────────────────────────────────────
   if (loading) return (
     <div className="flex h-full items-center justify-center">
       <Loader className="animate-spin text-cyan-400 w-10 h-10" />
     </div>
   );
 
-  // ── Paywall (гость исчерпал лимит) ───────────────────────
   if (showPaywall) {
     return (
       <div className="flex flex-col h-full items-center justify-center p-8 text-center animate-in zoom-in duration-300">
@@ -305,12 +293,10 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
     );
   }
 
-  // ── Основной рендер ───────────────────────────────────────
   return (
     <div className="w-full h-full overflow-y-auto pb-20 custom-scrollbar">
       <div className="max-w-4xl mx-auto p-4 md:p-8">
 
-        {/* Шапка */}
         <div className="flex justify-between items-center mb-6 md:mb-8">
           <button
             onClick={onBack}
@@ -326,7 +312,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
           )}
         </div>
 
-        {/* Заголовок модуля */}
         <div className="mb-6 md:mb-8">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg animate-pulse">
@@ -344,7 +329,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
         {currentProblem ? (
           <div className="bg-slate-800/50 backdrop-blur-sm border border-cyan-500/30 rounded-2xl p-4 md:p-8 mb-6 relative overflow-hidden shadow-2xl">
 
-            {/* ── Блок вопроса ────────────────────────────────── */}
             <div className="mb-8 relative z-10">
               {currentProblem.image_url && (
                 <div className="mb-6 flex justify-center">
@@ -360,7 +344,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
               </h2>
             </div>
 
-            {/* ── Зона решения или результата ─────────────────── */}
             {result === null ? (
               <div className="relative z-10">
                 <div className="mb-4">
@@ -379,7 +362,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
                   onSubmit={() => handleSubmit()}
                 />
 
-                {/* Нижняя панель: стрелки слева, чат/подсказка справа */}
                 <div className="flex justify-between items-center pt-4">
                   <div className="flex gap-2">
                     <button
@@ -429,7 +411,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
                 )}
               </div>
             ) : (
-              /* ── Результат ─────────────────────────────────── */
               <div
                 className={`p-6 rounded-2xl border-2 flex items-center gap-4 animate-in zoom-in duration-300 ${
                   result === 'correct'
@@ -458,9 +439,8 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
                     {result === 'correct' ? t('reactor.correct') : t('reactor.incorrect')}
                   </div>
 
-                  {/* Награда SXP суриката — анимация (реальное начисление в триггере БД) */}
                   {result === 'correct' && user && (
-                    <div className="flex flex-col gap-2 mt-3">
+                    <div className="flex flex-col sm:flex-row gap-2 mt-3">
                       <div
                         className={`inline-flex items-center gap-2 px-3 py-1.5 border rounded-xl text-xs font-bold font-mono w-fit ${
                           profile?.is_premium
@@ -480,6 +460,15 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
                           </span>
                         )}
                       </div>
+                      
+                      {earnedCoins !== null && earnedCoins > 0 && (
+                        <div
+                          className="inline-flex items-center gap-2 px-3 py-1.5 border rounded-xl text-xs font-bold font-mono w-fit bg-amber-500/10 border-amber-500/30 text-amber-400"
+                        >
+                          <Coins className="w-3.5 h-3.5 fill-current" />
+                          +{earnedCoins} MC
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -496,7 +485,6 @@ export function Reactor({ module, onBack, onRequestAuth, forcedProblemIds }: Rea
             )}
           </div>
         ) : (
-          /* Все задачи пройдены */
           <div className="text-center py-20 text-slate-500 border-2 border-dashed border-slate-800 rounded-3xl">
             <div className="inline-block p-4 bg-slate-800 rounded-full mb-4">
               <Zap className="w-10 h-10 text-slate-600" />
