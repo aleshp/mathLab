@@ -8,7 +8,7 @@ import {
   User, LogOut, Trophy, Target, TrendingUp, Award, Zap, Clock, CheckCircle2,
   XCircle, X, Mail, ShieldCheck, GraduationCap, CreditCard, Shield,
   HelpCircle, ChevronDown, ChevronUp, ChevronLeft, FileText, ArrowRight,
-  Palette, Share2
+  Palette, Share2, Coins
 } from 'lucide-react';
 import { BecomeTeacherModal } from './BecomeTeacherModal';
 import { getRank, getPvPRank, getLevelProgress } from '../lib/gameLogic';
@@ -18,8 +18,9 @@ type DashboardProps = {
   onOpenLegal: (type: 'privacy' | 'terms' | 'refund') => void;
 };
 
+// Расширяем тип достижения для поддержки монет
 type UserAchievement = {
-  achievement: Achievement;
+  achievement: Achievement & { reward_coins?: number };
   earned_at: string;
 };
 
@@ -89,13 +90,10 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
       .from('user_achievements')
       .select('earned_at, achievement:achievements(*)')
       .eq('user_id', profile.id)
-      .order('earned_at', { ascending: false })
-      .limit(6);
+      .order('earned_at', { ascending: false });
+    
     if (data) {
-      setAchievements(data.map(item => ({
-        achievement: item.achievement as unknown as Achievement,
-        earned_at: item.earned_at,
-      })));
+      setAchievements(data as any);
     }
   }
 
@@ -152,6 +150,7 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
     <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[70] overflow-y-auto custom-scrollbar">
       <div className="max-w-6xl mx-auto p-4 md:p-8 animate-in fade-in duration-300 flex flex-col min-h-screen">
 
+        {/* --- ШАПКА МОДАЛКИ --- */}
         <div className="flex items-center justify-between mb-8 shrink-0">
           <div className="flex items-center gap-4">
             {currentView === 'faq' && (
@@ -181,6 +180,7 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
           {currentView === 'profile' && profile ? (
             <div className="space-y-6">
 
+              {/* --- КАРТОЧКА ПРОФИЛЯ --- */}
               <div className={`p-6 rounded-3xl border ${roleInfo.bg} relative overflow-hidden shadow-2xl`}>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
@@ -220,9 +220,9 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
 
                       <button
                         onClick={() => setShowCardShop(true)}
-                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg transition-all font-bold text-sm flex items-center gap-2"
+                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl font-bold text-sm flex items-center gap-2"
                       >
-                        <Palette className="w-4 h-4" /> Стиль карточки
+                        <Palette className="w-4 h-4" /> Магазин скинов
                       </button>
 
                       <button
@@ -278,7 +278,9 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
                 </div>
               </div>
 
+              {/* --- СЕТКА СТАТИСТИКИ --- */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                {/* 1. PvP Рейтинг */}
                 <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-3 md:p-4 flex items-center gap-2 md:gap-4 group hover:border-slate-500 transition-colors">
                   <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center text-4xl md:text-[2.5rem] group-hover:scale-110 transition-transform flex-shrink-0">
                     {isUnranked ? <Target className="w-8 h-8 text-yellow-400" /> : pvpRank?.icon}
@@ -292,14 +294,17 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
                   </div>
                 </div>
 
+                {/* 2. MathCoins */}
                 <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-3 md:p-4 flex items-center gap-2 md:gap-4">
-                  <div className="p-2.5 md:p-3 bg-purple-500/20 rounded-xl text-purple-400 flex-shrink-0"><Target className="w-5 h-5 md:w-6 md:h-6" /></div>
+                  <div className="p-2.5 md:p-3 bg-amber-500/20 rounded-xl text-amber-400 flex-shrink-0"><Coins className="w-5 h-5 md:w-6 md:h-6" /></div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[9px] md:text-xs text-slate-400 uppercase font-bold tracking-wider truncate">Level (XP)</div>
-                    <div className="text-lg sm:text-xl md:text-2xl font-black text-white">{profile.clearance_level}</div>
+                    <div className="text-[9px] md:text-xs text-slate-400 uppercase font-bold tracking-wider truncate">Баланс</div>
+                    <div className="text-lg sm:text-xl md:text-2xl font-black text-white">{profile.coins || 0}</div>
+                    <div className="text-[10px] md:text-xs text-slate-500 font-mono mt-0.5">MathCoins</div>
                   </div>
                 </div>
 
+                {/* 3. Задач решено */}
                 <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-3 md:p-4 flex items-center gap-2 md:gap-4">
                   <div className="p-2.5 md:p-3 bg-emerald-500/20 rounded-xl text-emerald-400 flex-shrink-0"><Zap className="w-5 h-5 md:w-6 md:h-6" /></div>
                   <div className="min-w-0 flex-1">
@@ -308,6 +313,7 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
                   </div>
                 </div>
 
+                {/* 4. Точность */}
                 <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-3 md:p-4 flex items-center gap-2 md:gap-4">
                   <div className="p-2.5 md:p-3 bg-blue-500/20 rounded-xl text-blue-400 flex-shrink-0"><TrendingUp className="w-5 h-5 md:w-6 md:h-6" /></div>
                   <div className="min-w-0 flex-1">
@@ -319,6 +325,7 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
+                {/* --- ДОСТИЖЕНИЯ --- */}
                 <div>
                   <div className="flex items-center gap-2 mb-4 px-1">
                     <Trophy className="w-5 h-5 text-amber-400" />
@@ -328,23 +335,43 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
                     <div className="space-y-3">
                       {achievements.length > 0 ? (
                         achievements.map((item, index) => (
-                          <div key={index} className="bg-slate-800 border border-slate-700 rounded-xl p-3 flex items-center gap-3">
-                            <div className={`p-2 rounded-lg bg-gradient-to-br ${rarityColors[item.achievement.rarity]} shadow-lg`}>
+                          <div key={index} className="bg-slate-800 border border-slate-700 rounded-xl p-3 flex items-center gap-3 relative overflow-hidden group">
+                            
+                            <div className={`p-2.5 rounded-lg bg-gradient-to-br ${rarityColors[item.achievement.rarity as keyof typeof rarityColors]} shadow-lg z-10 transition-transform group-hover:scale-110`}>
                               <Award className="w-5 h-5 text-white" />
                             </div>
-                            <div className="flex-1 min-w-0">
+                            
+                            <div className="flex-1 min-w-0 z-10">
                               <h3 className="font-bold text-white text-sm truncate">{item.achievement.name}</h3>
-                              <p className="text-slate-400 text-[10px] truncate">{item.achievement.description}</p>
+                              <p className="text-slate-400 text-[10px] leading-tight line-clamp-1">{item.achievement.description}</p>
                             </div>
+
+                            {/* Награда в монетах */}
+                            {item.achievement.reward_coins && (
+                              <div className="flex flex-col items-end shrink-0 z-10 bg-slate-900/50 px-2 py-1 rounded-lg border border-white/5">
+                                <div className="flex items-center gap-1 text-amber-400 font-black font-mono text-xs">
+                                  <Coins className="w-3 h-3" />
+                                  +{item.achievement.reward_coins}
+                                </div>
+                                <span className="text-[7px] text-slate-500 uppercase font-bold tracking-tighter">Награда</span>
+                              </div>
+                            )}
+
+                            {/* Декоративное свечение */}
+                            <div className={`absolute top-0 right-0 w-24 h-24 blur-2xl opacity-10 pointer-events-none transition-opacity group-hover:opacity-20 bg-gradient-to-br ${rarityColors[item.achievement.rarity as keyof typeof rarityColors]}`} />
                           </div>
                         ))
                       ) : (
-                        <div className="text-center py-12 text-slate-600 text-sm italic">{t('dashboard.no_awards')}</div>
+                        <div className="flex flex-col items-center justify-center py-12 text-slate-600">
+                           <Award className="w-12 h-12 mb-3 opacity-20" />
+                           <p className="text-sm italic">{t('dashboard.no_awards')}</p>
+                        </div>
                       )}
                     </div>
                   </div>
                 </div>
 
+                {/* --- ЖУРНАЛ АКТИВНОСТИ --- */}
                 <div>
                   <div className="flex items-center gap-2 mb-4 px-1">
                     <Clock className="w-5 h-5 text-cyan-400" />
@@ -402,7 +429,7 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
             </div>
 
           ) : currentView === 'faq' ? (
-            <div className="space-y-4 max-w-3xl mx-auto">
+            <div className="space-y-4 max-w-3xl mx-auto pb-10">
               {faqList.map((i) => (
                 <div key={i} className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden transition-all hover:border-slate-600">
                   <button
@@ -443,6 +470,7 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
           ) : null}
         </div>
 
+        {/* --- ФУТЕР И ЮРИДИЧЕСКИЕ ССЫЛКИ --- */}
         <div className="mt-12 pt-8 border-t border-slate-800 shrink-0">
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
             <button
@@ -482,11 +510,12 @@ export function Dashboard({ onClose, onOpenLegal }: DashboardProps) {
             </a>
           </div>
 
-          <div className="text-center mt-4 text-[10px] text-slate-700 font-mono">
+          <div className="text-center mt-4 text-[10px] text-slate-700 font-mono pb-4">
             MathLab PvP © 2026. All Systems Operational.
           </div>
         </div>
 
+        {/* --- МОДАЛЬНЫЕ ОКНА --- */}
         {showTeacherModal && (
           <BecomeTeacherModal onClose={() => { setShowTeacherModal(false); checkTeacherRequest(); }} />
         )}
